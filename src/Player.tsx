@@ -188,8 +188,8 @@ export default function Player(p: Props) {
     const hls = new Hls({
       startPosition: resume.current > 0 ? resume.current : -1,
       capLevelToPlayerSize: true,      // no point converting to 1080p for a small window
-      abrEwmaDefaultEstimate: 8_000_000, // start high, then adapt after the first piece
-      maxBufferLength: 40, backBufferLength: 30,
+      abrEwmaDefaultEstimate: 500_000,   // start low so Auto never wastes data on a high level first
+      maxBufferLength: 30, maxMaxBufferLength: 40, backBufferLength: 60,
     });
     hlsRef.current = hls;
     hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => setHlsH(hls.levels[d.level]?.height ?? 0));

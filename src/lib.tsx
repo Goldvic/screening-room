@@ -22,7 +22,8 @@ export const QUALITIES: { id: string; label: string; hint: string }[] = [
   { id: '1080', label: '1080p', hint: 'Locked to this size, converted on the VPS' },
   { id: '720', label: '720p', hint: 'Locked, lower data use' },
   { id: '480', label: '480p', hint: 'Locked, low data use' },
-  { id: '360', label: '360p', hint: 'Locked, minimum data use' },
+  { id: '360', label: '360p', hint: 'Locked, very low data use' },
+  { id: '240', label: '240p (Data saver)', hint: 'Locked, smallest possible data use' },
 ];
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 export const ASPECTS: { id: string; label: string; hint: string }[] = [

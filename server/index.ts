@@ -567,8 +567,8 @@ async function probe(full: string, st: FileStat): Promise<Probe> {
 
 const SEG = 6;
 const LADDER = [
-  { h: 360, v: 700_000 }, { h: 480, v: 1_300_000 }, { h: 720, v: 2_800_000 },
-  { h: 1080, v: 5_000_000 }, { h: 1440, v: 9_000_000 }, { h: 2160, v: 16_000_000 },
+  { h: 240, v: 250_000 }, { h: 360, v: 400_000 }, { h: 480, v: 700_000 }, { h: 720, v: 1_600_000 },
+  { h: 1080, v: 3_200_000 }, { h: 1440, v: 6_000_000 }, { h: 2160, v: 12_000_000 },
 ];
 const rateFor = (h: number) => (LADDER.find((l) => l.h >= h) ?? LADDER[LADDER.length - 1]).v;
 const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
@@ -640,8 +640,8 @@ function encodeSeg(full: string, h: number, a: number, n: number, dur: number) {
   // -ss before -i cuts at an exact time, and -output_ts_offset keeps original timestamps, so segments join with no gap or overlap.
   return runBuf(
     `ffmpeg -hide_banner -loglevel error -ss ${start} -i ${sh(full)} -t ${len.toFixed(3)} -map 0:v:0 -map '0:a:${a}?' -sn -dn ` +
-    `-c:v libx264 -preset ${PRESET} -profile:v high -pix_fmt yuv420p -crf 23 -maxrate ${v} -bufsize ${v * 2} -threads 0 ` +
-    `-vf "scale=-2:'min(ih,${h})'" -c:a aac -ac 2 -ar 48000 -b:a 128k ` +
+    `-c:v libx264 -preset ${PRESET} -profile:v high -pix_fmt yuv420p -crf 28 -maxrate ${v} -bufsize ${v * 2} -threads 0 ` +
+    `-vf "scale=-2:'min(ih,${h})'" -c:a aac -ac 2 -ar 44100 -b:a 64k ` +
     `-f mpegts -output_ts_offset ${start} -muxdelay 0 -muxpreload 0 pipe:1`,
   );
 }
@@ -756,9 +756,9 @@ app.get('/api/stream', h(async (req, res) => {
     cmd = `ffmpeg -hide_banner -loglevel error ${input} -c:v copy -c:a aac -ac 2 -b:a 192k -avoid_negative_ts make_zero ${tail}`;
   } else {
     const H = Number(q);
-    if (![360, 480, 720, 1080, 1440, 2160].includes(H)) throw new HttpError(400, 'Bad quality');
-    cmd = `ffmpeg -hide_banner -loglevel error ${input} -c:v libx264 -preset ${PRESET} -crf 20 -pix_fmt yuv420p -threads 0 ` +
-      `-vf "scale=-2:'min(ih,${H})'" -c:a aac -ac 2 -b:a 192k ${tail}`;
+    if (![240, 360, 480, 720, 1080, 1440, 2160].includes(H)) throw new HttpError(400, 'Bad quality');
+    cmd = `ffmpeg -hide_banner -loglevel error ${input} -c:v libx264 -preset ${PRESET} -crf 28 -maxrate ${rateFor(H)} -bufsize ${rateFor(H) * 2} -pix_fmt yuv420p -threads 0 ` +
+      `-vf "scale=-2:'min(ih,${H})'" -c:a aac -ac 2 -b:a 64k ${tail}`;
   }
   const p = await B.exec(cmd);
   req.socket.setNoDelay(true);
