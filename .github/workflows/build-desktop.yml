@@ -12,14 +12,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Build exe
+      - name: Build installer
         working-directory: desktop
         run: |
           npm install
-          npx electron-builder --win portable --publish never
+          npx electron-builder --win nsis --publish never
       - uses: actions/upload-artifact@v4
         with:
-          name: ScreeningRoom-windows
+          name: Cinema-installer
           path: desktop/release/*.exe
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')

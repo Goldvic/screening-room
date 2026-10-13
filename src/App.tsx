@@ -173,7 +173,7 @@ function Library() {
   return (
     <div className="shell">
       <aside className="side">
-        <div className="brand"><span className="lamp" />Screening Room</div>
+        <div className="brand"><span className="lamp" />CINEMA</div>
         <p className="muted small host">{host ? `Connected to ${host}` : 'Connecting to your VPS…'}</p>
         <nav className="shelves" aria-label="Storage">
           {roots.map((r) => (

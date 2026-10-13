@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { Client, ClientChannel, SFTPWrapper } from 'ssh2';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { Readable } from 'node:stream';
 import os from 'node:os';
 import path, { posix } from 'node:path';
@@ -350,15 +350,63 @@ const thumbFail = new Set<string>();
 const app = express();
 app.disable('x-powered-by');
 
-// Optional login (set APP_PASSWORD). Required if you expose this beyond localhost.
+// Login (set APP_PASSWORD): a real login page with a 30-day cookie. Basic auth still works for scripts.
 const PASS = env.APP_PASSWORD;
+const COOKIE = 'cinema_auth';
+const TOKEN = PASS ? createHmac('sha256', PASS).update('cinema-session-v1').digest('hex') : '';
+const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const cookieOf = (req: Request, name: string) =>
+  (req.headers.cookie ?? '').split(';').map((c) => c.trim().split('=')).find(([k]) => k === name)?.[1] ?? '';
+const fails = new Map<string, { n: number; t: number }>();
+const LOGIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cinema</title><style>
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:#07090d;color:#efece5;font-family:system-ui,'Segoe UI',sans-serif;display:grid;place-items:center;overflow:hidden}
+.bg{position:fixed;inset:0;background:radial-gradient(60% 50% at 50% 0%,rgba(242,184,75,.22),transparent 70%),radial-gradient(40% 40% at 90% 100%,rgba(234,100,81,.12),transparent 70%)}
+.reel{position:fixed;left:0;right:0;height:28px;opacity:.35;background:repeating-linear-gradient(90deg,#1c2431 0 22px,transparent 22px 40px)}
+.reel.t{top:18px}.reel.b{bottom:18px}
+.card{position:relative;width:min(400px,90vw);padding:40px 32px 32px;border:1px solid #2a3344;border-radius:22px;background:rgba(19,26,36,.82);backdrop-filter:blur(10px);box-shadow:0 30px 80px rgba(0,0,0,.55);text-align:center}
+.lamp{width:14px;height:14px;border-radius:50%;background:#f2b84b;margin:0 auto 18px;box-shadow:0 0 28px 8px rgba(242,184,75,.5);animation:p 2.4s ease-in-out infinite}
+@keyframes p{50%{box-shadow:0 0 38px 12px rgba(242,184,75,.7)}}
+h1{margin:0;font:700 38px/1 Georgia,serif;letter-spacing:.32em;text-indent:.32em}
+p{margin:10px 0 26px;color:#8f98ab;font-size:14px}
+input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #2a3344;background:#0c1017;color:#efece5;font-size:16px;outline:none;transition:border-color .15s}
+input:focus{border-color:#f2b84b}
+button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:#f2b84b;color:#1a1204;font-weight:700;font-size:16px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}button:hover{filter:brightness(1.07)}
+.err{min-height:20px;margin-top:12px;color:#ea6451;font-size:14px}
+</style></head><body><div class="bg"></div><div class="reel t"></div><div class="reel b"></div>
+<div class="card"><div class="lamp"></div><h1>CINEMA</h1><p>Your private screening room</p>
+<input id="pw" type="password" placeholder="Password" autocomplete="current-password" autofocus>
+<button id="go">Log in</button><div class="err" id="err"></div></div>
+<script>
+const pw=document.getElementById('pw'),go=document.getElementById('go'),err=document.getElementById('err');
+async function login(){err.textContent='';go.disabled=true;
+try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw.value})});
+if(r.ok){location.href='/';return}err.textContent=r.status===429?'Too many tries. Wait a minute.':'Wrong password';}
+catch(e){err.textContent='Cannot reach the server'}go.disabled=false}
+go.onclick=login;pw.addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+</script></body></html>`;
 if (PASS) {
+  app.post('/api/login', express.json(), (req, res) => {
+    const ip = req.ip ?? 'x', f = fails.get(ip);
+    if (f && Date.now() - f.t < 60_000 && f.n >= 5) return res.status(429).json({ error: 'slow down' });
+    if (!same(String(req.body?.password ?? ''), PASS)) {
+      fails.set(ip, { n: f && Date.now() - f.t < 60_000 ? f.n + 1 : 1, t: Date.now() });
+      return res.status(401).json({ error: 'wrong password' });
+    }
+    fails.delete(ip);
+    const secure = req.secure || req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `${COOKIE}=${TOKEN}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 86400}${secure}`);
+    res.json({ ok: true });
+  });
+  app.post('/api/logout', (_req, res) => { res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; Max-Age=0`); res.json({ ok: true }); });
   app.use((req, res, next) => {
+    if (same(cookieOf(req, COOKIE), TOKEN)) return next();
     const dec = Buffer.from((req.headers.authorization ?? '').replace(/^Basic /, ''), 'base64').toString();
-    const pw = Buffer.from(dec.slice(dec.indexOf(':') + 1));
-    const want = Buffer.from(PASS);
-    if (pw.length === want.length && timingSafeEqual(pw, want)) return next();
-    res.set('WWW-Authenticate', 'Basic realm="Screening Room"').status(401).send('Login required');
+    if (req.headers.authorization && same(dec.slice(dec.indexOf(':') + 1), PASS)) return next();
+    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'login required' });
+    res.status(401).set('Cache-Control', 'no-store').type('html').send(LOGIN_PAGE);
   });
 }
 app.use(express.json());

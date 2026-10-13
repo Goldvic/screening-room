@@ -1,7 +1,7 @@
 {
-  "name": "screening-room-desktop",
+  "name": "cinema-desktop",
   "version": "1.0.0",
-  "description": "Screening Room desktop app",
+  "description": "Cinema desktop app",
   "author": "you",
   "main": "main.cjs",
   "devDependencies": {
@@ -9,9 +9,16 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.screening.room",
-    "productName": "Screening Room",
-    "win": { "target": "portable" },
+    "appId": "com.cinema.app",
+    "productName": "Cinema",
+    "win": { "target": "nsis" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true
+    },
     "directories": { "output": "release" }
   }
 }

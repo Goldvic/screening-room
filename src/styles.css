@@ -18,7 +18,7 @@ select { background: var(--raise); border: 1px solid var(--line); border-radius:
 /* ---------- layout ---------- */
 .shell { display: grid; grid-template-columns: 300px 1fr; height: 100%; }
 .side { background: var(--panel); border-right: 1px solid var(--line); padding: 26px 18px; overflow: auto; display: flex; flex-direction: column; gap: 18px; }
-.brand { font: 700 24px/1 var(--serif); letter-spacing: -0.01em; display: flex; align-items: center; gap: 12px; }
+.brand { font: 700 22px/1 var(--serif); letter-spacing: .28em; display: flex; align-items: center; gap: 12px; }
 .lamp { width: 12px; height: 12px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 18px 4px color-mix(in srgb, var(--lamp) 55%, transparent); }
 .host { margin: -6px 0 0; }
 .shelves { display: grid; gap: 10px; }
