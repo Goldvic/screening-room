@@ -1,0 +1,17 @@
+{
+  "name": "screening-room-desktop",
+  "version": "1.0.0",
+  "description": "Screening Room desktop app",
+  "author": "you",
+  "main": "main.cjs",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.screening.room",
+    "productName": "Screening Room",
+    "win": { "target": "portable" },
+    "directories": { "output": "release" }
+  }
+}
