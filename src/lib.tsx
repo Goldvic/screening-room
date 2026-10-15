@@ -2,18 +2,58 @@ import { createContext, useEffect, useRef, useState } from 'react';
 
 // ---------- types ----------
 export type Entry = { name: string; dir: boolean; size: number; mtime: number };
-export type Root = { id: number; name: string; dir: string; free: number; total: number };
+export type Root = { id: number; name: string; dir: string; free: number; total: number; offline?: boolean; opened?: boolean };
 export type Prog = { pos: number; dur: number; watched: boolean; updated: number };
-export type Track = { i: number; label: string; lang: string };
+export type Track = { i: number; label: string; lang: string; channels?: number };
 export type Ext = { name: string; label: string; lang: string };
+export type Chapter = { start: number; end: number; title: string };
 export type Info = {
-  duration: number; width?: number; height?: number; codec?: string; bitrate?: number;
-  audio?: Track[]; subs?: Track[]; external?: Ext[]; ai?: boolean;
+  duration: number; width?: number; height?: number; codec?: string; bitrate?: number; fps?: number; channels?: number;
+  audio?: Track[]; subs?: Track[]; external?: Ext[]; ai?: boolean; chapters?: Chapter[]; size?: number;
 };
+export type Caps = {
+  local: { ffmpeg: boolean; ffprobe: boolean };
+  remote: { ffmpeg: boolean; h264: boolean; hevc: boolean; av1: boolean };
+  platform: string; embedded: boolean; hasServer: boolean;
+};
+
+export const APP_NAME = 'Cinema';
+export const OFFLINE_ID = 1000;
+export const OPENED_ID = 1001;  // "Opened files": videos opened from Explorer, drag and drop or Open file
+
+export type UpdateState = {
+  state: 'idle' | 'checking' | 'available' | 'none' | 'downloading' | 'ready' | 'error';
+  version: string; percent: number; error: string; current: string; feed: string; auto: boolean; packaged: boolean;
+};
+export const VIDEO_EXTS = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'm4v'];
+
+// The desktop app (Electron) exposes a small bridge; in a normal browser it is undefined.
+export type Bridge = {
+  selectFile(filters?: { name: string; extensions: string[] }[]): Promise<string | null>;
+  selectFolder(): Promise<string | null>;
+  powerSave(on: boolean): Promise<void>;
+  miniPlayer(on: boolean): Promise<void>;
+  openExternal(file: string, player?: string): Promise<string>;
+  openStream(apiPath: string, player?: string): Promise<string>;
+  reveal(file: string): Promise<void>;
+  pathForFile(file: File): string;
+  takePendingOpen(): Promise<string | null>;
+  onOpenFile(cb: (file: string) => void): () => void;
+  updateGet(): Promise<UpdateState>;
+  updateConfig(cfg: { feed?: string; auto?: boolean }): Promise<UpdateState>;
+  updateCheck(): Promise<void>;
+  updateDownload(): Promise<void>;
+  updateInstall(): Promise<void>;
+  onUpdate(cb: (s: UpdateState) => void): () => void;
+  openFolder(dir: string): Promise<void>;
+  version: string;
+};
+export const bridge: Bridge | undefined = typeof window !== 'undefined' ? (window as any).cinema : undefined;
 
 // ---------- constants ----------
 export const VIDEO = /\.(mp4|mkv|webm|mov|avi|m4v)$/i;
 export const QUALITIES: { id: string; label: string; hint: string }[] = [
+  { id: 'audio', label: 'Audio only', hint: 'Sound without the picture. Uses almost no data (about 30 MB per hour)' },
   { id: 'auto', label: 'Auto', hint: 'Adapts to your connection (360p up to the source). Instant seeking' },
   { id: 'orig', label: 'Original', hint: 'Direct play. No conversion, lightest on the server' },
   { id: 'remux', label: 'Original + fixed audio', hint: 'Keeps the video untouched, converts audio. Fixes silent MKV files' },
@@ -22,10 +62,9 @@ export const QUALITIES: { id: string; label: string; hint: string }[] = [
   { id: '1080', label: '1080p', hint: 'Locked to this size, converted on the VPS' },
   { id: '720', label: '720p', hint: 'Locked, lower data use' },
   { id: '480', label: '480p', hint: 'Locked, low data use' },
-  { id: '360', label: '360p', hint: 'Locked, very low data use' },
-  { id: '240', label: '240p (Data saver)', hint: 'Locked, smallest possible data use' },
+  { id: '360', label: '360p', hint: 'Locked, minimum data use' },
 ];
-export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
 export const ASPECTS: { id: string; label: string; hint: string }[] = [
   { id: 'fit', label: 'Fit', hint: 'Whole picture, black bars if needed' },
   { id: 'fill', label: 'Fill screen', hint: 'Zooms in to remove black bars (crops edges)' },
@@ -66,6 +105,13 @@ export const matchLang = (tag: string, code: string) => {
   if (!l || !tag) return false;
   return tag.toLowerCase().split(/[^a-z]+/).some((t) => l.alts.includes(t));
 };
+export const SAVER: { id: number; label: string; hint: string }[] = [
+  { id: 0, label: 'Off', hint: 'Best quality, normal data use' },
+  { id: 1, label: 'Balanced', hint: 'Up to 720p, at most about 850 MB per hour' },
+  { id: 2, label: 'Low', hint: 'Up to 480p, at most about 320 MB per hour' },
+  { id: 3, label: 'Ultra', hint: 'Up to 360p, at most about 150 MB per hour' },
+];
+export const MAX_VOLS = [100, 200, 300, 500];
 export const ACCENTS: Record<string, string> = {
   Amber: '#f2b84b', Violet: '#a592ff', Emerald: '#3fd6a0', Rose: '#ff7a93', Sky: '#4cb8ff',
 };
@@ -75,11 +121,19 @@ export type Settings = {
   accent: string; quality: string; speed: number; aspect: string; autoNext: boolean;
   autoSub: boolean; subSmart: boolean; subLang: string; subSize: number; subColor: string; subBg: number;
   turbo: boolean; conns: number; view: 'grid' | 'list'; thumbs: boolean;
+  saver: number; saverAuto: boolean;
+  vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
+  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean;
+  posters: boolean; filter: 'all' | 'unwatched' | 'watched' | 'fav'; externalPlayer: string;
 };
 export const DEFAULTS: Settings = {
   accent: 'Amber', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
   autoSub: true, subSmart: true, subLang: 'en', subSize: 28, subColor: '#ffffff', subBg: 55,
   turbo: true, conns: 8, view: 'grid', thumbs: true,
+  saver: 0, saverAuto: true,
+  vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
+  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false,
+  posters: false, filter: 'all', externalPlayer: '',
 };
 export function loadSettings(): Settings {
   try {
@@ -91,11 +145,23 @@ export function loadSettings(): Settings {
 }
 export const SettingsCtx = createContext<{ s: Settings; set: (p: Partial<Settings>) => void }>({ s: DEFAULTS, set: () => {} });
 
+// Things kept on the server so they survive restarts (favourites, per-video sound, bookmarks).
+export type Fx = { eq: number[]; dialogue: boolean; night: boolean; mono: boolean };
+export type Bookmark = { t: number; label: string };
+export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]> };
+export const PrefsCtx = createContext<{ prefs: Prefs; setPref: <K extends keyof Prefs>(k: K, v: Prefs[K]) => void }>({ prefs: {}, setPref: () => {} });
+
 // ---------- helpers ----------
 export const qs = (o: Record<string, string | number>) =>
   new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
 export async function api<T>(p: string, o: Record<string, string | number> = {}, method = 'GET'): Promise<T> {
   const r = await fetch(`/api/${p}?${qs(o)}`, { method });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j as T;
+}
+export async function post<T>(p: string, body: unknown = {}): Promise<T> {
+  const r = await fetch(`/api/${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j as T;
@@ -166,7 +232,12 @@ const ICONS: Record<string, string> = {
   sliders: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4', upload: 'M12 16V5m0 0l-4 4m4-4l4 4M5 19h14',
   info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
   audio: 'M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z',
-  more: 'M5 12h.01M12 12h.01M19 12h.01', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  more: 'M5 12h.01M12 12h.01M19 12h.01', heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
+  server: 'M4 5h16v6H4zM4 13h16v6H4zM8 8h.01M8 16h.01', plus: 'M12 5v14M5 12h14', pause2: 'M8 5v14M16 5v14',
+  rotate: 'M20 12a8 8 0 1 1-3-6.2M20 4v5h-5', repeat: 'M4 11V9a3 3 0 0 1 3-3h13M17 3l3 3-3 3M20 13v2a3 3 0 0 1-3 3H4M7 21l-3-3 3-3',
+  bookmark: 'M6 4h12v17l-6-4-6 4z', random: 'M3 6h4l10 12h4M3 18h4l3-3.5M14 9.5L17 6h4M18 3l3 3-3 3M18 15l3 3-3 3',
+  hdd: 'M3 14l3-8h12l3 8v5H3zM3 14h18M7 17h.01', skip: 'M5 5l9 7-9 7zM17 5v14', external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
+  cloud: 'M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9.5 4.3 4.3 0 0 1 17.5 18z', save: 'M4 4h13l3 3v13H4zM8 4v5h8V4M8 20v-6h8v6', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
 };
 export const Icon = ({ n, s = 18 }: { n: string; s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -175,21 +246,21 @@ export const Icon = ({ n, s = 18 }: { n: string; s?: number }) => (
 );
 
 // ---------- live network meter (server-side byte counting) ----------
-export type Net = { speed: number; bytes: number; today: number; lifetime: number; active: number; hist: number[]; mode: string; ok: boolean };
+export type Net = { speed: number; bytes: number; today: number; month: number; lifetime: number; active: number; hist: number[]; mode: string; ok: boolean };
 export function useNet(sid: string | null, ms: number): Net {
-  const [n, setN] = useState<Net>({ speed: 0, bytes: 0, today: 0, lifetime: 0, active: 0, hist: [], mode: '', ok: true });
+  const [n, setN] = useState<Net>({ speed: 0, bytes: 0, today: 0, month: 0, lifetime: 0, active: 0, hist: [], mode: '', ok: true });
   const last = useRef<{ t: number; b: number } | null>(null);
   useEffect(() => {
     last.current = null;
     const tick = async () => {
       try {
-        const j = await api<{ total: number; session: number; today: number; lifetime: number; active: number; mode: string }>('net', sid ? { sid } : {});
+        const j = await api<{ total: number; session: number; today: number; month: number; lifetime: number; active: number; mode: string }>('net', sid ? { sid } : {});
         const t = performance.now(), b = sid ? j.session : j.total;
         const prev = last.current;
         last.current = { t, b };
         setN((o) => {
           const inst = prev ? Math.max(0, (b - prev.b) / ((t - prev.t) / 1000)) : 0;
-          return { speed: o.speed * 0.35 + inst * 0.65, bytes: b, today: j.today, lifetime: j.lifetime, active: j.active, mode: j.mode, ok: true, hist: [...o.hist, inst].slice(-60) };
+          return { speed: o.speed * 0.35 + inst * 0.65, bytes: b, today: j.today, month: j.month ?? 0, lifetime: j.lifetime, active: j.active, mode: j.mode, ok: true, hist: [...o.hist, inst].slice(-60) };
         });
       } catch { setN((o) => ({ ...o, ok: false })); }
     };
@@ -283,4 +354,35 @@ export async function speedTest(conns: number, mbEach: number, onSpeed: (bps: nu
   } finally { clearInterval(tick); }
   const secs = (performance.now() - t0) / 1000;
   return { avg: got / secs, peak, bytes: got, secs };
+}
+
+export function useUpdates(): UpdateState | null {
+  const [u, setU] = useState<UpdateState | null>(null);
+  useEffect(() => {
+    if (!bridge) return;
+    bridge.updateGet().then(setU).catch(() => {});
+    return bridge.onUpdate(setU);
+  }, []);
+  return u;
+}
+
+// ---------- turn a messy file name into a searchable title ----------
+export function parseTitle(name: string): { title: string; year: number; season: number; episode: number } {
+  let t = name.replace(/\.[^.]+$/, '');
+  const ep = /[Ss](\d{1,2})[ ._-]*[Ee](\d{1,3})/.exec(t) ?? /(\d{1,2})x(\d{2})/.exec(t);
+  const season = ep ? Number(ep[1]) : 0, episode = ep ? Number(ep[2]) : 0;
+  if (ep) t = t.slice(0, ep.index);
+  const ym = /[ ._(\[-]((?:19|20)\d{2})(?=[ ._)\]-]|$)/.exec(t);
+  const year = ym ? Number(ym[1]) : 0;
+  if (ym) t = t.slice(0, ym.index);
+  t = t.replace(/\b(2160p|1080p|720p|480p|360p|4k|uhd|bluray|brrip|bdrip|webrip|web-dl|webdl|hdrip|dvdrip|hdtv|x264|x265|h264|h265|hevc|av1|aac|ac3|dts|10bit|remux|proper|extended|unrated|yify|rarbg)\b.*$/i, '');
+  t = t.replace(/[._]+/g, ' ').replace(/\s*[-\[(]+\s*$/, '').replace(/\s+/g, ' ').trim();
+  return { title: t || name.replace(/\.[^.]+$/, ''), year, season, episode };
+}
+
+// ---------- can this laptop play a codec? (decides which compressed downloads are offered) ----------
+export function canDecode(codec: 'h264' | 'hevc' | 'av1'): boolean {
+  const v = document.createElement('video');
+  const t = { h264: 'video/mp4; codecs="avc1.640028"', hevc: 'video/mp4; codecs="hvc1.1.6.L93.B0"', av1: 'video/mp4; codecs="av01.0.05M.08"' }[codec];
+  return v.canPlayType(t) !== '';
 }

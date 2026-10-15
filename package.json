@@ -1,21 +1,24 @@
 {
-  "name": "screening-room",
+  "name": "cinema",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"tsx watch server/index.ts\" \"vite\"",
     "build": "vite build",
     "start": "tsx server/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist-server/server.cjs --external:ssh2 --external:ffmpeg-static --external:ffprobe-static \"--define:import.meta.url=__importMetaUrl\" \"--banner:js=const __importMetaUrl = require('url').pathToFileURL(__filename).href;\" --log-level=warning",
+    "build:app": "vite build && npm run build:server",
+    "app": "npm run build:app && electron .",
+    "app:dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:127.0.0.1:5173 && cross-env CINEMA_DEV_URL=http://127.0.0.1:5173 electron .\"",
+    "dist": "npm run build:app && electron-builder --win",
+    "dist:mac": "npm run build:app && electron-builder --mac",
+    "dist:linux": "npm run build:app && electron-builder --linux",
+    "dist:dir": "npm run build:app && electron-builder --dir"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "hls.js": "^1.5.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "ssh2": "^1.15.0",
-    "tsx": "^4.19.0"
+    "electron-updater": "^6.8.9",
+    "ssh2": "^1.15.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
@@ -25,7 +28,116 @@
     "@types/ssh2": "^1.15.0",
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
+    "express": "^4.19.2",
+    "hls.js": "^1.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.4",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "wait-on": "^8.0.5"
+  },
+  "optionalDependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0"
+  },
+  "version": "1.1.0",
+  "description": "Cinema: watch your server's movies on your laptop, stream or offline",
+  "author": "Ghost Of Spata",
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.cinema.desktop",
+    "productName": "Cinema",
+    "copyright": "Cinema",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "dist-server/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**/*",
+      "node_modules/ffprobe-static/**/*"
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "files": [
+        "!node_modules/ffprobe-static/bin/darwin/**",
+        "!node_modules/ffprobe-static/bin/linux/**",
+        "!node_modules/ffprobe-static/bin/win32/ia32/**"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Cinema",
+      "artifactName": "Cinema-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.video",
+      "files": [
+        "!node_modules/ffprobe-static/bin/win32/**",
+        "!node_modules/ffprobe-static/bin/linux/**"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "AudioVideo",
+      "files": [
+        "!node_modules/ffprobe-static/bin/win32/**",
+        "!node_modules/ffprobe-static/bin/darwin/**"
+      ]
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://updates.example.com/cinema/"
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "mp4",
+          "mkv",
+          "webm",
+          "mov",
+          "avi",
+          "m4v"
+        ],
+        "name": "Video",
+        "description": "Video file",
+        "role": "Viewer"
+      }
+    ]
   }
 }

@@ -1,58 +1,104 @@
-# Screening Room
+# Cinema
 
-Browse, stream, download and delete the media your downloader bot saves on your VPS.
+Watch the movies and series on your VPS from your laptop: stream them, or save them for offline and watch with no internet.
+It started as "Screening Room" (a web app) and is now also a desktop app with an installer.
 
-## Run on your computer
-1. `cp .env.example .env` (check VPS_KEY points at your .pem)
-2. `npm install`
-3. `npm run dev` → open http://localhost:5173
+## Run it
 
-Production build: `npm run build && npm start` → http://localhost:3001
+```
+npm install
+npm run app          # builds and opens the desktop app
+```
 
-## What is in the player
-- Your own controls: seek bar with buffer and hover time, volume, speed 0.5×–3×, fullscreen, picture-in-picture, screenshot, sleep timer, next episode.
-- **Screen shape**: Fit, Fill (zoom to remove black bars), Stretch, or force 16:9, 21:9, 4:3, 1:1. Plus zoom, brightness, contrast, color.
-- **Subtitles**: picks your language automatically from tracks inside the file or `.srt/.vtt/.ass` files next to the video. You can also load a file from your device, change size/color/background and shift the timing.
-- **AI subtitles** (optional): generates them on the VPS with Whisper when a video has none. See below.
-- **Sound**: volume boost up to 300% and a night mode that evens out loud and quiet parts.
-- **Quality**: *Auto* (adaptive, see below), Original, *Original + fixed audio* (copies the video, converts only the audio, fixes silent MKV files), or a locked size from 360p to 4K.
-- **Seek-bar previews**: hover or drag the seek bar to see a thumbnail of that moment. The server builds one small sheet of frames per video the first time you hover (a few seconds to a minute, only key frames are read), then keeps it.
-- **Network status**: live speed (KB/s or MB/s and Mbps), data used by this video, data used today and in total (press `I` in the player, or see the card in the sidebar).
-- Keys: Space play, ←/→ 10 s, ↑/↓ volume, F fullscreen, C subtitles, A screen shape, < > speed, 0–9 jump, N next, I stats, S screenshot, P picture-in-picture. In the library press `/` to search.
+Develop with live reload: `npm run app:dev`. The old browser version still works: `npm run dev`.
 
-## Auto quality (adaptive streaming)
-Pick **Quality → Auto**. The server cuts the video into 6-second pieces at 360p, 480p, 720p, 1080p (and up, never above the source) as the player asks for them, and the player switches level by itself when your connection speeds up or slows down. Seeking is instant and works anywhere in the video. Locked sizes (720p and so on) use the same system with a single level.
+## Make the Windows installer
 
-Things worth knowing:
-- Every Auto level is converted on the VPS, so Auto never equals the untouched original. Use **Original** when your connection can take it; if the original keeps pausing, the player offers to switch to Auto.
-- It needs CPU: roughly one fast core per stream at 1080p. `HLS_JOBS` (default 2) limits how many pieces are converted at once, and `HLS_CACHE_MB` (default 256) keeps recent pieces in memory so rewinding is free. If the VPS is too slow, Auto simply settles on a lower level.
-- It uses `hls.js`, so run `npm install` once after updating (use `npm install`, not `npm ci`, because the lock file changed).
+```
+npm run dist
+```
 
-## Making it fast
-Speed from VPS to your screen is the lowest of four things: the disk, this app, the VPS network port, and your own internet line. The app handles the first two; the Settings → Speed test button shows you the other two.
+The installer appears in `release/` (`Cinema-Setup-1.0.0.exe`). Build it on Windows to get the Windows ffmpeg inside.
+`npm run dist:mac` and `npm run dist:linux` do the same on those systems.
+The installer is not code-signed, so Windows SmartScreen shows a warning the first time ("More info" > "Run anyway").
 
-1. **Run the app on the VPS itself.** When `VPS_HOST` is one of the machine's own addresses (or you set `MODE=local`) the app reads the disk directly and skips SSH completely. The server log says `LOCAL disk mode` when this is active.
-2. If it runs elsewhere, SSH mode now keeps many read requests in flight and uses the fastest cipher, instead of one request at a time.
-3. **Turbo download** (Settings → Downloads): big files are fetched over 2–16 parallel connections and written straight to disk. A single TCP connection often cannot fill a fast line over long distances; several can. Works in Chrome, Edge and Opera over HTTPS or localhost. Other browsers fall back to a normal download.
-4. Turn on **BBR** on the VPS, which helps every single-connection transfer:
-   ```
-   echo "net.core.default_qdisc=fq" | sudo tee -a /etc/sysctl.conf
-   echo "net.ipv4.tcp_congestion_control=bbr" | sudo tee -a /etc/sysctl.conf
-   sudo sysctl -p
-   ```
-5. Use Caddy (below) rather than a tunnel for the best speed. Cloudflare tunnels and similar add limits.
+## First start
 
-About 10 Gbps: no app can promise that. It only happens if your VPS plan has a 10 Gbps port **and** your own connection and device can take it. Run the speed test to see what your real path delivers.
+1. Open **Servers** (the first start shows it automatically) and fill in your VPS address, user and SSH key (or password).
+2. Press **Test connection**, then **Save**.
+3. Your movies appear. Nothing is stored in the installer: keys and passwords are encrypted with your Windows account.
 
-## AI subtitles (optional)
-On the VPS: `pip install whisper-ctranslate2` (needs ffmpeg). Then use **Subtitles → Generate subtitles with AI** in the player. The first run downloads the model. On a CPU-only VPS a full movie can take from a few minutes to hours depending on the model (`WHISPER_MODEL=tiny|base|small`), and it runs at low priority so streaming keeps working.
+## What it does
 
-## Put it online (recommended: on the VPS itself, not Vercel)
-- Set `APP_PASSWORD` in `.env`, then run `npm run build && npm start` on the VPS (use pm2 or systemd).
-- HTTPS option 1: a domain (a free DuckDNS name works) pointing to the VPS, then Caddy:
-  `your.domain { reverse_proxy 127.0.0.1:3001 }` (certificates are automatic; ports 80 and 443 must be open).
-- HTTPS option 2, no domain: `cloudflared tunnel --url http://127.0.0.1:3001`.
-- No HTTPS at all: `ssh -i ~/.ssh/Traqor.pem -L 3001:127.0.0.1:3001 root@139.162.182.113`, then open http://localhost:3001.
+**Offline.** The save icon (or *Save for offline* inside the player) puts a movie or a whole folder in the download queue.
+Downloads resume after a break, can be limited in speed, scheduled for the night and paused when your monthly data budget is used.
+Thumbnails, seek previews and subtitles are saved too, so everything works with no internet.
+Your files go to `Videos\Cinema` (change it in Settings). **Storage** shows what takes space and can delete watched videos.
 
-## Needs on the VPS
-ffmpeg and ffprobe (conversions, thumbnails, subtitles; "Original" playback needs nothing). `zip` is optional (folder downloads). Whisper is optional (AI subtitles).
+**Smaller files.** When saving you can have the server make the file smaller first (720p, 480p, 360p; H.264, HEVC or AV1).
+This runs once on the VPS, then only the small file is downloaded. HEVC/AV1 appear only if both the server and this laptop support them.
+You can also mix 5.1 down to stereo with louder dialogue, or even out the loudness.
+
+**Less data when streaming.** *Data Saver* (Off / Balanced / Low / Ultra) caps what Auto quality may pick, lowers the bitrate,
+stops downloading ahead while paused and skips the seek previews. *Audio only* uses almost no data.
+With a monthly budget set, Data Saver moves to Low at 80%.
+
+**Sound.** The volume slider goes to 500% (mouse wheel and arrow keys too). A limiter and soft clipper keep it clean at high volume.
+There is a 10-band equalizer with presets, dialogue boost, night mode, mono and an output device picker, remembered per video.
+5.1 audio is mixed to stereo with the centre channel (voices) lifted. Very loud volume can hurt your ears: by default the volume goes back to 100% when the app restarts.
+
+**Player.** Keyboard: Space, arrows, F, C (subtitles), G (sound), A (screen shape), `<` `>` (speed up to 4x), B (A-B loop), D (bookmark), E (next frame), 0-9 (jump), N (next), I (stats).
+Chapters and *Skip intro*, bookmarks, online subtitle search (OpenSubtitles), AI subtitles (Whisper on the VPS), picture-in-picture, mini player that stays on top, screenshots,
+rotate/flip/zoom/colors, sleep timer, media keys, and the laptop stays awake while playing.
+*Open in another player* sends the video to VLC or any player you choose in Settings.
+
+**Library.** Favorites, filters (not watched / watched / favorites), "Surprise me", Continue watching, optional posters and descriptions (free TMDB key).
+
+## Open any video on your computer
+
+You can play videos that are not in your server library, and they are never copied or moved:
+
+- **Right-click a video in Explorer > Open with > Cinema**, or set Cinema as the default player for .mp4, .mkv and the others.
+- **Drag videos onto the Cinema window** or onto its icon.
+- **Open file…** in the sidebar, or press Ctrl+O.
+
+They appear under **Opened files** in the sidebar, so Next, Continue watching and subtitles (a .srt next to the video is found automatically) all work.
+Removing one from the list never deletes the video file. If Cinema is already running, the video opens in that window.
+
+## Updates
+
+The installed app can update itself from any web folder you control, for example one on your VPS.
+
+1. Build the installer with `npm run dist`.
+2. Upload these three files from `release/` to a folder on a web server: `Cinema-Setup-X.Y.Z.exe`, `Cinema-Setup-X.Y.Z.exe.blockmap` and `latest.yml`.
+3. In Cinema open **Settings > Updates** and enter that folder's address (for example `https://example.com/cinema/`).
+
+To publish a new version, raise `version` in `package.json`, run `npm run dist`, and upload the three new files over the old ones.
+Cinema checks a few seconds after it starts and every 6 hours, shows an **Update available** card, downloads when you press Download,
+and installs when you press **Restart and install** (or the next time you close the app). Nothing installs without you.
+Updates work in the installed app only, not with `npm run app`.
+
+## Offline playback and codecs
+
+The player is Chromium. It plays H.264/AAC/VP9/AV1 anywhere. HEVC needs a laptop that can decode it.
+AC3/DTS audio cannot be played by Chromium, so the player offers *Original + fixed audio*: online the VPS converts the sound,
+offline the laptop does it with the ffmpeg that comes with the app. Compressed downloads already contain AAC sound.
+
+## Security
+
+- The desktop app only listens on `127.0.0.1` and requires a secret that only its own window has.
+- SSH keys and passwords are encrypted with the operating system's keychain (Electron safeStorage).
+- The browser version stores them obscured, not encrypted. Keep it on localhost, and set `APP_PASSWORD` if you ever expose it.
+
+## Where things live
+
+| What | Where |
+|---|---|
+| Settings, servers, queue, caches | `%APPDATA%\Cinema\data` |
+| Downloaded videos | `Videos\Cinema` |
+| Opened files list | `%APPDATA%\Cinema\data\opened.json` (only the list, never the videos) |
+| Server code | `server/` (index.ts routes, downloads.ts queue, backend.ts SSH/SFTP, store.ts settings) |
+| Web app | `src/` |
+| Desktop shell | `electron/` |
+
+To rename the app, change `APP_NAME` in `src/lib.tsx`, `productName` in `package.json` and `<title>` in `index.html`.
