@@ -77,6 +77,12 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.png",
@@ -94,6 +100,14 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Cinema",
       "artifactName": "Cinema-Setup-${version}.${ext}"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "warningsAsErrors": false,
+      "artifactName": "Cinema-${version}.${ext}"
     },
     "mac": {
       "target": [
