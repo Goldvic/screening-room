@@ -214,7 +214,11 @@ function Library() {
     if (root === null) return;
     setStatus('loading');
     try { setItems(await api<Entry[]>('list', { root, path: dir })); setStatus('ready'); }
-    catch (e: any) { setErr(e.message); setStatus('error'); }
+    catch (e: any) {
+      // The folder is gone (moved, deleted or a bad link): step back to the nearest folder that exists instead of a dead end.
+      if (dir && /not found/i.test(e.message)) { setDir(dir.split('/').slice(0, -1).join('/')); return; }
+      setErr(e.message); setStatus('error');
+    }
   }, [root, dir]);
 
   useEffect(() => { loadRoots(); loadProg(); loadSrv(); loadCaps(); }, [loadRoots, loadProg, loadSrv, loadCaps]);

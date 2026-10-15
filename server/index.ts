@@ -84,11 +84,15 @@ export async function start(opts: StartOpts = {}) {
   const dropBackend = (id: string) => { backends.get(id)?.close(); backends.delete(id); rootsCache.delete(id); remoteCaps.delete(id); };
 
   async function detectRoots(s: Server, B: Backend): Promise<Root[]> {
-    if (s.roots?.length) return s.roots;
+    // Only the Downloads folder is ever read. Any "exports" folder (zip packages made by the bot) is ignored.
+    if (s.roots?.length) {
+      const keep = s.roots.filter((r) => !/(^|[\\/])exports?$/i.test(r.dir.replace(/\/+$/, '')) && !/^exports?$/i.test(r.name.trim()));
+      if (keep.length) return keep;
+    }
     if (!s.container) throw new HttpError(400, 'No media folders set for this server. Edit the server and add one.');
     const src = (await runText(B, `docker inspect ${sh(s.container)} --format '{{range .Mounts}}{{if eq .Destination "/app/data"}}{{.Source}}{{end}}{{end}}'`)).trim();
     if (!src) throw new HttpError(400, `Could not find the data folder of container "${s.container}". Add the media folders by hand in the server settings.`);
-    return [{ name: 'Downloads', dir: `${src}/downloads` }, { name: 'Exports', dir: `${src}/exports` }];
+    return [{ name: 'Downloads', dir: `${src}/downloads` }];
   }
   async function rootsOf(s: Server): Promise<Root[]> {
     const hit = rootsCache.get(s.id);

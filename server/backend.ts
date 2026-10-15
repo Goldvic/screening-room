@@ -37,8 +37,16 @@ export function makeLocalBackend(opts: { shell?: boolean } = {}): Backend {
       const names = await fs.promises.readdir(p);
       const out = await Promise.all(names.map(async (name) => {
         try {
-          const s = await fs.promises.stat(path.join(p, name));
-          return { name, dir: s.isDirectory(), size: s.size, mtime: Math.floor(s.mtimeMs / 1000) };
+          const full = path.join(p, name);
+          const l = await fs.promises.lstat(full);
+          // A symlinked folder is the usual cause of endless "Season 03/Season 03/Season 03" nesting
+          // (a link that points back into itself), so linked folders are never listed or followed.
+          if (l.isSymbolicLink()) {
+            const s = await fs.promises.stat(full);
+            if (s.isDirectory()) return null;
+            return { name, dir: false, size: s.size, mtime: Math.floor(s.mtimeMs / 1000) };
+          }
+          return { name, dir: l.isDirectory(), size: l.size, mtime: Math.floor(l.mtimeMs / 1000) };
         } catch { return null; }
       }));
       return out.filter((x): x is Entry => !!x);
