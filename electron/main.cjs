@@ -170,6 +170,10 @@ ipcMain.handle('select-file', async (_e, filters) => {
   const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'showHiddenFiles'], filters: Array.isArray(filters) ? filters : undefined });
   return r.canceled ? null : r.filePaths[0];
 });
+ipcMain.handle('select-files', async (_e, filters) => {
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections', 'showHiddenFiles'], filters: Array.isArray(filters) ? filters : undefined });
+  return r.canceled ? [] : r.filePaths;
+});
 ipcMain.handle('select-folder', async () => {
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
   return r.canceled ? null : r.filePaths[0];

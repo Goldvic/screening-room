@@ -30,6 +30,7 @@ export const VIDEO_EXTS = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'm4v'];
 // The desktop app (Electron) exposes a small bridge; in a normal browser it is undefined.
 export type Bridge = {
   selectFile(filters?: { name: string; extensions: string[] }[]): Promise<string | null>;
+  selectFiles(filters?: { name: string; extensions: string[] }[]): Promise<string[]>;
   selectFolder(): Promise<string | null>;
   powerSave(on: boolean): Promise<void>;
   miniPlayer(on: boolean): Promise<void>;
@@ -149,7 +150,7 @@ export const SettingsCtx = createContext<{ s: Settings; set: (p: Partial<Setting
 export type Fx = { eq: number[]; dialogue: boolean; night: boolean; mono: boolean };
 export type Bookmark = { t: number; label: string };
 export type SavedList = { id: string; name: string; root: string; dir: string; items: string[] };
-export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]>; playlists?: SavedList[] };
+export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]>; playlists?: SavedList[]; intros?: Record<string, { start: number; end: number }> };
 export const PrefsCtx = createContext<{ prefs: Prefs; setPref: <K extends keyof Prefs>(k: K, v: Prefs[K]) => void }>({ prefs: {}, setPref: () => {} });
 
 // ---------- helpers ----------

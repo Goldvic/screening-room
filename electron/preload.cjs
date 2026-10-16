@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('cinema', {
   version: ipcRenderer.sendSync('app-version'),
   selectFile: (filters) => ipcRenderer.invoke('select-file', filters),
+  selectFiles: (filters) => ipcRenderer.invoke('select-files', filters),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   powerSave: (on) => ipcRenderer.invoke('power-save', !!on),
   miniPlayer: (on) => ipcRenderer.invoke('mini-player', !!on),

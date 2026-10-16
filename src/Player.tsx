@@ -13,6 +13,7 @@ type OsHit = { id: number; name: string; lang: string; downloads: number };
 type Props = {
   root: number; dir: string; name: string; videos: string[]; pkey: string; saved?: Prog;
   offline: boolean; opened?: boolean; saver: number; caps: Caps | null; playlist?: boolean;
+  floating?: boolean; onFloat?: (on: boolean) => void;
   onClose: () => void; onNext: (n: string) => void; onDelete: (n: string) => void;
   onDownload?: (n: string) => void; onStarted?: (n: string) => void;
 };
@@ -225,8 +226,18 @@ export default function Player(p: Props) {
   };
 
   const src = `/api/stream?${qs({ root: p.root, path, q, t: offset, a, sid })}`;
-  const masterUrl = `/api/hls/master.m3u8?${qs({ root: p.root, path, q, a, ds, sid })}`;
-  const vkey = hlsMode ? `hls:${q}:${a}:${ds}` : src;
+  // Locked sizes load every size and pick one in the player, so changing size keeps what is already buffered.
+  const mq = q === 'auto' ? 'auto' : 'all';
+  const masterUrl = `/api/hls/master.m3u8?${qs({ root: p.root, path, q: mq, a, ds, sid })}`;
+  const vkey = hlsMode ? `hls:${mq}:${a}:${ds}` : src;
+  const qRef = useRef(q); qRef.current = q;
+  const applySize = (h: Hls) => {
+    if (qRef.current === 'auto') { h.loadLevel = -1; return; }
+    const want = Number(qRef.current); let idx = -1;
+    h.levels.forEach((l, i) => { if (l.height <= want && (idx < 0 || l.height > h.levels[idx].height)) idx = i; });
+    h.loadLevel = idx < 0 ? 0 : idx;
+  };
+  useEffect(() => { if (hlsRef.current?.levels?.length) applySize(hlsRef.current); }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!hlsMode || nativeHls) return;
     const v = vref.current;
@@ -238,6 +249,7 @@ export default function Player(p: Props) {
       maxBufferLength: ds ? 20 : 40, backBufferLength: ds ? 10 : 30,
     });
     hlsRef.current = hls;
+    hls.on(Hls.Events.MANIFEST_PARSED, () => applySize(hls));
     hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => setHlsH(hls.levels[d.level]?.height ?? 0));
     let netTries = 0, mediaTries = 0;
     hls.on(Hls.Events.ERROR, (_e, d) => {
@@ -496,6 +508,7 @@ export default function Player(p: Props) {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (p.floating) return;
       const v = vref.current;
       if (!v) return;
       wake();
@@ -558,7 +571,10 @@ export default function Player(p: Props) {
   const cbtn = (m: MenuId, icon: string, title: string, on = false) => (
     <button className={menu === m ? 'cbtn on' : on ? 'cbtn lit' : 'cbtn'} title={title} aria-label={title} onClick={() => toggle(m)}><Icon n={icon} s={20} /></button>
   );
-  const intro = !s.skipIntro || !title.episode ? undefined : chapters.find((c) => /\b(intro|recap|previously)\b/i.test(c.title) && !/credit/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
+  const ikey = p.pkey.slice(0, p.pkey.length - p.name.length);
+  const mark = prefs.intros?.[ikey];
+  const chapIntro = !s.skipIntro ? undefined : chapters.find((c) => /\b(intro|recap|previously)\b/i.test(c.title) && !/credit/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
+  const intro = !s.skipIntro ? undefined : chapIntro ?? (mark && pos >= mark.start - 1 && pos < mark.end - 1 ? { end: mark.end, title: 'Intro', start: mark.start } : undefined);
   const qualityList = QUALITIES.filter((o) => {
     if (p.offline) return o.id === 'orig' || o.id === 'audio' || (o.id === 'remux' && !!p.caps?.local.ffmpeg);
     const h = Number(o.id); // hide sizes bigger than the video itself
@@ -567,7 +583,7 @@ export default function Player(p: Props) {
   const volPct = Math.round((muted ? 0 : vol) * 100);
 
   return (
-    <div className={'theatre' + (show ? ' ui' : '') + (mini ? ' mini' : '')} ref={box} onMouseMove={wake} onTouchStart={wake}
+    <div className={'theatre' + (show ? ' ui' : '') + (mini ? ' mini' : '') + (p.floating ? ' float' : '')} ref={box} onMouseMove={wake} onTouchStart={wake}
       onWheel={(e) => { if (menu) return; setMuted(false); setVol((x) => Math.min(maxVol, Math.max(0, +(x + (e.deltaY < 0 ? 0.05 : -0.05)).toFixed(2)))); }}>
       <div className="stage" ref={stage}>
         <div className="vwrap">
@@ -675,6 +691,14 @@ export default function Player(p: Props) {
             <span>Playback keeps pausing to buffer. Auto quality adapts to your connection.</span>
             <button className="btn" onClick={() => reload({ q: 'auto' }, false)}>Switch to Auto</button>
             <button className="btn ghost" onClick={() => { setSuggest(false); dismissed.current = true; }}>Not now</button>
+          </div>
+        )}
+        {p.floating && (
+          <div className="floatbar" onClick={(e) => e.stopPropagation()}>
+            <span className="fl-t" title={p.name}>{p.name.replace(/\.[^.]+$/, '')}</span>
+            <button className="cbtn sm" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} s={16} /></button>
+            <button className="cbtn sm" onClick={() => p.onFloat?.(false)} aria-label="Expand" title="Back to full screen"><Icon n="full" s={16} /></button>
+            <button className="cbtn sm" onClick={p.onClose} aria-label="Close player"><Icon n="close" s={16} /></button>
           </div>
         )}
         {next && s.autoNext && !noNext && !failed && total > 0 && total - pos <= 20 && total - pos > 0 && (
@@ -850,6 +874,10 @@ export default function Player(p: Props) {
                 <Opt on={sleep === null} label="Off" onClick={() => setSleep(null)} />
                 {[15, 30, 60].map((m) => <Opt key={m} on={typeof sleep === 'number' && Math.abs(sleep - Date.now() - m * 60000) < 90000} label={`${m} minutes`} onClick={() => { setSleep(Date.now() + m * 60000); flash(`Will pause in ${m} minutes`); }} />)}
                 <Opt on={sleep === 'end'} label="After this video" onClick={() => setSleep('end')} />
+                <div className="msec">Skip intro for this folder</div>
+                <button className="opt" onClick={() => { setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: Math.floor(pos), end: mark && mark.end > pos ? mark.end : Math.floor(pos) + 90 } }); flash('Intro starts here'); }}><span><b>Intro starts here</b><small>{mark ? `Now ${clock(mark.start)} to ${clock(mark.end)}` : 'Pause at the start of the intro, then press this'}</small></span></button>
+                <button className="opt" onClick={() => { const st = mark && mark.start < pos ? mark.start : Math.max(0, Math.floor(pos) - 90); setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: st, end: Math.floor(pos) } }); flash('Skip intro is set for every video in this folder'); }}><span><b>Intro ends here</b><small>Every video in this folder then gets a Skip intro button</small></span></button>
+                {mark && <button className="opt" onClick={() => { const n = { ...(prefs.intros ?? {}) }; delete n[ikey]; setPref('intros', n); }}><span><b>Clear this folder’s intro</b></span></button>}
                 <div className="msec">Tools</div>
                 <button className="opt" onClick={shot}><span><b><Icon n="camera" s={15} /> Save screenshot (S)</b></span></button>
                 <button className="opt" onClick={pip}><span><b><Icon n="pip" s={15} /> Picture-in-picture (P)</b></span></button>
@@ -900,6 +928,8 @@ export default function Player(p: Props) {
             <span className="grow" />
             <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
             {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
+            <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
+            {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
             {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
             <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
           </div>

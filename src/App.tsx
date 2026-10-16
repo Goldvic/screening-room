@@ -39,7 +39,7 @@ export default function App() {
   useEffect(() => {
     api<Record<string, any>>('prefs').then((d) => {
       if (d.settings) setSettings((o) => ({ ...DEFAULTS, ...o, ...d.settings }));
-      setPrefs({ favs: d.favs, audio: d.audio, bookmarks: d.bookmarks, playlists: d.playlists });
+      setPrefs({ favs: d.favs, audio: d.audio, bookmarks: d.bookmarks, playlists: d.playlists, intros: d.intros });
     }).catch(() => {}).finally(() => setReady(true));
   }, []);
   useEffect(() => { document.documentElement.dataset.theme = settings.theme; }, [settings.theme]);
@@ -174,6 +174,7 @@ function Library() {
   const net = useNet(null, 2000);
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
+  const [floating, setFloating] = useState(false);
   const [view, setView] = useState<'home' | 'library' | 'playlists'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
   const [nameAsk, setNameAsk] = useState<{ title: string; value: string; label: string; go: (v: string) => void } | null>(null);
@@ -222,6 +223,12 @@ function Library() {
   }, [play, panel]);
 
   const refreshAll = () => Promise.all([load(), loadRoots(), loadProg()]);
+  const refreshRef = useRef(refreshAll); refreshRef.current = refreshAll;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r')) { e.preventDefault(); refreshRef.current(); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   // ----- videos from outside the library: Explorer "Open with", double-click, drag and drop, Open file -----
   const openLocal = async (files: string[]) => {
     const list = files.filter((f) => f && VIDEO.test(f));
@@ -238,8 +245,8 @@ function Library() {
   const openRef = useRef(openLocal);
   openRef.current = openLocal;
   const pickFile = async () => {
-    const f = await bridge?.selectFile([{ name: 'Videos', extensions: VIDEO_EXTS }]);
-    if (f) openLocal([f]);
+    const f = await bridge?.selectFiles([{ name: 'Videos', extensions: VIDEO_EXTS }]);
+    if (f?.length) openLocal(f);
   };
   useEffect(() => {
     if (!bridge) return;
@@ -283,6 +290,7 @@ function Library() {
     setPref('favs', f.includes(k) ? f.filter((x) => x !== k) : [...f, k]);
   };
   const playOffline = (destRel: string) => {
+    setFloating(false);
     const parts = destRel.split('/');
     setPanel(null); setRoot(OFFLINE_ID); setDir(parts.slice(0, -1).join('/')); setPlay(parts[parts.length - 1]);
   };
@@ -308,6 +316,7 @@ function Library() {
     setPanel(null); setPlaylist(l.items); startPlay(l.items[0], r.id, l.dir, true);
   };
   const startPlay = async (name: string, r: number = rid, d: string = dir, keepList = false) => {
+    setFloating(false);
     if (!keepList) setPlaylist(null);
     const rt = roots.find((x) => x.id === r);
     if (rt && !rt.offline && !keepList) {
@@ -573,6 +582,7 @@ function Library() {
             <select value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
               <option value="name">Name</option><option value="new">Newest</option><option value="size">Largest</option>
             </select>
+            <button className="btn ghost" onClick={() => { refreshAll().then(() => flash('Refreshed')); }} title="Refresh (F5)"><Icon n="rotate" s={16} /> Refresh</button>
             {videos.length > 1 && <button className={selecting ? 'btn' : 'btn ghost'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Pick several videos to play as a playlist"><Icon n="list" s={16} /> {selecting ? 'Done' : 'Select'}</button>}
             <span className="seg" role="group" aria-label="View">
               <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
@@ -587,6 +597,7 @@ function Library() {
             <span className="inline">
               <button className="btn ghost" onClick={() => setSel(videos)}>Select all</button>
               <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play as playlist</button>
+              <button className="btn ghost danger" disabled={!sel.length} onClick={() => { const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete</button>
               <button className="btn ghost" disabled={!sel.length} onClick={savePlaylist}><Icon n="list" s={15} /> Save playlist</button>
               {!offline && <button className="btn ghost" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Save offline</button>}
               <button className="btn ghost" onClick={endSelect}>Cancel</button>
@@ -666,7 +677,7 @@ function Library() {
                     </span>
                     {p?.watched && <span className="tag"><Icon n="check" s={13} /> Watched</span>}
                   </button>
-                  {fileActions(it, isVid, p)}
+                  <span className="r-act">{fileActions(it, isVid, p)}</span>
                 </li>
               );
             })}
@@ -678,9 +689,9 @@ function Library() {
 
       {play && root !== null && (
         <Player
-          key={`${root}:${join(dir, play)}`} root={root} dir={dir} name={play} videos={playlist ?? videos} playlist={!!playlist}
+          key={`${root}:${join(dir, play)}`} root={root} dir={dir} name={play} videos={playlist ?? videos} playlist={!!playlist} floating={floating} onFloat={setFloating}
           pkey={pkey(play)} saved={prog[pkey(play)]} offline={offline} opened={opened} saver={saver} caps={caps}
-          onClose={() => { setPlay(null); setPlaylist(null); setTimeout(loadProg, 500); }}
+          onClose={() => { setPlay(null); setPlaylist(null); setFloating(false); setTimeout(loadProg, 500); }}
           onNext={setPlay} onStarted={onStarted}
           onDownload={(n) => saveOffline([n], items.find((i) => i.name === n)?.size ?? 0)}
           onDelete={(n) => { setPlay(null); confirmDelete([n], `“${n}”`); }}

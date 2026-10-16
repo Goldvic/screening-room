@@ -407,6 +407,7 @@ export async function start(opts: StartOpts = {}) {
   // Which renditions to offer. "auto" = every level up to the source height (and the Data Saver cap); a number = just that one.
   function variantsFor(pr: Probe, q: string, ds: number) {
     let vs = LADDER.filter((l) => l.h <= pr.height * 1.1);
+    if (q === 'all') return vs; // every size, so the player can change size without throwing away what it has buffered
     const want = Number(q);
     const explicit = Number.isFinite(want) && want > 0;
     if (!explicit) { const capped = vs.filter((l) => l.h <= SAVER[ds].cap); vs = capped.length ? capped : vs.slice(0, 1); }
