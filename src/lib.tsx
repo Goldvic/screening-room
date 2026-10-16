@@ -113,7 +113,7 @@ export const SAVER: { id: number; label: string; hint: string }[] = [
 ];
 export const MAX_VOLS = [100, 200, 300, 500];
 export const ACCENTS: Record<string, string> = {
-  Amber: '#f2b84b', Violet: '#a592ff', Emerald: '#3fd6a0', Rose: '#ff7a93', Sky: '#4cb8ff',
+  Violet: '#8b7bff', Teal: '#2dd4bf', Amber: '#f2b84b', Emerald: '#3fd6a0', Rose: '#ff7a93', Sky: '#4cb8ff',
 };
 
 // ---------- settings (saved in this browser) ----------
@@ -123,16 +123,16 @@ export type Settings = {
   turbo: boolean; conns: number; view: 'grid' | 'list'; thumbs: boolean;
   saver: number; saverAuto: boolean;
   vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
-  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean;
+  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean; skipIntro: boolean; theme: 'dark' | 'light';
   posters: boolean; filter: 'all' | 'unwatched' | 'watched' | 'fav'; externalPlayer: string;
 };
 export const DEFAULTS: Settings = {
-  accent: 'Amber', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
+  accent: 'Violet', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
   autoSub: true, subSmart: true, subLang: 'en', subSize: 28, subColor: '#ffffff', subBg: 55,
   turbo: true, conns: 8, view: 'grid', thumbs: true,
   saver: 0, saverAuto: true,
   vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
-  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true,
+  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true, skipIntro: true, theme: 'dark',
   posters: false, filter: 'all', externalPlayer: '',
 };
 export function loadSettings(): Settings {
@@ -148,7 +148,8 @@ export const SettingsCtx = createContext<{ s: Settings; set: (p: Partial<Setting
 // Things kept on the server so they survive restarts (favourites, per-video sound, bookmarks).
 export type Fx = { eq: number[]; dialogue: boolean; night: boolean; mono: boolean };
 export type Bookmark = { t: number; label: string };
-export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]> };
+export type SavedList = { id: string; name: string; root: string; dir: string; items: string[] };
+export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]>; playlists?: SavedList[] };
 export const PrefsCtx = createContext<{ prefs: Prefs; setPref: <K extends keyof Prefs>(k: K, v: Prefs[K]) => void }>({ prefs: {}, setPref: () => {} });
 
 // ---------- helpers ----------
@@ -213,6 +214,7 @@ export function parseCues(text: string): Cue[] {
 
 // ---------- icons ----------
 const ICONS: Record<string, string> = {
+  home: 'M3 11l9-8 9 8v10h-6v-6H9v6H3z',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   film: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M16 9h4M4 15h4M16 15h4',
   down: 'M12 4v11m0 0l-4-4m4 4l4-4M5 19h14', trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',

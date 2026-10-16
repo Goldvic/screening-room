@@ -117,6 +117,7 @@ export default function Player(p: Props) {
   const [sprite, setSprite] = useState<Sprite | null>(null);
   const [barW, setBarW] = useState(0);
   const [suggest, setSuggest] = useState(false);
+  const [noNext, setNoNext] = useState(false);
   const [ab, setAb] = useState<{ a: number | null; b: number | null }>({ a: null, b: null });
   const net = useNet(sid, 1000);
   // "Save while watching": the original is copied to this laptop in the background; the bar shows how much is saved.
@@ -557,7 +558,7 @@ export default function Player(p: Props) {
   const cbtn = (m: MenuId, icon: string, title: string, on = false) => (
     <button className={menu === m ? 'cbtn on' : on ? 'cbtn lit' : 'cbtn'} title={title} aria-label={title} onClick={() => toggle(m)}><Icon n={icon} s={20} /></button>
   );
-  const intro = chapters.find((c) => /intro|opening|recap|previously/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
+  const intro = !s.skipIntro || !title.episode ? undefined : chapters.find((c) => /\b(intro|recap|previously)\b/i.test(c.title) && !/credit/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
   const qualityList = QUALITIES.filter((o) => {
     if (p.offline) return o.id === 'orig' || o.id === 'audio' || (o.id === 'remux' && !!p.caps?.local.ffmpeg);
     const h = Number(o.id); // hide sizes bigger than the video itself
@@ -587,7 +588,7 @@ export default function Player(p: Props) {
             onEnded={() => {
               post(true);
               if (sleep === 'end') { setSleep(null); flash('Sleep timer: stopped'); return; }
-              if (s.autoNext && next) p.onNext(next);
+              if (s.autoNext && next && !noNext) p.onNext(next);
             }}
             onError={() => setFailed(true)}
           />
@@ -612,6 +613,7 @@ export default function Player(p: Props) {
         {intro && <button className="skipintro" onClick={() => seekTo(intro.end)}><Icon n="skip" s={16} /> Skip intro</button>}
 
         <div className="hud top">
+          <button className="cbtn" onClick={p.onClose} title="Back (Esc)" aria-label="Back to library"><Icon n="back" s={22} /></button>
           <div className="ttl">
             <strong className="full" title={p.name}>{p.name.replace(/\.[^.]+$/, '')}</strong>
             <span>
@@ -632,7 +634,6 @@ export default function Player(p: Props) {
             <b>{p.offline ? 'Offline' : net.ok ? rate(net.speed) : 'offline'}</b>
             <span>{p.offline ? 'no data used' : `${bytes(net.bytes)} used`}</span>
           </button>
-          <button className="cbtn" onClick={p.onClose} title="Close (Esc)" aria-label="Close player"><Icon n="close" s={22} /></button>
         </div>
 
         {stats && (
@@ -676,6 +677,13 @@ export default function Player(p: Props) {
             <button className="btn ghost" onClick={() => { setSuggest(false); dismissed.current = true; }}>Not now</button>
           </div>
         )}
+        {next && s.autoNext && !noNext && !failed && total > 0 && total - pos <= 20 && total - pos > 0 && (
+          <div className="nextcard" onClick={(e) => e.stopPropagation()}>
+            <small>Next episode</small>
+            <strong>{next.replace(/\.[^.]+$/, '')}</strong>
+            <span className="inline"><button className="btn" onClick={() => p.onNext(next)}><Icon n="next" s={15} /> Play now</button><button className="btn ghost" onClick={() => setNoNext(true)}>Cancel</button></span>
+          </div>
+        )}
         {toast && <div className="ptoast">{toast}</div>}
 
         {menu && (
@@ -683,6 +691,11 @@ export default function Player(p: Props) {
             <div className="menu-h">
               <strong>{{ quality: 'Quality and data', speed: 'Speed', aspect: 'Screen shape', subs: 'Subtitles', audio: 'Audio track', sound: 'Sound', picture: 'Picture', more: 'More' }[menu]}</strong>
               <button className="cbtn sm" onClick={() => setMenu(null)} aria-label="Close menu"><Icon n="close" s={16} /></button>
+            </div>
+            <div className="menu-tabs" role="tablist">
+              {([['quality', 'Quality'], ['speed', 'Speed'], ['subs', 'Subtitles'], ...((info.audio?.length ?? 0) > 1 ? [['audio', 'Audio']] : []), ['sound', 'Sound'], ['picture', 'Picture'], ['aspect', 'Shape'], ['more', 'More']] as [MenuId, string][]).map(([id, l]) => (
+                <button key={id} role="tab" aria-selected={menu === id} className={menu === id ? 'on' : ''} onClick={() => (id === 'sound' ? (menu !== 'sound' && openSound()) : setMenu(id))}>{l}</button>
+              ))}
             </div>
 
             {menu === 'quality' && (
@@ -887,12 +900,7 @@ export default function Player(p: Props) {
             <span className="grow" />
             <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
             {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
-            {cbtn('sound', 'sliders', 'Sound: equalizer, dialogue boost (G)', needRig)}
-            {cbtn('speed', 'gauge', `Speed ${speed}×`)}
-            {cbtn('quality', 'film', 'Quality and Data Saver', ds > 0 && !p.offline)}
-            {cbtn('aspect', 'aspect', 'Screen shape (A)')}
-            {cbtn('picture', 'eye', 'Picture')}
-            {cbtn('more', 'more', 'More')}
+            {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
             <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
           </div>
         </div>

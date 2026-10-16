@@ -115,6 +115,12 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
               <button key={name} className={s.accent === name ? 'sw-c on' : 'sw-c'} style={{ background: c }} title={name} aria-label={name} onClick={() => set({ accent: name })} />
             ))}</span>
           </Field>
+          <Field label="Theme">
+            <span className="seg" role="group" aria-label="Theme">
+              <button className={s.theme === 'dark' ? 'on' : ''} onClick={() => set({ theme: 'dark' })}>Dark</button>
+              <button className={s.theme === 'light' ? 'on' : ''} onClick={() => set({ theme: 'light' })}>Light</button>
+            </span>
+          </Field>
           <Field label="Video thumbnails" hint="Made once on the server, then cached"><Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} /></Field>
         </section>
         )}
@@ -143,6 +149,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           <Field label="Default screen shape">
             <select value={s.aspect} onChange={(e) => set({ aspect: e.target.value })}>{ASPECTS.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}</select>
           </Field>
+          <Field label="Show “Skip intro”" hint="Only on episodes whose file has an intro or recap chapter"><Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} /></Field>
           <Field label="Play next episode automatically"><Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} /></Field>
           <Field label="Download the next episode while I watch" hint="Saves it for offline in the background"><Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} /></Field>
         </section>
