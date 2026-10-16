@@ -30,6 +30,7 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
   const [test, setTest] = useState<Test | null>(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const [showPw, setShowPw] = useState(false);
 
   const load = () => api<List>('servers').then((l) => { setList(l); if (!l.servers.length) setForm((f) => f ?? blank); }).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, []);
@@ -75,10 +76,8 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
     <div className={firstRun ? 'setup-card' : 'dialog wide'} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Servers">
       {firstRun ? (
         <div className="welcome">
-          <span className="lamp big" />
-          <h1>Welcome to {APP_NAME}</h1>
-          <p className="muted">Connect to the server where your movies are stored. You can also skip this and only watch what you have downloaded to this laptop.</p>
-          <button className="btn ghost" onClick={onOffline}>Skip: only use downloaded files</button>
+          <h2>Sign in to your server</h2>
+          <p className="muted small">Enter where your movies live. Your key or password is stored encrypted on this computer.</p>
         </div>
       ) : (
         <div className="dlg-head"><h3>Servers</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
@@ -128,7 +127,7 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
             </>
           ) : (
             <F label="Password" hint={list.servers.find((s) => s.id === form.id)?.hasPassword ? 'A password is saved. Leave empty to keep it.' : 'Stored encrypted by your operating system'}>
-              <input type="password" value={form.password} onChange={(e) => up({ password: e.target.value })} autoComplete="off" />
+              <span className="inline pw"><input type={showPw ? 'text' : 'password'} value={form.password} onChange={(e) => up({ password: e.target.value })} autoComplete="off" /><button type="button" className="btn ghost" onClick={() => setShowPw((x) => !x)}>{showPw ? 'Hide' : 'Show'}</button></span>
             </F>
           )}
           <F label="Docker container of the downloader bot" hint="Used to find the media folder automatically. Leave empty if you list folders below.">
@@ -154,14 +153,26 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
             <button className="btn ghost" onClick={() => { setForm(null); setTest(null); setErr(''); if (!list.servers.length && firstRun) setForm(blank); }} disabled={!list.servers.length && !firstRun}>Cancel</button>
             <span className="inline">
               <button className="btn ghost" onClick={runTest} disabled={!form.host.trim() || busy !== ''}>{busy === 'test' ? 'Testing…' : 'Test connection'}</button>
-              <button className="btn" onClick={save} disabled={!form.host.trim() || busy !== ''}>{busy === 'save' ? 'Saving…' : 'Save'}</button>
+              <button className="btn" onClick={save} disabled={!form.host.trim() || busy !== ''}>{busy === 'save' ? (firstRun ? 'Connecting…' : 'Saving…') : firstRun ? 'Connect' : 'Save'}</button>
             </span>
           </div>
+          {firstRun && <button className="skip-link" onClick={onOffline}>Skip for now and only watch downloaded files</button>}
         </div>
       )}
       {!form && err && <p className="err-t">{err}</p>}
     </div>
   );
 
-  return firstRun ? <div className="setup-wrap">{inner}</div> : <div className="scrim" onClick={onClose}>{inner}</div>;
+  const hero = (
+    <aside className="login-hero">
+      <div className="brand"><span className="lamp" />{APP_NAME}</div>
+      <h1>Your private<br />screening room.</h1>
+      <ul>
+        <li>Stream from your own server</li>
+        <li>Save while you watch, replay offline</li>
+        <li>Build playlists in two clicks</li>
+      </ul>
+    </aside>
+  );
+  return firstRun ? <div className="setup-wrap login">{hero}{inner}</div> : <div className="scrim" onClick={onClose}>{inner}</div>;
 }

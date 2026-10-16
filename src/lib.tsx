@@ -123,7 +123,7 @@ export type Settings = {
   turbo: boolean; conns: number; view: 'grid' | 'list'; thumbs: boolean;
   saver: number; saverAuto: boolean;
   vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
-  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean;
+  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean;
   posters: boolean; filter: 'all' | 'unwatched' | 'watched' | 'fav'; externalPlayer: string;
 };
 export const DEFAULTS: Settings = {
@@ -132,7 +132,7 @@ export const DEFAULTS: Settings = {
   turbo: true, conns: 8, view: 'grid', thumbs: true,
   saver: 0, saverAuto: true,
   vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
-  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false,
+  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true,
   posters: false, filter: 'all', externalPlayer: '',
 };
 export function loadSettings(): Settings {

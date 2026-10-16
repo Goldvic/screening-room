@@ -814,7 +814,10 @@ export async function start(opts: StartOpts = {}) {
     const roots: any[] = await Promise.all(remote.map(async (r, id) => {
       let free = 0, total = 0;
       try {
-        const f = (await runText(backendOf(s!), `df -P -k ${sh(r.dir)} | tail -1`)).trim().split(/\s+/);
+        const f = (await Promise.race([
+          runText(backendOf(s!), `df -P -k ${sh(r.dir)} | tail -1`),
+          new Promise<string>((_, no) => setTimeout(() => no(new Error('slow')), 4000)),
+        ])).trim().split(/\s+/);
         total = Number(f[1]) * 1024; free = Number(f[3]) * 1024;
       } catch { /* folder may not exist yet */ }
       return { id, name: r.name, dir: r.dir, free, total };
@@ -1099,6 +1102,33 @@ export async function start(opts: StartOpts = {}) {
     const r = await resolve(req.query);
     const q = String(req.query.q ?? 'orig');
     const sid = sidOf(req);
+    if (q === 'orig' && !r.offline) {
+      // Same file already saved (or being saved) on this laptop: play it from here instead of pulling the bytes from the server again.
+      const it = dl.list().find((i) => i.rootName === r.root.name && i.rel === r.rel && i.profile === 'orig');
+      if (it) {
+        const dest = path.join(store.settings().downloadDir, ...it.dest.split('/'));
+        if (it.state === 'done' && fs.existsSync(dest)) return serveFile(req, res, offlineB, dest, false, sid, false);
+        const part = dest + '.part';
+        if (['downloading', 'paused', 'queued', 'finalizing'].includes(it.state) && it.size > 0 && fs.existsSync(part)) {
+          const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+          const start = m && m[1] ? +m[1] : 0;
+          const want = m && m[2] ? +m[2] : it.size - 1;
+          const end = Math.min(want, it.done - 1);
+          if (!(m && !m[1] && m[2]) && end >= start && (end - start >= 65535 || end === want)) {
+            req.socket.setNoDelay(true);
+            res.writeHead(206, {
+              'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${it.size}`,
+              'Content-Type': MIME[path.extname(dest).toLowerCase()] ?? 'application/octet-stream',
+            });
+            const rs = fs.createReadStream(part, { start, end });
+            rs.on('error', () => res.destroy());
+            rs.pipe(res);
+            res.on('close', () => rs.destroy());
+            return;
+          }
+        }
+      }
+    }
     if (q === 'orig') return serveFile(req, res, r.B, r.full, false, sid, !r.offline);
     const t = Math.max(0, Number(req.query.t) || 0);
     const a = Math.max(0, Math.floor(Number(req.query.a)) || 0);
@@ -1228,6 +1258,24 @@ export async function start(opts: StartOpts = {}) {
     else if (a === 'remove') dl.remove(id); else if (a === 'start') dl.startNow(id);
     else throw new HttpError(400, 'Unknown action');
     res.json({ ok: true });
+  }));
+
+  // Is this server video already (fully or partly) saved on the laptop? Used for "save while watching" and to prefer the saved copy.
+  app.get('/api/saved', h(async (req, res) => {
+    const r = await resolve(req.query);
+    if (r.offline) return res.json({ state: 'none' });
+    const item = dl.list().filter((i) => i.rootName === r.root.name && i.rel === r.rel).sort((a, b) => b.created - a.created)[0];
+    const exists = (rel: string) => { try { return fs.statSync(path.join(store.settings().downloadDir, ...rel.split('/'))).isFile(); } catch { return false; } };
+    if (item) {
+      if (item.state === 'done' && exists(item.dest)) return res.json({ state: 'done', dest: item.dest, done: item.size, size: item.size });
+      if (item.state !== 'cancelled' && item.state !== 'error') return res.json({ state: item.state, done: item.done, size: item.size, speed: item.speed });
+    }
+    // The queue entry may have been cleared: the saved file still knows where it came from.
+    for (const f of walkOffline(store.settings().downloadDir)) {
+      const o = readMeta(f.rel)?.origin;
+      if (o && o.rootName === r.root.name && o.rel === r.rel) return res.json({ state: 'done', dest: f.rel, done: f.size, size: f.size });
+    }
+    res.json({ state: 'none' });
   }));
 
   // ---------- storage manager ----------

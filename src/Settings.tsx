@@ -51,12 +51,19 @@ type Srv = {
   downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string };
   budgetGB: number; autoDeleteDays: number; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
 };
+type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app';
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'look', label: 'Appearance', icon: 'eye' }, { id: 'play', label: 'Playback & sound', icon: 'play' },
+  { id: 'subs', label: 'Subtitles', icon: 'cc' }, { id: 'data', label: 'Data & speed', icon: 'bolt' },
+  { id: 'offline', label: 'Offline & downloads', icon: 'save' }, { id: 'app', label: 'App & servers', icon: 'server' },
+];
 const LIMITS = [0, 250, 500, 1000, 2000, 5000, 10000];
 
 export default function SettingsDialog({ onClose, mode, prog, onStorage, onServers, onSaved }: {
   onClose: () => void; mode: string; prog: Record<string, Prog>; onStorage: () => void; onServers: () => void; onSaved: () => void;
 }) {
   const { s, set } = useContext(SettingsCtx);
+  const [tab, setTab] = useState<Tab>('look');
   const [srv, setSrv] = useState<Srv | null>(null);
   const [osPass, setOsPass] = useState('');
   const [t, setT] = useState<{ running: boolean; live: number; res?: { avg: number; peak: number; bytes: number }; err?: string }>({ running: false, live: 0 });
@@ -92,9 +99,15 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
+      <div className="dialog wide settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
         <div className="dlg-head"><h3>Settings</h3><button className="icon" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button></div>
+        <div className="set-layout">
+        <nav className="set-nav" aria-label="Settings sections">
+          {TABS.map((x) => <button key={x.id} className={tab === x.id ? 'on' : ''} onClick={() => setTab(x.id)}><Icon n={x.icon} s={16} /> {x.label}</button>)}
+        </nav>
+        <div className="set-body">
 
+        {tab === 'look' && (
         <section>
           <h4>Look</h4>
           <Field label="Accent color">
@@ -104,7 +117,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           </Field>
           <Field label="Video thumbnails" hint="Made once on the server, then cached"><Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} /></Field>
         </section>
+        )}
 
+        {tab === 'data' && (
         <section>
           <h4>Data Saver</h4>
           <p className="muted small">Lowers how much data streaming uses. It caps the quality that Auto may choose and squeezes the bitrate. It does not change Original playback or downloads.</p>
@@ -117,7 +132,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           </Field>
           <Field label="Switch to Low at 80% of the budget" hint="Automatically, until the month ends"><Toggle on={s.saverAuto} label="Auto Data Saver" onClick={() => set({ saverAuto: !s.saverAuto })} /></Field>
         </section>
+        )}
 
+        {tab === 'play' && (
         <section>
           <h4>Playback</h4>
           <Field label="Default quality">
@@ -129,7 +146,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           <Field label="Play next episode automatically"><Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} /></Field>
           <Field label="Download the next episode while I watch" hint="Saves it for offline in the background"><Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} /></Field>
         </section>
+        )}
 
+        {tab === 'play' && (
         <section>
           <h4>Sound</h4>
           <Field label="Maximum volume" hint="How far the volume slider can go. Above 100% a limiter keeps it clean">
@@ -142,7 +161,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
             <select value={s.eqPreset} onChange={(e) => set({ eqPreset: e.target.value })}>{Object.keys(EQ_PRESETS).map((n) => <option key={n} value={n}>{n}</option>)}</select>
           </Field>
         </section>
+        )}
 
+        {tab === 'subs' && (
         <section>
           <h4>Subtitles</h4>
           <Field label="Turn on subtitles automatically" hint="Picks a track in your language, inside the video or next to it">
@@ -162,7 +183,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
             </span>
           </Field>
         </section>
+        )}
 
+        {tab === 'look' && (
         <section>
           <h4>Library</h4>
           <Field label="TMDB key" hint="Free at themoviedb.org. Adds posters, ratings and descriptions">
@@ -171,11 +194,16 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           <Field label="Show posters instead of thumbnails" hint="Needs the TMDB key"><Toggle on={s.posters} label="Posters" onClick={() => set({ posters: !s.posters })} /></Field>
           <Field label="Watching so far"><span>{hours.toFixed(1)} hours · {finished} finished</span></Field>
         </section>
+        )}
 
+        {tab === 'offline' && (
         <section>
           <h4>Downloads and offline</h4>
           <Field label="Save downloads to" hint={srv?.downloadDir}>
             <span className="inline">{bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change…</button>}<button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button></span>
+          </Field>
+          <Field label="Save while I watch" hint="Keeps a full-quality copy on this laptop in the background, so next time it plays offline and uses no data">
+            <Toggle on={s.autoCache} label="Save while watching" onClick={() => set({ autoCache: !s.autoCache })} />
           </Field>
           <Field label="Files at the same time">
             <select value={srv?.maxParallel ?? 2} onChange={(e) => patch({ maxParallel: +e.target.value })}>{[1, 2, 3, 4, 6].map((n) => <option key={n} value={n}>{n}</option>)}</select>
@@ -210,8 +238,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
             </>
           )}
         </section>
+        )}
 
-        {bridge && (
+        {bridge && tab === 'play' && (
           <section>
             <h4>Other players</h4>
             <Field label="Open in another player" hint="For example VLC. Leave empty to use your computer’s default player">
@@ -220,13 +249,16 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           </section>
         )}
 
-        <Updates />
+        {tab === 'app' && <Updates />}
 
+        {tab === 'app' && (
         <section>
           <h4>Servers</h4>
           <Field label="Where your movies are stored"><button className="btn ghost" onClick={onServers}><Icon n="server" s={15} /> Manage servers</button></Field>
         </section>
+        )}
 
+        {tab === 'data' && (
         <section>
           <h4>Speed test</h4>
           <p className="muted small">Measures how fast your server can send data to this laptop. That number is the real limit for streaming and downloads. Server disk path: {mode === 'local' ? 'direct (fastest)' : mode && mode !== 'none' ? 'through SSH' : 'unknown'}.</p>
@@ -238,8 +270,11 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           {t.res && <p>Average <b>{rate(t.res.avg)}</b> ({mbps(t.res.avg)}), peak <b>{mbps(t.res.peak)}</b>, {bytes(t.res.bytes)} transferred.</p>}
           {t.err && <p className="err-t">{t.err}</p>}
         </section>
+        )}
 
-        <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>
+        {tab === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
+        </div>
+        </div>
       </div>
     </div>
   );

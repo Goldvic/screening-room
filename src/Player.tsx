@@ -12,7 +12,7 @@ type Ai = { available: boolean; state: string; elapsed: number; error?: string }
 type OsHit = { id: number; name: string; lang: string; downloads: number };
 type Props = {
   root: number; dir: string; name: string; videos: string[]; pkey: string; saved?: Prog;
-  offline: boolean; opened?: boolean; saver: number; caps: Caps | null;
+  offline: boolean; opened?: boolean; saver: number; caps: Caps | null; playlist?: boolean;
   onClose: () => void; onNext: (n: string) => void; onDelete: (n: string) => void;
   onDownload?: (n: string) => void; onStarted?: (n: string) => void;
 };
@@ -119,6 +119,27 @@ export default function Player(p: Props) {
   const [suggest, setSuggest] = useState(false);
   const [ab, setAb] = useState<{ a: number | null; b: number | null }>({ a: null, b: null });
   const net = useNet(sid, 1000);
+  // "Save while watching": the original is copied to this laptop in the background; the bar shows how much is saved.
+  const [cache, setCache] = useState<{ state: string; frac: number }>({ state: 'none', frac: 0 });
+  const startCache = () => {
+    if (p.offline || p.opened || !s.autoCache || ds > 0) return; // Data Saver on: never spend extra data on a copy
+    fetch('/api/dl/add', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ root: p.root, paths: [path], profile: 'orig', opts: {} }) }).catch(() => {});
+  };
+  useEffect(() => {
+    if (p.offline || p.opened) return;
+    let dead = false;
+    const tick = async () => {
+      try {
+        const j = await api<{ state: string; done?: number; size?: number }>('saved', { root: p.root, path });
+        if (!dead) setCache({ state: j.state, frac: j.state === 'done' ? 1 : j.size ? Math.min(1, (j.done ?? 0) / j.size) : 0 });
+      } catch { /* server not reachable */ }
+    };
+    tick();
+    const t = setInterval(tick, 3000);
+    return () => { dead = true; clearInterval(t); };
+  }, [p.root, path, p.offline, p.opened]);
+  const cachedFrac = p.offline && !p.opened ? 1 : cache.frac;
 
   const hlsMode = !p.offline && q !== 'orig' && q !== 'remux' && q !== 'audio'; // auto or a locked size: adaptive HLS
   const offsetMode = q === 'remux' || q === 'audio';                             // piped stream: seeking restarts it at an offset
@@ -560,7 +581,7 @@ export default function Player(p: Props) {
             onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
             onPlaying={() => {
               setPlaying(true); setBuffering(false); everPlayed.current = true;
-              if (!startedFired.current) { startedFired.current = true; p.onStarted?.(p.name); }
+              if (!startedFired.current) { startedFired.current = true; p.onStarted?.(p.name); startCache(); }
             }}
             onWaiting={onWaiting} onCanPlay={() => setBuffering(false)}
             onEnded={() => {
@@ -592,12 +613,19 @@ export default function Player(p: Props) {
 
         <div className="hud top">
           <div className="ttl">
-            <strong>{p.name}</strong>
+            <strong className="full" title={p.name}>{p.name.replace(/\.[^.]+$/, '')}</strong>
             <span>
+              {p.dir ? `${p.dir.split('/').join(' › ')} · ` : ''}
               {info.width ? `${info.width}×${info.height}${info.codec ? ' ' + info.codec.toUpperCase() : ''}` : p.opened ? 'Playing from your computer' : p.offline ? 'Playing from this laptop' : 'Streaming from your server'}
               {p.offline && info.width ? ' · offline' : ''}{ds > 0 && !p.offline ? ` · Data Saver ${SAVER[ds].label}` : ''}
             </span>
           </div>
+          {p.playlist && idx >= 0 && <span className="chip" title="Position in your playlist"><Icon n="list" s={15} /><b>{idx + 1} / {p.videos.length}</b></span>}
+          {!p.offline && !p.opened && cache.state !== 'none' && (
+            <span className={'chip save' + (cache.state === 'done' ? ' done' : '')} title="A copy of this video is kept on this laptop so it can play offline">
+              <Icon n="save" s={15} /><b>{cache.state === 'done' ? 'Saved' : cache.state === 'paused' ? 'Save paused' : cache.state === 'queued' ? 'Save queued' : `Saving ${Math.round(cache.frac * 100)}%`}</b>
+            </span>
+          )}
           {vol > 1 && <span className="chip loud" title="Volume is boosted above 100%"><Icon n="volume" s={15} /><b>{Math.round(vol * 100)}%</b></span>}
           <button className={'chip' + (stats ? ' on' : '')} onClick={() => setStats((x) => !x)} title="Network and playback stats (I)">
             <Icon n="activity" s={15} />
@@ -829,7 +857,7 @@ export default function Player(p: Props) {
             onPointerMove={(e) => { const f = fracOf(e); setHover(f); setBarW(seekRef.current!.clientWidth); setWantSprite(true); if (scrub !== null) setScrub(f * total); }}
             onPointerUp={(e) => { if (scrub !== null) { seekTo(fracOf(e) * total); setScrub(null); } }}
             onPointerCancel={() => setScrub(null)} onPointerLeave={() => setHover(null)}>
-            <i className="track" /><i className="buffered" style={{ width: `${bufFrac * 100}%` }} /><i className="played" style={{ width: `${frac * 100}%` }} /><i className="knob" style={{ left: `${frac * 100}%` }} />
+            <i className="track" /><i className="buffered" style={{ width: `${bufFrac * 100}%` }} /><i className="cached" style={{ width: `${cachedFrac * 100}%` }} /><i className="played" style={{ width: `${frac * 100}%` }} /><i className="knob" style={{ left: `${frac * 100}%` }} />
             {total > 0 && chapters.slice(1).map((c, i) => <i key={i} className="chap" style={{ left: `${(c.start / total) * 100}%` }} />)}
             {total > 0 && ab.a !== null && <i className="abmark" style={{ left: `${(ab.a / total) * 100}%`, width: ab.b !== null ? `${((ab.b - ab.a) / total) * 100}%` : 3 }} />}
             {hover !== null && total > 0 && (

@@ -194,6 +194,9 @@ function Library() {
   const net = useNet(null, 2000);
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [sel, setSel] = useState<string[]>([]);
+  const [playlist, setPlaylist] = useState<string[] | null>(null);
 
   const rootOf = (id: number | null) => roots.find((r) => r.id === id);
   const cur = rootOf(root);
@@ -243,8 +246,10 @@ function Library() {
     try {
       let first = '';
       for (const f of list) { const r = await post<{ name: string }>('opened', { path: f }); if (!first) first = r.name; }
-      await loadRoots();
+      // Start playing right away; the storage list refreshes in the background (it can be slow when the server is far away).
+      setRoots((rs) => (rs.some((x) => x.id === OPENED_ID) ? rs : [...rs, { id: OPENED_ID, name: 'Opened', dir: '', free: 0, total: 0, offline: true, opened: true } as Root]));
       setPanel(null); setQuery(''); setRoot(OPENED_ID); setDir(''); setPlay(first);
+      loadRoots();
     } catch (e: any) { flash(e.message); }
   };
   const openRef = useRef(openLocal);
@@ -297,6 +302,31 @@ function Library() {
   const playOffline = (destRel: string) => {
     const parts = destRel.split('/');
     setPanel(null); setRoot(OFFLINE_ID); setDir(parts.slice(0, -1).join('/')); setPlay(parts[parts.length - 1]);
+  };
+
+  // Play a video. If a full copy is already saved on this laptop, play that one (works with no internet and uses no data).
+  const startPlay = async (name: string, r: number = rid, d: string = dir, keepList = false) => {
+    if (!keepList) setPlaylist(null);
+    const rt = roots.find((x) => x.id === r);
+    if (rt && !rt.offline && !keepList) {
+      try {
+        const j = await api<{ state: string; dest?: string }>('saved', { root: r, path: join(d, name) });
+        if (j.state === 'done' && j.dest) { flash('Playing the saved copy from this laptop'); playOffline(j.dest); return; }
+      } catch { /* server unreachable: fall through */ }
+    }
+    setRoot(r); setDir(d); setPlay(name);
+  };
+  const toggleSel = (name: string) => setSel((x) => (x.includes(name) ? x.filter((n) => n !== name) : [...x, name]));
+  const endSelect = () => { setSelecting(false); setSel([]); };
+  const playSelected = () => {
+    const list = videos.filter((n) => sel.includes(n));
+    if (!list.length) return;
+    endSelect(); setPlaylist(list); setPlay(list[0]);
+  };
+  const saveSelected = () => {
+    const list = videos.filter((n) => sel.includes(n));
+    if (!list.length) return;
+    saveOffline(list, items.filter((i) => list.includes(i.name)).reduce((a, i) => a + i.size, 0)); endSelect();
   };
 
   // Browser-only turbo download (the desktop app uses "Save for offline" instead).
@@ -362,7 +392,7 @@ function Library() {
   const randomPick = () => {
     const pool = videos.filter((n) => !prog[pkey(n)]?.watched);
     const list = pool.length ? pool : videos;
-    if (list.length) setPlay(list[Math.floor(Math.random() * list.length)]);
+    if (list.length) startPlay(list[Math.floor(Math.random() * list.length)]);
   };
 
   const crumbs = dir ? dir.split('/') : [];
@@ -396,7 +426,7 @@ function Library() {
       <div className="cards">
         {list.map((x) => (
           <button key={x.k} className="card" style={{ '--h': hue(x.dir || x.name) } as CSSProperties}
-            onClick={() => { setRoot(x.rid); setDir(x.dir); setPlay(x.name); }}>
+            onClick={() => startPlay(x.name, x.rid, x.dir)}>
             <span className="shot"><Art root={x.rid} path={join(x.dir, x.name)} v={0} name={x.name} /></span>
             <span className="go"><Icon n="play" s={18} /></span>
             <span className="card-t">
@@ -472,7 +502,7 @@ function Library() {
             {crumbs.map((c, i) => <span key={i}>/ <button onClick={() => setDir(crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
           </div>
           <div className="actions">
-            {nextUp && <button className="btn" onClick={() => setPlay(nextUp.name)}><Icon n="play" s={15} /> {nextUp.label}</button>}
+            {nextUp && <button className="btn" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {nextUp.label}</button>}
             {videos.length > 1 && <button className="btn ghost" onClick={randomPick} title="Pick something for me"><Icon n="random" s={16} /> Surprise me</button>}
             {!offline && dir && <button className="btn ghost" onClick={() => setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 })}><Icon n="save" s={16} /> Save folder for offline</button>}
             {seen.length > 0 && (
@@ -493,6 +523,7 @@ function Library() {
             <select value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
               <option value="name">Name</option><option value="new">Newest</option><option value="size">Largest</option>
             </select>
+            {videos.length > 1 && <button className={selecting ? 'btn' : 'btn ghost'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Pick several videos to play as a playlist"><Icon n="list" s={16} /> {selecting ? 'Done' : 'Select'}</button>}
             <span className="seg" role="group" aria-label="View">
               <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
               <button className={s.view === 'list' ? 'on' : ''} onClick={() => set({ view: 'list' })} title="List view" aria-label="List view"><Icon n="list" s={16} /></button>
@@ -500,6 +531,17 @@ function Library() {
           </div>
         )}
 
+        {selecting && (
+          <div className="selbar" role="status">
+            <strong>{sel.length ? `${sel.length} selected` : 'Tap videos to add them to a playlist'}</strong>
+            <span className="inline">
+              <button className="btn ghost" onClick={() => setSel(videos)}>Select all</button>
+              <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play as playlist</button>
+              {!offline && <button className="btn ghost" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Save offline</button>}
+              <button className="btn ghost" onClick={endSelect}>Cancel</button>
+            </span>
+          </div>
+        )}
         {status === 'loading' && root !== null && <p className="note">Loading…</p>}
         {status === 'error' && !rootsErr && (
           <div className="note err">
@@ -535,8 +577,9 @@ function Library() {
               const p = prog[pkey(it.name)];
               const part = p && !p.watched && p.pos > 30;
               return (
-                <li key={it.name} className={p?.watched ? 'poster done' : 'poster'} style={{ '--h': hue(it.name) } as CSSProperties}>
-                  <button className="poster-open" onClick={() => setPlay(it.name)}>
+                <li key={it.name} className={(p?.watched ? 'poster done' : 'poster') + (sel.includes(it.name) ? ' picked' : '')} style={{ '--h': hue(it.name) } as CSSProperties}>
+                  {selecting && <span className={sel.includes(it.name) ? 'selmark on' : 'selmark'} aria-hidden="true"><Icon n="check" s={14} /></span>}
+                  <button className="poster-open" onClick={() => (selecting ? toggleSel(it.name) : startPlay(it.name))}>
                     <span className="frame">
                       <Art root={rid} path={join(dir, it.name)} v={it.mtime} name={it.name} />
                       <span className="go"><Icon n="play" s={18} /></span>
@@ -561,8 +604,9 @@ function Library() {
               const p = prog[pkey(it.name)];
               const part = p && !p.watched && p.pos > 30;
               return (
-                <li key={it.name} className={p?.watched ? 'row done' : 'row'}>
-                  <button className="open" onClick={() => isVid && setPlay(it.name)}>
+                <li key={it.name} className={(p?.watched ? 'row done' : 'row') + (sel.includes(it.name) ? ' picked' : '')}>
+                  {selecting && isVid && <span className={sel.includes(it.name) ? 'selmark on inrow' : 'selmark inrow'} aria-hidden="true"><Icon n="check" s={14} /></span>}
+                  <button className="open" onClick={() => isVid && (selecting ? toggleSel(it.name) : startPlay(it.name))}>
                     <span className="ico">{isVid && s.thumbs ? <Thumb root={rid} path={join(dir, it.name)} v={it.mtime} icon="film" /> : <Icon n={isVid ? 'film' : 'file'} />}</span>
                     <span className="info">
                       <span className="name">{it.name}</span>
@@ -581,9 +625,9 @@ function Library() {
 
       {play && root !== null && (
         <Player
-          key={`${root}:${join(dir, play)}`} root={root} dir={dir} name={play} videos={videos}
+          key={`${root}:${join(dir, play)}`} root={root} dir={dir} name={play} videos={playlist ?? videos} playlist={!!playlist}
           pkey={pkey(play)} saved={prog[pkey(play)]} offline={offline} opened={opened} saver={saver} caps={caps}
-          onClose={() => { setPlay(null); setTimeout(loadProg, 500); }}
+          onClose={() => { setPlay(null); setPlaylist(null); setTimeout(loadProg, 500); }}
           onNext={setPlay} onStarted={onStarted}
           onDownload={(n) => saveOffline([n], items.find((i) => i.name === n)?.size ?? 0)}
           onDelete={(n) => { setPlay(null); confirmDelete([n], `“${n}”`); }}
@@ -597,7 +641,7 @@ function Library() {
         <DownloadDialog {...target} caps={caps} onClose={() => setTarget(null)}
           onQueued={(n) => { setTarget(null); flash(n ? `Added ${n} to Downloads` : 'Already saved or queued'); if (n) setPanel('downloads'); }} />
       )}
-      {detail && <Details name={detail} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { setPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
+      {detail && <Details name={detail} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
       {ask && <Confirm ask={ask} onClose={() => setAsk(null)} onError={flash} />}
       {dls.length > 0 && <Tray dls={dls} onDismiss={(id) => setDls((d) => d.filter((x) => x.id !== id))} />}
       {toast && <div className="toast" role="status">{toast}</div>}
