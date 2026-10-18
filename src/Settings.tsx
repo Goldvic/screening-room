@@ -29,8 +29,8 @@ function Updates() {
     <section>
       <h4>Updates</h4>
       <Field label="Installed version"><span>{u.current}</span></Field>
-      <Field label="Update address" hint="The web folder where you put the installer and latest.yml (for example on your VPS)">
-        <input value={feed} placeholder="https://example.com/cinema/" autoComplete="off" onChange={(e) => setFeed(e.target.value)} onBlur={() => bridge!.updateConfig({ feed })} />
+      <Field label="Update address" hint="Paste your GitHub repository link (it must be public). A web folder with latest.yml also works">
+        <input value={feed} placeholder="https://github.com/you/screening-room" autoComplete="off" onChange={(e) => setFeed(e.target.value)} onBlur={() => bridge!.updateConfig({ feed })} />
       </Field>
       <Field label="Check automatically" hint="A few seconds after start, then every 6 hours. Nothing is installed without you"><Toggle on={u.auto} label="Check automatically" onClick={() => bridge!.updateConfig({ auto: !u.auto })} /></Field>
       <p className={u.state === 'error' ? 'err-t' : 'muted small'} role="status">{status}</p>
@@ -64,6 +64,10 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
   const { s, set } = useContext(SettingsCtx);
   const [tab, setTab] = useState<Tab>('look');
   const [moveMsg, setMoveMsg] = useState('');
+  const [kd, setKd] = useState({ tmdb: '', os: '', user: '' });
+  const [kMsg, setKMsg] = useState<Record<string, { ok: boolean; text: string } | undefined>>({});
+  const [kBusy, setKBusy] = useState('');
+  const kSeed = useRef(false);
   const [srv, setSrv] = useState<Srv | null>(null);
   const [osPass, setOsPass] = useState('');
   const [t, setT] = useState<{ running: boolean; live: number; res?: { avg: number; peak: number; bytes: number }; err?: string }>({ running: false, live: 0 });
@@ -77,6 +81,28 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
 
   const patch = async (p: Record<string, unknown>) => {
     try { setSrv(await post<Srv>('settings', p)); onSaved(); } catch { /* shown by next load */ }
+  };
+  useEffect(() => { if (srv && !kSeed.current) { kSeed.current = true; setKd({ tmdb: srv.tmdbKey ?? '', os: srv.osKey ?? '', user: srv.osUser ?? '' }); } }, [srv]);
+  const saveTest = async (kind: 'tmdb' | 'os') => {
+    setKBusy(kind); setKMsg((m) => ({ ...m, [kind]: undefined }));
+    try {
+      await post<Srv>('settings', kind === 'tmdb' ? { tmdbKey: kd.tmdb } : { osKey: kd.os, osUser: kd.user, ...(osPass ? { osPass } : {}) }).then(setSrv);
+      if (osPass) setOsPass('');
+      onSaved();
+      const r = await api<{ ok: boolean; text: string }>('online/test', { kind });
+      setKMsg((m) => ({ ...m, [kind]: r }));
+    } catch (e: any) { setKMsg((m) => ({ ...m, [kind]: { ok: false, text: e?.message ?? 'Could not save' } })); }
+    setKBusy('');
+  };
+  const clearKeys = async (kind: 'tmdb' | 'os') => {
+    if (kind === 'tmdb') { setKd((x) => ({ ...x, tmdb: '' })); await post<Srv>('settings', { tmdbKey: '' }).then(setSrv); }
+    else { setKd((x) => ({ ...x, os: '', user: '' })); setOsPass(''); await post<Srv>('settings', { osKey: '', osUser: '', osPass: '' }).then(setSrv); }
+    setKMsg((m) => ({ ...m, [kind]: { ok: true, text: 'Removed.' } })); onSaved();
+  };
+  const kline = (kind: string, has: boolean) => {
+    const m = kMsg[kind];
+    return m ? <span className={'kstat ' + (m.ok ? 'ok' : 'bad')}>{m.ok ? '✓' : '✕'} {m.text}</span>
+      : <span className={'kstat ' + (has ? 'ok' : 'idle')}>{has ? '✓ Saved. Press “Save & test” to check it works.' : 'Not set yet'}</span>;
   };
   const local = (p: Partial<Srv>) => setSrv((x) => (x ? { ...x, ...p } : x));
   const run = async () => {
@@ -183,13 +209,18 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
             <select value={s.subLang} onChange={(e) => set({ subLang: e.target.value })}>{LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select>
           </Field>
           <Field label="Skip if the audio is already in that language"><Toggle on={s.subSmart} label="Skip when audio matches" onClick={() => set({ subSmart: !s.subSmart })} /></Field>
-          <Field label="OpenSubtitles API key" hint="Free at opensubtitles.com. Lets you search subtitles inside the player">
-            <input value={srv?.osKey ?? ''} onChange={(e) => local({ osKey: e.target.value })} onBlur={() => patch({ osKey: srv?.osKey ?? '' })} placeholder="API key" autoComplete="off" />
-          </Field>
-          <Field label="OpenSubtitles account" hint="Needed to download. Stored encrypted">
-            <span className="stack">
-              <input value={srv?.osUser ?? ''} onChange={(e) => local({ osUser: e.target.value })} onBlur={() => patch({ osUser: srv?.osUser ?? '' })} placeholder="Username" autoComplete="off" />
-              <input type="password" value={osPass} onChange={(e) => setOsPass(e.target.value)} onBlur={() => { if (osPass) { patch({ osPass }); setOsPass(''); } }} placeholder={srv?.hasOsPass ? 'Password saved' : 'Password'} autoComplete="off" />
+          <Field label="OpenSubtitles" hint="Free key at opensubtitles.com. The account is only needed to download. Stored encrypted on this computer">
+            <span className="keybox">
+              <input value={kd.os} onChange={(e) => setKd({ ...kd, os: e.target.value })} placeholder="API key" autoComplete="off" spellCheck={false} />
+              <span className="inline">
+                <input value={kd.user} onChange={(e) => setKd({ ...kd, user: e.target.value })} placeholder="Username" autoComplete="off" />
+                <input type="password" value={osPass} onChange={(e) => setOsPass(e.target.value)} placeholder={srv?.hasOsPass ? 'Password saved (type to change)' : 'Password'} autoComplete="new-password" />
+              </span>
+              {kline('os', !!(srv?.osKey || srv?.hasOsPass))}
+              <span className="inline">
+                <button className="btn" disabled={kBusy === 'os' || !kd.os.trim()} onClick={() => saveTest('os')}>{kBusy === 'os' ? 'Checking…' : 'Save & test'}</button>
+                <button className="btn ghost" disabled={kBusy === 'os'} onClick={() => clearKeys('os')}>Remove</button>
+              </span>
             </span>
           </Field>
         </section>
@@ -199,7 +230,14 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         <section>
           <h4>Library</h4>
           <Field label="TMDB key" hint="Free at themoviedb.org. Adds posters, ratings and descriptions">
-            <input value={srv?.tmdbKey ?? ''} onChange={(e) => local({ tmdbKey: e.target.value })} onBlur={() => patch({ tmdbKey: srv?.tmdbKey ?? '' })} placeholder="API key or read token" autoComplete="off" />
+            <span className="keybox">
+              <input value={kd.tmdb} onChange={(e) => setKd({ ...kd, tmdb: e.target.value })} placeholder="API key or read token" autoComplete="off" spellCheck={false} />
+              {kline('tmdb', !!srv?.tmdbKey)}
+              <span className="inline">
+                <button className="btn" disabled={kBusy === 'tmdb' || !kd.tmdb.trim()} onClick={() => saveTest('tmdb')}>{kBusy === 'tmdb' ? 'Checking…' : 'Save & test'}</button>
+                <button className="btn ghost" disabled={kBusy === 'tmdb'} onClick={() => clearKeys('tmdb')}>Remove</button>
+              </span>
+            </span>
           </Field>
           <Field label="Show posters instead of thumbnails" hint="Needs the TMDB key"><Toggle on={s.posters} label="Posters" onClick={() => set({ posters: !s.posters })} /></Field>
           <Field label="Watching so far"><span>{hours.toFixed(1)} hours · {finished} finished</span></Field>

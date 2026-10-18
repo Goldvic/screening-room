@@ -174,6 +174,7 @@ function Library() {
   const net = useNet(null, 2000);
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const [floating, setFloating] = useState(false);
   const [view, setView] = useState<'home' | 'library' | 'playlists'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
@@ -419,17 +420,30 @@ function Library() {
       .then((r: any) => r.queued && flash(`Saving “${nx.replace(/\.[^.]+$/, '')}” for offline`)).catch(() => {});
   };
 
-  const fileActions = (it: Entry, isVid: boolean, p?: Prog) => (
-    <>
-      {isVid && <button className={favs.includes(pkey(it.name)) ? 'icon on' : 'icon'} title="Favorite" aria-label={`Favorite ${it.name}`} aria-pressed={favs.includes(pkey(it.name))} onClick={() => toggleFav(it.name)}><Icon n="heart" /></button>}
-      {isVid && <button className="icon" title="About this video" aria-label={`About ${it.name}`} onClick={() => setDetail(it.name)}><Icon n="info" /></button>}
-      {isVid && <button className="icon" title={p?.watched ? 'Mark as unwatched' : 'Mark as watched'} aria-label={p?.watched ? 'Mark as unwatched' : 'Mark as watched'} onClick={() => setWatched(it.name, !p?.watched)}><Icon n="check" /></button>}
-      {!offline && <button className="icon" title="Save for offline" aria-label={`Save ${it.name} for offline`} onClick={() => saveOffline([it.name], it.size)}><Icon n="save" /></button>}
-      {!offline && !bridge && <button className="icon" title="Download" aria-label={`Download ${it.name}`} onClick={() => download(it)}><Icon n="down" /></button>}
-      {offline && bridge && <button className="icon" title="Show in folder" aria-label={`Show ${it.name} in folder`} onClick={() => api<{ path: string }>('localpath', { root: rid, path: join(dir, it.name) }).then((r) => bridge?.reveal(r.path))}><Icon n="folder" /></button>}
-      <button className="icon danger" title={offline ? 'Delete from this laptop' : 'Delete from server'} aria-label={`Delete ${it.name}`} onClick={() => confirmDelete([it.name], `“${it.name}”`)}><Icon n="trash" /></button>
-    </>
-  );
+  const fileActions = (it: Entry, isVid: boolean, p?: Prog) => {
+    const done = (fn: () => void) => () => { setMenuFor(null); fn(); };
+    const open = menuFor === it.name;
+    return (
+      <>
+        {isVid && <button className={favs.includes(pkey(it.name)) ? 'icon on' : 'icon'} title="Favorite" aria-label={`Favorite ${it.name}`} aria-pressed={favs.includes(pkey(it.name))} onClick={() => toggleFav(it.name)}><Icon n="heart" s={17} /></button>}
+        {!offline && <button className="icon" title="Save for offline" aria-label={`Save ${it.name} for offline`} onClick={() => saveOffline([it.name], it.size)}><Icon n="save" s={17} /></button>}
+        <button className={open ? 'icon on-m' : 'icon'} title="More" aria-label={`More actions for ${it.name}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setMenuFor(open ? null : it.name)}><Icon n="more" s={17} /></button>
+        {open && (
+          <>
+            <div className="amenu-bg" onClick={() => setMenuFor(null)} />
+            <div className="amenu" role="menu">
+              {isVid && <button role="menuitem" onClick={done(() => setDetail(it.name))}><Icon n="info" s={15} /> Details</button>}
+              {isVid && <button role="menuitem" onClick={done(() => setWatched(it.name, !p?.watched))}><Icon n="check" s={15} /> {p?.watched ? 'Mark as unwatched' : 'Mark as watched'}</button>}
+              {!offline && !bridge && <button role="menuitem" onClick={done(() => download(it))}><Icon n="down" s={15} /> Download</button>}
+              {offline && bridge && <button role="menuitem" onClick={done(() => { api<{ path: string }>('localpath', { root: rid, path: join(dir, it.name) }).then((r) => bridge?.reveal(r.path)); })}><Icon n="folder" s={15} /> Show in folder</button>}
+              <i className="amenu-sep" />
+              <button role="menuitem" className="del" onClick={done(() => confirmDelete([it.name], `“${it.name}”`))}><Icon n="trash" s={15} /> {offline ? 'Delete from this laptop' : 'Delete from server'}</button>
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
 
   if (!hasServer && !skipSetup && !play && roots.length > 0 && !roots.some((r) => !r.offline || r.opened) && panel !== 'servers') {
     return <Setup firstRun onClose={() => {}} onChanged={serversChanged} onOffline={() => { try { localStorage.setItem('cinema.skipSetup', '1'); } catch { /* ignore */ } setSkipSetup(true); }} />;
@@ -639,7 +653,7 @@ function Library() {
               const p = prog[pkey(it.name)];
               const part = p && !p.watched && p.pos > 30;
               return (
-                <li key={it.name} className={(p?.watched ? 'poster done' : 'poster') + (sel.includes(it.name) ? ' picked' : '')} style={{ '--h': hue(it.name) } as CSSProperties}>
+                <li key={it.name} className={(p?.watched ? 'poster done' : 'poster') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')} style={{ '--h': hue(it.name) } as CSSProperties}>
                   {selecting && <span className={sel.includes(it.name) ? 'selmark on' : 'selmark'} aria-hidden="true"><Icon n="check" s={14} /></span>}
                   <button className="poster-open" onClick={() => (selecting ? toggleSel(it.name) : startPlay(it.name))}>
                     <span className="frame">
@@ -666,7 +680,7 @@ function Library() {
               const p = prog[pkey(it.name)];
               const part = p && !p.watched && p.pos > 30;
               return (
-                <li key={it.name} className={(p?.watched ? 'row done' : 'row') + (sel.includes(it.name) ? ' picked' : '')}>
+                <li key={it.name} className={(p?.watched ? 'row done' : 'row') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')}>
                   {selecting && isVid && <span className={sel.includes(it.name) ? 'selmark on inrow' : 'selmark inrow'} aria-hidden="true"><Icon n="check" s={14} /></span>}
                   <button className="open" onClick={() => isVid && (selecting ? toggleSel(it.name) : startPlay(it.name))}>
                     <span className="ico">{isVid && s.thumbs ? <Thumb root={rid} path={join(dir, it.name)} v={it.mtime} icon="film" /> : <Icon n={isVid ? 'film' : 'file'} />}</span>

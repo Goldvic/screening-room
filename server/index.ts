@@ -800,6 +800,29 @@ export async function start(opts: StartOpts = {}) {
 
   // ---------- settings (downloads, budget, integrations) ----------
   app.get('/api/settings', (_req, res) => res.json(store.publicSettings()));
+  // Check a saved key or account against the real service, so you can see that it works.
+  app.get('/api/online/test', h(async (req, res) => {
+    const s = store.settings();
+    const kind = String(req.query.kind);
+    const ua = { 'User-Agent': 'ScreeningRoom v1' };
+    try {
+      if (kind === 'tmdb') {
+        const key = s.tmdbKey.trim();
+        if (!key) return res.json({ ok: false, text: 'Paste your key first.' });
+        const bearer = key.length > 40;
+        const r = await fetch(bearer ? 'https://api.themoviedb.org/3/configuration' : `https://api.themoviedb.org/3/configuration?api_key=${encodeURIComponent(key)}`, { headers: bearer ? { Authorization: `Bearer ${key}` } : {} });
+        return res.json(r.ok ? { ok: true, text: 'Connected to TMDB. Posters and descriptions will load.' } : { ok: false, text: r.status === 401 ? 'TMDB rejected this key. Check that you copied all of it.' : `TMDB answered with error ${r.status}.` });
+      }
+      const key = s.osKey.trim();
+      if (!key) return res.json({ ok: false, text: 'Paste your API key first.' });
+      const k = await fetch('https://api.opensubtitles.com/api/v1/infos/formats', { headers: { 'Api-Key': key, ...ua } });
+      if (!k.ok) return res.json({ ok: false, text: k.status === 401 || k.status === 403 ? 'OpenSubtitles rejected this API key.' : `OpenSubtitles answered with error ${k.status}.` });
+      const pass = store.osPassword();
+      if (!s.osUser || !pass) return res.json({ ok: true, text: 'The key works. Add your username and password to download subtitles.' });
+      const l = await fetch('https://api.opensubtitles.com/api/v1/login', { method: 'POST', headers: { 'Api-Key': key, 'Content-Type': 'application/json', ...ua }, body: JSON.stringify({ username: s.osUser, password: pass }) });
+      return res.json(l.ok ? { ok: true, text: 'Key and account both work.' } : { ok: false, text: 'The key works, but the username or password was rejected.' });
+    } catch { return res.json({ ok: false, text: 'Could not reach the service. Check your internet connection.' }); }
+  }));
   app.post('/api/settings', h(async (req, res) => {
     const b = req.body ?? {};
     const patch: any = {};

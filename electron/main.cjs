@@ -60,7 +60,12 @@ const friendly = (e) => {
   if (/404|latest.*yml|Cannot find/i.test(m)) return 'The update address does not have a latest.yml file. Check that you uploaded the release files there.';
   return m.split('\n')[0].slice(0, 200);
 };
-function applyFeed() { if (updater && updCfg.feed) updater.setFeedURL({ provider: 'generic', url: updCfg.feed }); }
+function feedConfig(feed) {
+  const m = /github\.com\/([^/\s]+)\/([^/\s#?]+)/i.exec(feed) || /^([\w.-]+)\/([\w.-]+)$/.exec(feed.trim());
+  if (m) return { provider: 'github', owner: m[1], repo: m[2].replace(/\.git$/, ''), releaseType: 'release' };
+  return { provider: 'generic', url: feed };
+}
+function applyFeed() { if (updater && updCfg.feed) updater.setFeedURL(feedConfig(updCfg.feed)); }
 function initUpdater() {
   loadUpdCfg();
   if (!app.isPackaged) return; // updates only exist in the installed app

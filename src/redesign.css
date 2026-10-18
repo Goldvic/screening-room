@@ -256,10 +256,33 @@ select { border-radius: 8px; padding: 6px 9px; }
 .floatbar { position: absolute; inset: auto 0 0 0; z-index: 6; display: flex; align-items: center; gap: 4px; padding: 22px 10px 8px; background: linear-gradient(0deg, rgba(0,0,0,.8), transparent); opacity: 0; transition: opacity .15s; }
 .theatre.float:hover .floatbar { opacity: 1; }
 .fl-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
-.btn.danger { color: var(--danger); }
+.btn.ghost.danger { color: var(--danger); background: transparent; }
+.btn.ghost.danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
 
 /* scheduled downloads */
 .sched { margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: var(--raise); }
 .sched .msec { margin: 0 0 4px; }
 .sched-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; }
 .sched-row span { display: grid; min-width: 0; } .sched-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; } .sched-row small { color: var(--mute); }
+
+
+/* v4: quick actions are small; everything else lives in a labelled menu */
+.p-act { top: 8px; right: 8px; left: auto; bottom: auto; width: auto; justify-content: flex-end; padding: 3px; gap: 0; background: rgba(12,12,16,.7); }
+.poster:hover .p-act, .poster:focus-within .p-act, .poster.menu-open .p-act { opacity: 1; transform: none; pointer-events: auto; }
+.p-act .icon, .r-act .icon { width: 28px; height: 28px; }
+.icon.on-m { background: rgba(255,255,255,.18); }
+.r-act { position: relative; } .row.menu-open .r-act { opacity: 1; }
+.amenu-bg { position: fixed; inset: 0; z-index: 30; }
+.amenu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 31; min-width: 200px; display: grid; gap: 1px; padding: 5px; border-radius: 12px;
+  background: rgba(22,22,29,.94); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid var(--line); box-shadow: 0 16px 44px rgba(0,0,0,.5); animation: slidein .12s ease-out; }
+.p-act .amenu { top: calc(100% + 6px); }
+.amenu button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; text-align: left; color: var(--text); font-size: 13px; white-space: nowrap; }
+.amenu button:hover { background: rgba(255,255,255,.1); }
+.amenu button.del { color: #ff8b7a; } .amenu button.del:hover { background: rgba(240,98,79,.2); }
+.amenu-sep { display: block; height: 1px; margin: 3px 4px; background: var(--line); }
+
+/* keys and accounts */
+.keybox { display: grid; gap: 8px; width: 100%; }
+.keybox .inline { gap: 8px; } .keybox input { flex: 1; min-width: 0; }
+.kstat { font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+.kstat.ok { color: #5eead4; } .kstat.bad { color: var(--danger); } .kstat.idle { color: var(--mute); }
