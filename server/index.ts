@@ -623,6 +623,26 @@ export async function start(opts: StartOpts = {}) {
       if (pg?.watched && pg.updated < cutoff) { try { removeOffline(f.rel); } catch { /* ignore */ } }
     }
   }
+  // Space limit: keep saved videos under N GB by removing the oldest watched ones first, then the oldest saved. The newest file and anything played in the last 30 minutes are kept.
+  function enforceQuota() {
+    const gb = store.settings().quotaGB;
+    if (!gb) return;
+    const cap = gb * 1024 ** 3;
+    const files = walkOffline(store.settings().downloadDir);
+    let total = files.reduce((a, f) => a + f.size, 0);
+    if (total <= cap) return;
+    const newest = files.reduce((a, f) => (f.mtime > (a?.mtime ?? 0) ? f : a), undefined as OffFile | undefined);
+    const recent = Date.now() - 30 * 60_000;
+    const order = files
+      .filter((f) => f !== newest && !((progress[`Offline:${f.rel}`]?.updated ?? 0) > recent))
+      .sort((a, b) => Number(!!progress[`Offline:${b.rel}`]?.watched) - Number(!!progress[`Offline:${a.rel}`]?.watched) || a.mtime - b.mtime);
+    for (const f of order) {
+      if (total <= cap) break;
+      try { removeOffline(f.rel); total -= f.size; } catch { /* in use */ }
+    }
+  }
+  const quotaTimer = setInterval(enforceQuota, 120_000); quotaTimer.unref();
+  setTimeout(enforceQuota, 20_000).unref();
   const cleanTimer = setInterval(autoDelete, 3600_000); cleanTimer.unref();
   setTimeout(autoDelete, 15_000).unref();
 
@@ -788,7 +808,7 @@ export async function start(opts: StartOpts = {}) {
       fs.mkdirSync(dir, { recursive: true });
       patch.downloadDir = dir;
     }
-    for (const k of ['maxParallel', 'limitKBps', 'budgetGB', 'autoDeleteDays'] as const) if (b[k] !== undefined) patch[k] = Math.max(0, Number(b[k]) || 0);
+    for (const k of ['maxParallel', 'limitKBps', 'budgetGB', 'autoDeleteDays', 'quotaGB'] as const) if (b[k] !== undefined) patch[k] = Math.max(0, Number(b[k]) || 0);
     if (b.schedule) patch.schedule = { on: !!b.schedule.on, from: String(b.schedule.from ?? '01:00'), to: String(b.schedule.to ?? '07:00') };
     for (const k of ['tmdbKey', 'osKey', 'osUser', 'osPass'] as const) if (typeof b[k] === 'string') patch[k] = b[k].trim();
     store.patchSettings(patch);
@@ -1228,23 +1248,96 @@ export async function start(opts: StartOpts = {}) {
       month: monthBytes(), budgetGB: store.settings().budgetGB,
     });
   });
-  app.post('/api/dl/add', h(async (req, res) => {
+  async function enqueue(body: any): Promise<number> {
     const s = activeServer();
     if (!s) throw new HttpError(400, 'No server set up yet');
-    const r = await resolve({ root: req.body?.root, path: '' } as any);
+    const r = await resolve({ root: body?.root, path: '' } as any);
     if (r.offline) throw new HttpError(400, 'These files are already on this laptop');
-    const rels = (Array.isArray(req.body?.paths) ? req.body.paths : []).map((p: unknown) => posix.normalize('/' + String(p)).replace(/^\/+/, ''));
+    const rels = (Array.isArray(body?.paths) ? body.paths : []).map((p: unknown) => posix.normalize('/' + String(p)).replace(/^\/+/, ''));
     if (!rels.length) throw new HttpError(400, 'Nothing selected');
-    const profile = String(req.body?.profile ?? 'orig');
+    const profile = String(body?.profile ?? 'orig');
     const caps = await getRemoteCaps(s);
     if (profile !== 'orig' && !caps.ffmpeg) throw new HttpError(400, 'ffmpeg is not installed on the server, so files cannot be compressed. Download the original instead.');
     if (/^hevc/.test(profile) && !caps.hevc) throw new HttpError(400, 'The server cannot encode HEVC. Pick H.264 instead.');
     if (/^av1/.test(profile) && !caps.av1) throw new HttpError(400, 'The server cannot encode AV1. Pick H.264 or HEVC instead.');
-    const n = await dl.add({
+    return dl.add({
       serverId: s.id, B: r.B, rootName: r.root.name, rootDir: r.root.dir, rels, profile,
-      opts: { loud: !!req.body?.opts?.loud, dialogue: !!req.body?.opts?.dialogue },
+      opts: { loud: !!body?.opts?.loud, dialogue: !!body?.opts?.dialogue },
     });
-    res.json({ queued: n });
+  }
+  app.post('/api/dl/add', h(async (req, res) => { res.json({ queued: await enqueue(req.body) }); }));
+
+  // Scheduled downloads: saved on disk, started by the app at the chosen time (the app has to be running then).
+  type Sched = { id: string; at: number; label: string; body: any };
+  const scheds = (): Sched[] => (Array.isArray(store.allPrefs().dlsched) ? (store.allPrefs().dlsched as Sched[]) : []);
+  const saveScheds = (l: Sched[]) => store.setPref('dlsched', l);
+  app.get('/api/dl/schedules', h(async (_req, res) => {
+    res.json({ items: scheds().map((x) => ({ id: x.id, at: x.at, label: x.label, count: x.body.paths.length })) });
+  }));
+  app.post('/api/dl/schedule', h(async (req, res) => {
+    const at = Number(req.body?.at);
+    const paths = Array.isArray(req.body?.paths) ? req.body.paths.map(String) : [];
+    if (!isFinite(at) || at < Date.now() - 60_000) throw new HttpError(400, 'Pick a time in the future');
+    if (!paths.length) throw new HttpError(400, 'Nothing selected');
+    saveScheds([...scheds(), {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at, label: String(req.body?.label ?? '').slice(0, 140),
+      body: { root: req.body?.root, paths, profile: String(req.body?.profile ?? 'orig'), opts: req.body?.opts ?? {} },
+    }]);
+    res.json({ ok: true });
+  }));
+  app.delete('/api/dl/schedule', h(async (req, res) => { saveScheds(scheds().filter((x) => x.id !== String(req.query.id))); res.json({ ok: true }); }));
+  setInterval(() => {
+    const now = Date.now();
+    const due = scheds().filter((x) => x.at <= now);
+    if (!due.length) return;
+    saveScheds(scheds().filter((x) => x.at > now));
+    for (const d of due) enqueue(d.body).catch(() => saveScheds([...scheds(), { ...d, at: Date.now() + 10 * 60_000 }])); // server unreachable: try again in 10 minutes
+  }, 20_000).unref?.();
+
+  // Move every saved video (and its saved info) to another folder or drive, so nothing is lost when the save folder changes.
+  type MoveSt = { state: 'idle' | 'moving' | 'done' | 'error'; done: number; total: number; file: string; error?: string };
+  let mv: MoveSt = { state: 'idle', done: 0, total: 0, file: '' };
+  const walkAll = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walkAll(path.join(d, e.name)) : [path.join(d, e.name)]));
+  const copyCount = (a: string, b: string) => new Promise<void>((ok, no) => {
+    const rs = fs.createReadStream(a), ws = fs.createWriteStream(b);
+    rs.on('data', (c) => { mv.done += c.length; });
+    rs.on('error', no); ws.on('error', no); ws.on('close', () => ok());
+    rs.pipe(ws);
+  });
+  app.get('/api/storage/move', (_req, res) => res.json(mv));
+  app.post('/api/storage/move', h(async (req, res) => {
+    if (mv.state === 'moving') throw new HttpError(409, 'Already moving');
+    const from = path.resolve(store.settings().downloadDir);
+    const vault = String(req.body?.to ?? '') === 'vault';
+    const to = vault ? path.join(DATA, 'vault') : path.resolve(String(req.body?.to ?? '').trim());
+    if (!String(req.body?.to ?? '').trim()) throw new HttpError(400, 'Pick a folder');
+    if (from.toLowerCase() === to.toLowerCase()) throw new HttpError(400, 'That is already the save folder');
+    if (to.toLowerCase().startsWith(from.toLowerCase() + path.sep)) throw new HttpError(400, 'Pick a folder outside the current one');
+    if (dl.list().some((i) => ['queued', 'encoding', 'downloading', 'finalizing'].includes(i.state))) throw new HttpError(409, 'Downloads are running. Pause or finish them, then move your videos.');
+    fs.mkdirSync(to, { recursive: true });
+    if (vault && process.platform === 'win32') { try { (await import('node:child_process')).execFile('attrib', ['+h', to], () => {}); } catch { /* cosmetic */ } }
+    const files = fs.existsSync(from) ? walkAll(from) : [];
+    const total = files.reduce((a, f) => a + fs.statSync(f).size, 0);
+    try { const st = fs.statfsSync(to); if (Number(st.bavail) * Number(st.bsize) < total * 1.02) throw new HttpError(400, 'There is not enough free space in that folder for your saved videos.'); } catch (e) { if (e instanceof HttpError) throw e; }
+    mv = { state: 'moving', done: 0, total, file: '' };
+    res.json(mv);
+    (async () => {
+      try {
+        for (const f of files) {
+          const dest = path.join(to, path.relative(from, f));
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          mv.file = path.basename(f);
+          const size = fs.statSync(f).size;
+          await copyCount(f, dest);
+          if (fs.statSync(dest).size !== size) throw new Error(`Copy of ${path.basename(f)} is incomplete`);
+          fs.rmSync(f, { force: true });
+        }
+        store.patchSettings({ downloadDir: to });
+        const dirs = fs.existsSync(from) ? [...new Set(files.map((f) => path.dirname(f)))].sort((a, b) => b.length - a.length) : [];
+        for (const d of dirs) { try { fs.rmdirSync(d); } catch { /* not empty */ } }
+        mv = { ...mv, state: 'done', done: total, file: '' };
+      } catch (e: any) { mv = { ...mv, state: 'error', error: e?.message ?? 'Move failed' }; }
+    })();
   }));
   app.post('/api/dl/all', h(async (req, res) => {
     const a = String(req.body?.action ?? '');

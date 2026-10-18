@@ -2,8 +2,7 @@ import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { EQ_PRESETS } from './audio';
 import {
   ACCENTS, APP_NAME, ASPECTS, Icon, LANGS, MAX_VOLS, Prog, QUALITIES, SAVER, SettingsCtx,
-  api, bridge, bytes, mbps, post, rate, speedTest, turboOk, useUpdates,
-} from './lib';
+  api, bridge, bytes, mbps, post, rate, speedTest, turboOk, useUpdates, moveDownloads } from './lib';
 
 export const Field = ({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) => (
   <div className="field"><div><b>{label}</b>{hint && <small>{hint}</small>}</div><div className="field-c">{children}</div></div>
@@ -49,7 +48,7 @@ function Updates() {
 
 type Srv = {
   downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string };
-  budgetGB: number; autoDeleteDays: number; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
+  budgetGB: number; autoDeleteDays: number; quotaGB: number; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
 };
 type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app';
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -64,6 +63,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
 }) {
   const { s, set } = useContext(SettingsCtx);
   const [tab, setTab] = useState<Tab>('look');
+  const [moveMsg, setMoveMsg] = useState('');
   const [srv, setSrv] = useState<Srv | null>(null);
   const [osPass, setOsPass] = useState('');
   const [t, setT] = useState<{ running: boolean; live: number; res?: { avg: number; peak: number; bytes: number }; err?: string }>({ running: false, live: 0 });
@@ -90,7 +90,10 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
   const browse = async (what: 'player' | 'folder') => {
     if (!bridge) return;
     if (what === 'player') { const f = await bridge.selectFile(); if (f) set({ externalPlayer: f }); }
-    else { const f = await bridge.selectFolder(); if (f) patch({ downloadDir: f }); }
+    else {
+      const f = await bridge.selectFolder();
+      if (f) { setMoveMsg('Moving…'); const e = await moveDownloads(f, setMoveMsg); setMoveMsg(e ?? 'Done. Your saved videos are in the new folder and still play offline.'); patch({}); }
+    }
   };
 
   const seen = Object.values(prog);
@@ -206,8 +209,9 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         {tab === 'offline' && (
         <section>
           <h4>Downloads and offline</h4>
-          <Field label="Save downloads to" hint={srv?.downloadDir}>
-            <span className="inline">{bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change…</button>}<button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button></span>
+          <Field label="Save downloads to" hint={moveMsg || `${srv?.downloadDir ?? ''}. Pick a folder on another drive to keep videos off your system drive; saved videos move with it.`}>
+            <span className="inline">{bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change…</button>}
+              <button className="btn ghost" onClick={async () => { setMoveMsg('Moving…'); const e = await moveDownloads('vault', setMoveMsg); setMoveMsg(e ?? 'Done. Saved videos now live in a hidden folder inside the app’s own data, not in your Videos or Downloads.'); patch({}); }} title="Hidden, app-private folder">Private storage</button><button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button></span>
           </Field>
           <Field label="Save while I watch" hint="Keeps a full-quality copy on this laptop in the background, so next time it plays offline and uses no data">
             <Toggle on={s.autoCache} label="Save while watching" onClick={() => set({ autoCache: !s.autoCache })} />
@@ -231,6 +235,11 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
               </span>
             </Field>
           )}
+          <Field label="Space limit for saved videos" hint="When it is full, watched videos are removed first, then the oldest. Your copies on the server stay">
+            <select value={srv?.quotaGB ?? 0} onChange={(e) => patch({ quotaGB: +e.target.value })}>
+              <option value={0}>No limit</option>{[2, 5, 10, 20, 50].map((n) => <option key={n} value={n}>{n} GB</option>)}
+            </select>
+          </Field>
           <Field label="Delete watched downloads after" hint="Frees space automatically. Your copy on the server stays">
             <select value={srv?.autoDeleteDays ?? 0} onChange={(e) => patch({ autoDeleteDays: +e.target.value })}>
               <option value={0}>Never</option>{[1, 3, 7, 14, 30].map((n) => <option key={n} value={n}>{n} day{n > 1 ? 's' : ''}</option>)}

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
-import { Caps, Icon, Info, SettingsCtx, api, bridge, bytes, canDecode, clock, post, rate } from './lib';
+import { Caps, Icon, Info, SettingsCtx, api, bridge, bytes, canDecode, clock, moveDownloads, post, rate } from './lib';
 
 // ------------------------------------------------------------------------------------------
 //  Choose how to save something for offline watching
@@ -20,7 +20,7 @@ const estimate = (profile: string, dur: number, size: number) => {
 
 export function DownloadDialog(p: {
   root: number; paths: string[]; names: string[]; sizes: number; caps: Caps | null;
-  onClose: () => void; onQueued: (n: number) => void;
+  onClose: () => void; onQueued: (n: number) => void; onScheduled?: (text: string) => void;
 }) {
   const { s, set } = useContext(SettingsCtx);
   const [info, setInfo] = useState<Info | null>(null);
@@ -30,6 +30,10 @@ export function DownloadDialog(p: {
   const [dialogue, setDialogue] = useState(s.dlDialogue);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [when, setWhen] = useState<'now' | 'tonight' | 'custom'>('now');
+  const tonight = () => { const d = new Date(); d.setHours(1, 0, 0, 0); if (d.getTime() < Date.now() + 60_000) d.setDate(d.getDate() + 1); return d; };
+  const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [at, setAt] = useState(local(tonight()));
   const single = p.paths.length === 1 && /\.[a-z0-9]{2,4}$/i.test(p.paths[0]);
   const remote = p.caps?.remote;
   const canEnc = !!remote?.ffmpeg;
@@ -74,8 +78,14 @@ export function DownloadDialog(p: {
     setBusy(true); setErr('');
     const prof = profile === 'orig' && (loud || dialogue) ? 'fix' : profile;
     try {
-      const r = await post<{ queued: number }>('dl/add', { root: p.root, paths: p.paths, profile: prof, opts: { loud, dialogue } });
       set({ dlProfile: profile, dlLoud: loud, dlDialogue: dialogue });
+      if (when !== 'now') {
+        const t = when === 'tonight' ? tonight() : new Date(at);
+        await post('dl/schedule', { root: p.root, paths: p.paths, profile: prof, opts: { loud, dialogue }, at: t.getTime(), label: p.names.length === 1 ? p.names[0] : `${p.names.length} videos` });
+        p.onScheduled?.(`Scheduled for ${t.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}. Keep the app running.`);
+        return;
+      }
+      const r = await post<{ queued: number }>('dl/add', { root: p.root, paths: p.paths, profile: prof, opts: { loud, dialogue } });
       p.onQueued(r.queued);
     } catch (e: any) { setErr(e.message); setBusy(false); }
   };
@@ -118,9 +128,17 @@ export function DownloadDialog(p: {
             </p>
           </>
         )}
+        <div className="msec">When</div>
+        <div className="seg-m" role="group" aria-label="When to download">
+          <button className={when === 'now' ? 'on' : ''} onClick={() => setWhen('now')}>Now</button>
+          <button className={when === 'tonight' ? 'on' : ''} onClick={() => setWhen('tonight')}>Tonight 01:00</button>
+          <button className={when === 'custom' ? 'on' : ''} onClick={() => setWhen('custom')}>Pick a time</button>
+        </div>
+        {when === 'custom' && <input type="datetime-local" value={at} min={local(new Date())} onChange={(e) => setAt(e.target.value)} />}
+        {when !== 'now' && <p className="mnote">Screening Room starts these by itself at that time. It only needs to be running (it can sit minimized).</p>}
         {err && <p className="err-t">{err}</p>}
         <div className="dlg-actions"><button className="btn ghost" onClick={p.onClose}>Cancel</button>
-          <button className="btn" onClick={go} disabled={busy}><Icon n="down" s={15} /> {busy ? 'Adding…' : p.names.length === 1 && single ? 'Download' : 'Download all'}</button></div>
+          <button className="btn" onClick={go} disabled={busy}><Icon n="down" s={15} /> {busy ? 'Adding…' : when !== 'now' ? 'Schedule' : p.names.length === 1 && single ? 'Download' : 'Download all'}</button></div>
       </div>
     </div>
   );
@@ -139,6 +157,9 @@ const eta = (s: number) => (!s || !isFinite(s) ? '' : s > 3600 ? `${Math.floor(s
 
 export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => void; onPlay: (destRel: string) => void; onStorage: () => void }) {
   const [q, setQ] = useState<Queue | null>(null);
+  const [sched, setSched] = useState<{ id: string; at: number; label: string; count: number }[]>([]);
+  const loadSched = () => api<{ items: { id: string; at: number; label: string; count: number }[] }>('dl/schedules').then((d) => setSched(d.items)).catch(() => {});
+  useEffect(() => { loadSched(); const t = setInterval(loadSched, 15000); return () => clearInterval(t); }, []);
   useEffect(() => {
     let dead = false;
     const tick = () => api<Queue>('dl').then((j) => { if (!dead) setQ(j); }).catch(() => {});
@@ -188,6 +209,17 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
     <div className="scrim side" onClick={onClose}>
       <aside className="drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Downloads">
         <div className="dlg-head"><h3>Downloads</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
+        {sched.length > 0 && (
+          <div className="sched">
+            <div className="msec">Scheduled</div>
+            {sched.map((x) => (
+              <div key={x.id} className="sched-row">
+                <span><b>{x.label || `${x.count} videos`}</b><small>{new Date(x.at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></span>
+                <button className="btn ghost" onClick={async () => { await api('dl/schedule', { id: x.id }, 'DELETE').catch(() => {}); loadSched(); }}>Cancel</button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="dl-top">
           <span><b>{rate(q?.speed ?? 0)}</b> <small className="muted">{live.length} active · {q?.waiting ?? 0} waiting</small></span>
           <span className="inline">
@@ -244,8 +276,9 @@ export function StoragePanel({ onClose, onPlay, onChanged }: { onClose: () => vo
   const move = async () => {
     const f = await bridge?.selectFolder();
     if (!f) return;
-    await post('settings', { downloadDir: f }).catch((e) => setErr(e.message));
-    setMsg('New downloads will go to the new folder. Existing downloads stay where they are.');
+    setMsg('Moving…');
+    const e = await moveDownloads(f, setMsg);
+    if (e) { setErr(e); setMsg(''); } else setMsg('Done. Your saved videos moved to the new folder and still play offline.');
     await load(); onChanged();
   };
   const watched = d?.items.filter((i) => i.watched) ?? [];

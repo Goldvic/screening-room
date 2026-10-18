@@ -26,7 +26,7 @@ export type PublicServer = Omit<Server, 'keySecret' | 'passSecret' | 'phraseSecr
 export type Settings = {
   downloadDir: string; maxParallel: number; limitKBps: number;
   schedule: { on: boolean; from: string; to: string };
-  budgetGB: number; autoDeleteDays: number;
+  budgetGB: number; autoDeleteDays: number; quotaGB: number;
   tmdbKey: string; osKey: string; osUser: string; osPassSecret?: string;
 };
 
@@ -124,6 +124,7 @@ export class Store {
       schedule: { on: false, from: '01:00', to: '07:00', ...(o.schedule ?? {}) },
       budgetGB: Math.max(0, o.budgetGB ?? 0),
       autoDeleteDays: Math.max(0, o.autoDeleteDays ?? 0),
+      quotaGB: Math.max(0, o.quotaGB ?? 0),
       tmdbKey: o.tmdbKey ?? '', osKey: o.osKey ?? '', osUser: o.osUser ?? '', osPassSecret: o.osPassSecret,
     };
   }

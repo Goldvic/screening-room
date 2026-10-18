@@ -703,6 +703,7 @@ function Library() {
       {panel === 'storage' && <StoragePanel onClose={() => setPanel(null)} onPlay={playOffline} onChanged={() => { loadRoots(); loadProg(); if (offline) load(); }} />}
       {target && (
         <DownloadDialog {...target} caps={caps} onClose={() => setTarget(null)}
+          onScheduled={(t) => { setTarget(null); flash(t); setPanel('downloads'); }}
           onQueued={(n) => { setTarget(null); flash(n ? `Added ${n} to Downloads` : 'Already saved or queued'); if (n) setPanel('downloads'); }} />
       )}
       {detail && <Details name={detail} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}

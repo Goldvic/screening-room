@@ -571,7 +571,9 @@ export default function Player(p: Props) {
   const cbtn = (m: MenuId, icon: string, title: string, on = false) => (
     <button className={menu === m ? 'cbtn on' : on ? 'cbtn lit' : 'cbtn'} title={title} aria-label={title} onClick={() => toggle(m)}><Icon n={icon} s={20} /></button>
   );
-  const ikey = p.pkey.slice(0, p.pkey.length - p.name.length);
+  const fileKey = p.offline && info.origin ? `${info.origin.rootName}:${info.origin.rel}` : p.pkey;
+  const baseLen = p.offline && info.origin ? (info.origin.rel.split('/').pop() ?? '').length : p.name.length;
+  const ikey = title.episode ? fileKey.slice(0, fileKey.length - baseLen) : fileKey; // episodes share one setting per folder, movies get their own
   const mark = prefs.intros?.[ikey];
   const chapIntro = !s.skipIntro ? undefined : chapters.find((c) => /\b(intro|recap|previously)\b/i.test(c.title) && !/credit/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
   const intro = !s.skipIntro ? undefined : chapIntro ?? (mark && pos >= mark.start - 1 && pos < mark.end - 1 ? { end: mark.end, title: 'Intro', start: mark.start } : undefined);
@@ -874,9 +876,9 @@ export default function Player(p: Props) {
                 <Opt on={sleep === null} label="Off" onClick={() => setSleep(null)} />
                 {[15, 30, 60].map((m) => <Opt key={m} on={typeof sleep === 'number' && Math.abs(sleep - Date.now() - m * 60000) < 90000} label={`${m} minutes`} onClick={() => { setSleep(Date.now() + m * 60000); flash(`Will pause in ${m} minutes`); }} />)}
                 <Opt on={sleep === 'end'} label="After this video" onClick={() => setSleep('end')} />
-                <div className="msec">Skip intro for this folder</div>
+                <div className="msec">Skip intro for this {title.episode ? 'folder' : 'video'}</div>
                 <button className="opt" onClick={() => { setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: Math.floor(pos), end: mark && mark.end > pos ? mark.end : Math.floor(pos) + 90 } }); flash('Intro starts here'); }}><span><b>Intro starts here</b><small>{mark ? `Now ${clock(mark.start)} to ${clock(mark.end)}` : 'Pause at the start of the intro, then press this'}</small></span></button>
-                <button className="opt" onClick={() => { const st = mark && mark.start < pos ? mark.start : Math.max(0, Math.floor(pos) - 90); setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: st, end: Math.floor(pos) } }); flash('Skip intro is set for every video in this folder'); }}><span><b>Intro ends here</b><small>Every video in this folder then gets a Skip intro button</small></span></button>
+                <button className="opt" onClick={() => { const st = mark && mark.start < pos ? mark.start : Math.max(0, Math.floor(pos) - 90); setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: st, end: Math.floor(pos) } }); flash('Skip intro is set for every video in this folder'); }}><span><b>Intro ends here</b><small>{title.episode ? 'Every video in this folder then gets a Skip intro button' : 'This video gets a Skip intro button'}</small></span></button>
                 {mark && <button className="opt" onClick={() => { const n = { ...(prefs.intros ?? {}) }; delete n[ikey]; setPref('intros', n); }}><span><b>Clear this folder’s intro</b></span></button>}
                 <div className="msec">Tools</div>
                 <button className="opt" onClick={shot}><span><b><Icon n="camera" s={15} /> Save screenshot (S)</b></span></button>

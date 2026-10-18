@@ -9,7 +9,7 @@ export type Ext = { name: string; label: string; lang: string };
 export type Chapter = { start: number; end: number; title: string };
 export type Info = {
   duration: number; width?: number; height?: number; codec?: string; bitrate?: number; fps?: number; channels?: number;
-  audio?: Track[]; subs?: Track[]; external?: Ext[]; ai?: boolean; chapters?: Chapter[]; size?: number;
+  audio?: Track[]; subs?: Track[]; external?: Ext[]; ai?: boolean; chapters?: Chapter[]; size?: number; origin?: { rootName: string; rel: string };
 };
 export type Caps = {
   local: { ffmpeg: boolean; ffprobe: boolean };
@@ -388,4 +388,16 @@ export function canDecode(codec: 'h264' | 'hevc' | 'av1'): boolean {
   const v = document.createElement('video');
   const t = { h264: 'video/mp4; codecs="avc1.640028"', hevc: 'video/mp4; codecs="hvc1.1.6.L93.B0"', av1: 'video/mp4; codecs="av01.0.05M.08"' }[codec];
   return v.canPlayType(t) !== '';
+}
+/** Move all saved videos to another folder or drive. Resolves with an error message, or null when finished. */
+export async function moveDownloads(to: string, onProgress: (text: string) => void): Promise<string | null> {
+  try { await post('storage/move', { to }); } catch (e: any) { return e?.message ?? 'Could not start moving'; }
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 800));
+    const m = await api<{ state: string; done: number; total: number; file: string; error?: string }>('storage/move').catch(() => null);
+    if (!m) continue;
+    if (m.state === 'error') return m.error ?? 'Move failed';
+    if (m.state === 'done') return null;
+    onProgress(`Moving… ${m.total ? Math.round((m.done / m.total) * 100) : 0}%${m.file ? ` · ${m.file}` : ''}`);
+  }
 }
