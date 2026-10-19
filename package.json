@@ -85,7 +85,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "files": [
         "!node_modules/ffprobe-static/bin/darwin/**",
         "!node_modules/ffprobe-static/bin/linux/**",
@@ -99,7 +99,16 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Cinema",
-      "artifactName": "Cinema-Setup-${version}.${ext}"
+      "artifactName": "Cinema-Setup-${version}.${ext}",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+      "installerHeader": "build/installerHeader.bmp",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "include": "build/installer.nsh",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
     },
     "msi": {
       "oneClick": false,
@@ -107,7 +116,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "warningsAsErrors": false,
-      "artifactName": "Cinema-${version}.${ext}"
+      "artifactName": "Cinema-${version}.${ext}",
+      "additionalLightArgs": [
+        "-dWixUIBannerBmp=build/msi-banner.bmp",
+        "-dWixUIDialogBmp=build/msi-dialog.bmp"
+      ]
     },
     "mac": {
       "target": [

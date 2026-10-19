@@ -119,6 +119,12 @@ export default function Player(p: Props) {
   const [barW, setBarW] = useState(0);
   const [suggest, setSuggest] = useState(false);
   const [noNext, setNoNext] = useState(false);
+  const [help, setHelp] = useState(false);
+  useEffect(() => { // after a mouse click, do not leave a button focused: Space must play/pause, not press that button again
+    const f = (e: MouseEvent) => { if (e.detail > 0 && (e.target as HTMLElement).closest?.('.theatre button')) setTimeout(() => (document.activeElement as HTMLElement | null)?.blur?.(), 0); };
+    window.addEventListener('click', f);
+    return () => window.removeEventListener('click', f);
+  }, []);
   const [det, setDet] = useState<{ state: 'idle' | 'busy' | 'found' | 'none'; start?: number; end?: number; reason?: string }>({ state: 'idle' });
   const detTimer = useRef(0);
   const detect = async () => {
@@ -517,16 +523,42 @@ export default function Player(p: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (p.floating) return;
       const v = vref.current;
       if (!v) return;
       wake();
       const k = e.key;
-      if (k === 'Escape') { if (menu) setMenu(null); else p.onClose(); }
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod || e.altKey) {
+        if (mod && k === 'ArrowRight') { e.preventDefault(); skip(60); }
+        else if (mod && k === 'ArrowLeft') { e.preventDefault(); skip(-60); }
+        else if (mod && k === 'ArrowUp') { e.preventDefault(); setMuted(false); setVol((x) => Math.min(maxVol, +(x + 0.2).toFixed(2))); }
+        else if (mod && k === 'ArrowDown') { e.preventDefault(); setVol((x) => Math.max(0, +(x - 0.2).toFixed(2))); }
+        else if (mod && k.toLowerCase() === 's') { e.preventDefault(); shot(); }
+        else if (mod && k.toLowerCase() === 'p') { e.preventDefault(); pip(); }
+        else if (mod && k.toLowerCase() === 'm') { e.preventDefault(); p.onFloat?.(true); }
+        else if (e.altKey && k === 'ArrowRight' && next) { e.preventDefault(); p.onNext(next); }
+        else if (e.altKey && k === 'ArrowLeft' && idx > 0) { e.preventDefault(); p.onNext(p.videos[idx - 1]); }
+        else if (e.altKey && k === 'Enter') { e.preventDefault(); toggleFs(); }
+        return;
+      }
+      if (k === 'Escape') { if (help) setHelp(false); else if (menu) setMenu(null); else p.onClose(); }
+      else if (k === '?' || k === 'h') setHelp((x) => !x);
+      else if (k === 'PageDown' && next) { e.preventDefault(); p.onNext(next); }
+      else if (k === 'PageUp' && idx > 0) { e.preventDefault(); p.onNext(p.videos[idx - 1]); }
+      else if (k === 'Home') { e.preventDefault(); seekTo(0); }
+      else if (k === 'End' && totalRef.current) { e.preventDefault(); seekTo(Math.max(0, totalRef.current - 5)); }
+      else if (e.shiftKey && k === 'ArrowRight') { e.preventDefault(); skip(5); }
+      else if (e.shiftKey && k === 'ArrowLeft') { e.preventDefault(); skip(-5); }
+      else if (k === 'Enter' && tag !== 'BUTTON') toggleFs();
+      else if (k === 'Backspace') { e.preventDefault(); setSpd(1); }
+      else if (k === '[') setSpd(SPEEDS[Math.max(0, SPEEDS.indexOf(speed) - 1)]);
+      else if (k === ']') setSpd(SPEEDS[Math.min(SPEEDS.length - 1, SPEEDS.indexOf(speed) + 1)]);
+      else if (k === 't' && p.onFloat) p.onFloat(true);
       else if (k === ' ' || k === 'k') { e.preventDefault(); togglePlay(); }
-      else if (k === 'ArrowRight' || k === 'l') skip(10);
-      else if (k === 'ArrowLeft' || k === 'j') skip(-10);
+      else if (k === 'ArrowRight' || k === 'l') { e.preventDefault(); skip(10); }
+      else if (k === 'ArrowLeft' || k === 'j') { e.preventDefault(); skip(-10); }
       else if (k === 'ArrowUp') { e.preventDefault(); setMuted(false); setVol((x) => Math.min(maxVol, +(x + 0.05).toFixed(2))); }
       else if (k === 'ArrowDown') { e.preventDefault(); setVol((x) => Math.max(0, +(x - 0.05).toFixed(2))); }
       else if (k === 'f') toggleFs();
@@ -713,6 +745,20 @@ export default function Player(p: Props) {
             <span>Playback keeps pausing to buffer. Auto quality adapts to your connection.</span>
             <button className="btn" onClick={() => reload({ q: 'auto' }, false)}>Switch to Auto</button>
             <button className="btn ghost" onClick={() => { setSuggest(false); dismissed.current = true; }}>Not now</button>
+          </div>
+        )}
+        {help && (
+          <div className="sheet" onClick={() => setHelp(false)} role="dialog" aria-label="Keyboard shortcuts">
+            <div className="sheet-box" onClick={(e) => e.stopPropagation()}>
+              <h3>Keyboard shortcuts</h3>
+              <div className="sheet-grid">
+                {[['Space / K', 'Play or pause'], ['← → / J L', 'Back or forward 10 s'], ['Shift + ← →', '5 s'], ['Ctrl + ← →', '1 minute'], ['↑ ↓', 'Volume'], ['Ctrl + ↑ ↓', 'Volume, bigger steps'],
+                  ['0 to 9', 'Jump to 0% to 90%'], ['Home / End', 'Start or end'], ['PageUp / PageDown', 'Previous or next video'], ['N, Alt + →', 'Next video'], ['F, Enter', 'Full screen'], ['M', 'Mute'],
+                  ['C', 'Subtitles on or off'], ['A', 'Picture shape'], ['< >  [ ]', 'Speed down or up'], ['Backspace', 'Normal speed'], ['E / Shift+E', 'Next or previous frame'], ['B', 'Loop a section'],
+                  ['D', 'Add a bookmark'], ['S, Ctrl + S', 'Screenshot'], ['P, Ctrl + P', 'Picture-in-picture'], ['T, Ctrl + M', 'Mini player'], ['I', 'Video info'], ['G', 'Sound panel'], ['H or ?', 'This sheet'], ['Esc', 'Close']]
+                  .map(([k, d]) => <p key={k}><kbd>{k}</kbd><span>{d}</span></p>)}
+              </div>
+            </div>
           </div>
         )}
         {p.floating && (

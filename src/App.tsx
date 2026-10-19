@@ -197,6 +197,8 @@ function Library() {
   const net = useNet(null, 2000);
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
+  const [palette, setPalette] = useState(false);
+  const [help, setHelp] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [onBattery, setOnBattery] = useState(false);
   const [floating, setFloating] = useState(false);
@@ -284,6 +286,46 @@ function Library() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Keyboard layer for the library (the player has its own keys). Ctrl+K opens the command palette, ? shows every shortcut.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (play) return;
+      const t = e.target as HTMLElement;
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable;
+      const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+      if (mod && k === 'k') { e.preventDefault(); setHelp(false); setPalette((x) => !x); return; }
+      if (palette || help) { if (e.key === 'Escape') { setPalette(false); setHelp(false); } return; }
+      if (mod && k === 'f') { e.preventDefault(); setView('library'); setTimeout(() => search.current?.focus(), 60); return; }
+      if (mod && k === 'a' && view === 'library' && !typing) { e.preventDefault(); setSelecting(true); setSel(videos); return; }
+      if (mod && ['1', '2', '3'].includes(k)) { e.preventDefault(); setView((['home', 'library', 'playlists'] as const)[Number(k) - 1]); return; }
+      if (mod && k === '4') { e.preventDefault(); setPanel('downloads'); return; }
+      if (mod && k === ',') { e.preventDefault(); setPanel('settings'); return; }
+      if (mod && k === 'd') { e.preventDefault(); setPanel('downloads'); return; }
+      if (typing || mod) return;
+      if (e.key === 'Escape') { if (menuFor) setMenuFor(null); else if (selecting) endSelect(); else if (panel) setPanel(null); return; }
+      if (e.key === 'Delete' && selecting && sel.length) { e.preventDefault(); const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); return; }
+      if (e.key === '?') { e.preventDefault(); setHelp(true); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  const palCmds = [
+    { t: 'Go to Home', k: 'Ctrl 1', run: () => setView('home') },
+    { t: 'Go to Library', k: 'Ctrl 2', run: () => setView('library') },
+    { t: 'Go to Playlists', k: 'Ctrl 3', run: () => setView('playlists') },
+    { t: 'Open Downloads', k: 'Ctrl D', run: () => setPanel('downloads') },
+    { t: 'Open Settings', k: 'Ctrl ,', run: () => setPanel('settings') },
+    { t: 'Open Servers', k: '', run: () => setPanel('servers') },
+    { t: 'Refresh', k: 'F5', run: () => { refreshAll().then(() => flash('Refreshed')); } },
+    { t: 'Select videos', k: 'Ctrl A', run: () => { setView('library'); setSelecting(true); } },
+    { t: s.theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme', k: '', run: () => set({ theme: s.theme === 'dark' ? 'light' : 'dark' }) },
+    { t: s.eco === 'on' ? 'Turn power saving off' : 'Turn power saving on', k: '', run: () => set({ eco: s.eco === 'on' ? 'off' : 'on' }) },
+    { t: 'Keyboard shortcuts', k: '?', run: () => setHelp(true) },
+    ...(bridge ? [{ t: 'Open a video from this computer', k: 'Ctrl O', run: () => pickFile() }] : []),
+    ...items.map((it) => it.dir
+      ? { t: `Open folder: ${it.name}`, k: '', run: () => { setView('library'); setDir(join(dir, it.name)); } }
+      : { t: `Play: ${it.name.replace(/\.[^.]+$/, '')}`, k: '', run: () => startPlay(it.name) }),
+  ];
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDragging(false);
     if (!bridge) return;
@@ -532,6 +574,16 @@ function Library() {
           const cardArt = (x: { rid: number; dir: string; name: string }) => <Art root={x.rid} path={join(x.dir, x.name)} v={0} name={x.name} />;
           return (
             <div className="home">
+              <div className="greet">
+                <h1>{new Date().getHours() < 5 ? 'Late night' : new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}</h1>
+                <div className="chips">
+                  {resumable.length > 0 && <span><b>{resumable.length}</b> in progress</span>}
+                  {savedFiles.length > 0 && <span><b>{savedFiles.length}</b> saved offline</span>}
+                  {queueInfo.active + queueInfo.waiting > 0 && <button onClick={() => setPanel('downloads')}><b>{queueInfo.active + queueInfo.waiting}</b> downloading</button>}
+                  {lists.length > 0 && <button onClick={() => setView('playlists')}><b>{lists.length}</b> playlist{lists.length > 1 ? 's' : ''}</button>}
+                  <button onClick={() => setPalette(true)}>Search everything <kbd>Ctrl K</kbd></button>
+                </div>
+              </div>
               {hero && t ? (
                 <Hero eyebrow="Continue watching" title={t.title + (t.season ? `  ·  S${String(t.season).padStart(2, '0')}E${String(t.episode).padStart(2, '0')}` : '')}
                   line={hero.p ? `${clock(hero.p.pos)} watched of ${clock(hero.p.dur)}` : ''} label="Resume" art={cardArt(hero)}
@@ -755,6 +807,8 @@ function Library() {
           onQueued={(n) => { setTarget(null); flash(n ? `Added ${n} to Downloads` : 'Already saved or queued'); if (n) setPanel('downloads'); }} />
       )}
       {detail && <Details name={detail} folder={dir} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
+      {palette && <Palette cmds={palCmds} onClose={() => setPalette(false)} />}
+      {help && <Sheet onClose={() => setHelp(false)} />}
       {nameAsk && <NameDialog ask={nameAsk} onClose={() => setNameAsk(null)} />}
       {ask && <Confirm ask={ask} onClose={() => setAsk(null)} onError={flash} />}
       {dls.length > 0 && <Tray dls={dls} onDismiss={(id) => setDls((d) => d.filter((x) => x.id !== id))} />}
@@ -816,6 +870,45 @@ function NameDialog({ ask, onClose }: { ask: { title: string; value: string; lab
         <h3>{ask.title}</h3>
         <input autoFocus value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') done(); if (e.key === 'Escape') onClose(); }} />
         <div className="dlg-actions"><button className="btn ghost" onClick={onClose}>Cancel</button><button className="btn" onClick={done}>{ask.label}</button></div>
+      </div>
+    </div>
+  );
+}
+
+
+function Palette({ cmds, onClose }: { cmds: { t: string; k: string; run: () => void }[]; onClose: () => void }) {
+  const [q, setQ] = useState('');
+  const [i, setI] = useState(0);
+  const list = cmds.filter((c) => q.split(/\s+/).every((w) => c.t.toLowerCase().includes(w.toLowerCase()))).slice(0, 12);
+  const go = (c?: { run: () => void }) => { if (!c) return; onClose(); c.run(); };
+  return (
+    <div className="scrim top" onClick={onClose}>
+      <div className="palette" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette">
+        <input autoFocus placeholder="Type a command or the name of a video…" value={q}
+          onChange={(e) => { setQ(e.target.value); setI(0); }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setI((x) => Math.min(list.length - 1, x + 1)); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setI((x) => Math.max(0, x - 1)); }
+            else if (e.key === 'Enter') go(list[i]);
+            else if (e.key === 'Escape') onClose();
+          }} />
+        <div className="pal-list" role="listbox">
+          {list.map((c, n) => <button key={c.t + n} role="option" aria-selected={n === i} className={n === i ? 'on' : ''} onMouseEnter={() => setI(n)} onClick={() => go(c)}><span>{c.t}</span>{c.k && <kbd>{c.k}</kbd>}</button>)}
+          {!list.length && <p className="muted small">Nothing matches “{q}”.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sheet({ onClose }: { onClose: () => void }) {
+  const rows = [['Ctrl + K', 'Command palette'], ['Ctrl + 1 / 2 / 3', 'Home, Library, Playlists'], ['Ctrl + 4 or Ctrl + D', 'Downloads'], ['Ctrl + ,', 'Settings'], ['Ctrl + F or /', 'Search this folder'], ['Ctrl + A', 'Select every video'],
+    ['Delete', 'Delete the selected videos'], ['F5 or Ctrl + R', 'Refresh'], ['Ctrl + O', 'Open a video from this computer'], ['Esc', 'Close or clear selection'], ['?', 'This sheet'], ['In the player', 'Press H for the player shortcuts']];
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Keyboard shortcuts">
+        <h3>Keyboard shortcuts</h3>
+        <div className="sheet-grid">{rows.map(([k, d]) => <p key={k}><kbd>{k}</kbd><span>{d}</span></p>)}</div>
       </div>
     </div>
   );

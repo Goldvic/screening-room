@@ -301,3 +301,27 @@ html[data-eco="1"] .menu { background: rgba(14,14,20,.96); }
 .cand span { display: grid; min-width: 0; } .cand small { color: var(--mute); }
 .btn.sm { padding: 4px 10px; font-size: 12px; }
 code { background: var(--raise); padding: 2px 6px; border-radius: 6px; font-size: 12px; user-select: all; }
+
+
+/* greeting, palette, shortcut sheets */
+.greet { display: grid; gap: 8px; }
+.greet h1 { font: 800 28px/1.1 var(--sans); letter-spacing: -.03em; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips span, .chips button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--raise); color: var(--mute); font-size: 12.5px; }
+.chips button:hover { color: var(--text); background: color-mix(in srgb, var(--lamp) 16%, var(--raise)); }
+.chips b { color: var(--text); }
+kbd { font: 600 11px var(--sans); padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,.1); border: 1px solid var(--line); color: inherit; white-space: nowrap; }
+.scrim.top { align-items: flex-start; padding-top: 12vh; }
+.palette { width: min(620px, 94vw); border-radius: 16px; background: rgba(22,22,29,.96); border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); overflow: hidden; animation: slidein .14s ease-out; }
+.palette input { width: 100%; padding: 16px 18px; font-size: 15px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; outline: none; color: var(--text); }
+.pal-list { max-height: 50vh; overflow: auto; padding: 6px; display: grid; gap: 1px; }
+.pal-list button { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 9px; text-align: left; color: var(--text); }
+.pal-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-list button.on { background: color-mix(in srgb, var(--lamp) 22%, transparent); }
+.sheet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; margin-top: 10px; }
+.sheet-grid p { display: flex; align-items: center; gap: 10px; margin: 0; padding: 4px 0; }
+.sheet-grid kbd { min-width: 96px; text-align: center; } .sheet-grid span { color: var(--mute); font-size: 12.5px; }
+.sheet { position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(5,5,8,.6); backdrop-filter: blur(8px); color: #fff; }
+.sheet-box { width: min(720px, 94%); max-height: 88%; overflow: auto; padding: 18px 22px; border-radius: 16px; background: rgba(20,20,26,.92); border: 1px solid rgba(255,255,255,.14); }
+.sheet-box h3 { margin: 0 0 6px; font: 700 17px var(--sans); }
+@media (max-width: 720px) { .sheet-grid { grid-template-columns: 1fr; } }

@@ -16,6 +16,7 @@ app.commandLine.appendSwitch('enable-features', 'HardwareMediaKeyHandling,MediaS
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
 let rendererReady = false, pendingOpen = null;
+let hadWindow = false;
 let win = null, tray = null, server = null, origin = '', port = 0, quitting = false, blocker = -1, miniFrom = null;
 const token = crypto.randomBytes(24).toString('hex');
 
@@ -114,13 +115,22 @@ async function startServer() {
   origin = DEV_URL || `http://127.0.0.1:${port}`;
 }
 
+// Background work = a download that is running or waiting, or one scheduled for later. Nothing else keeps the app alive.
+const pendingSchedules = async () => {
+  try { const j = await (await fetch(`http://127.0.0.1:${port}/api/dl/schedules?tk=${token}`)).json(); return j.items || []; } catch { return []; }
+};
 const hasWork = async () => {
   try {
-    const r = await fetch(`http://127.0.0.1:${port}/api/dl?tk=${token}`);
-    const j = await r.json();
-    return (j.active ?? 0) + (j.waiting ?? 0) > 0;
-  } catch { return false; }
+    const j = await (await fetch(`http://127.0.0.1:${port}/api/dl?tk=${token}`)).json();
+    if ((j.active ?? 0) + (j.waiting ?? 0) > 0) return true;
+  } catch { /* server not ready */ }
+  return (await pendingSchedules()).length > 0;
 };
+function showWin() {
+  if (!win || win.isDestroyed()) { createWindow(); return; }
+  if (win.isMinimized()) win.restore();
+  win.show(); win.focus();
+}
 
 // Download progress on the taskbar icon and in the tray tooltip, plus a notice when everything is done.
 let lastBusy = false;
@@ -143,6 +153,13 @@ function trackDownloads() {
         tray?.setToolTip?.('Cinema');
         if (lastBusy && Notification.isSupported()) new Notification({ title: 'Cinema', body: 'Your downloads are finished.' }).show();
       }
+      const sched = await pendingSchedules();
+      if (!busy && sched.length) {
+        const next = Math.min(...sched.map((x) => x.at));
+        tray?.setToolTip?.(`Cinema · next download ${new Date(next).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}`);
+      }
+      const hidden = hadWindow && (!win || win.isDestroyed() || (!win.isVisible() && !win.isMinimized()));
+      if (hidden && !busy && !sched.length && !quitting) { quitting = true; app.quit(); }
       lastBusy = busy;
     } catch { /* server not ready */ }
   };
@@ -150,6 +167,7 @@ function trackDownloads() {
 }
 
 function createWindow() {
+  hadWindow = true;
   const b = loadBounds();
   win = new BrowserWindow({
     width: b.width || 1280, height: b.height || 800, x: b.x, y: b.y, minWidth: 380, minHeight: 520,
@@ -158,6 +176,7 @@ function createWindow() {
   });
   if (b.max) win.maximize();
   win.once('ready-to-show', () => win.show());
+  win.on('closed', () => { win = null; });
   win.loadURL(origin);
   win.on('resize', saveBounds); win.on('move', saveBounds);
   win.webContents.on('did-start-loading', () => { rendererReady = false; });
@@ -169,7 +188,9 @@ function createWindow() {
     if (await hasWork()) {
       e.preventDefault();
       win.hide();
-      tray?.displayBalloon?.({ title: 'Cinema', content: 'Downloads continue in the background. Right-click the tray icon to quit.' });
+      // Free the window's memory; only the small background part keeps running, and it quits by itself when the work is done.
+      setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible() && !quitting) win.destroy(); }, 1500);
+      tray?.displayBalloon?.({ title: 'Cinema', content: 'Cinema keeps running only to finish your downloads, then closes by itself.' });
     } else { quitting = true; app.quit(); }
   });
 }
@@ -179,18 +200,20 @@ function createTray() {
     tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }));
     tray.setToolTip('Cinema');
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: 'Open Cinema', click: () => { win?.show(); win?.focus(); } },
-      { label: 'Check for updates', click: () => { win?.show(); checkUpdates(); } },
+      { label: 'Open Cinema', click: () => showWin() },
+      { label: 'Check for updates', click: () => { showWin(); checkUpdates(); } },
       { type: 'separator' },
       { label: 'Quit', click: () => { quitting = true; app.quit(); } },
     ]));
-    tray.on('click', () => { win?.show(); win?.focus(); });
+    tray.on('click', () => showWin());
   } catch { /* some Linux desktops have no tray */ }
 }
 
 function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'Cinema', submenu: [{ role: 'reload' }, { role: 'togglefullscreen' }, { type: 'separator' }, { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => { quitting = true; app.quit(); } }] },
+    { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
+    { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'togglefullscreen' }] },
     { label: 'View', submenu: [{ role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'resetZoom' }, { type: 'separator' }, { role: 'toggleDevTools' }] },
   ]));
 }
@@ -276,7 +299,7 @@ ipcMain.handle('reveal', (_e, file) => { if (str(file)) shell.showItemInFolder(f
 ipcMain.handle('open-folder', (_e, dir) => { if (str(dir)) return shell.openPath(dir); });
 
 app.on('second-instance', (_e, argv, cwd) => {
-  if (win) { win.show(); if (win.isMinimized()) win.restore(); win.focus(); }
+  showWin();
   deliver(fileFromArgv(argv, cwd));
 });
 app.on('before-quit', () => { quitting = true; saveBounds(); try { server?.close(); } catch { /* ignore */ } });
@@ -299,5 +322,5 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   trackDownloads();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else win?.show(); });
+  app.on('activate', () => showWin());
 });
