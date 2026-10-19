@@ -1,3 +1,4 @@
+import { fingerprint, matchIntro, pcm } from './intro';
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import fs from 'node:fs';
@@ -323,11 +324,13 @@ export async function start(opts: StartOpts = {}) {
     duration: number; bitrate?: number; width?: number; height?: number; codec?: string; fps?: number; channels?: number;
     audio: { i: number; label: string; lang: string; channels: number }[];
     subs: { i: number; label: string; lang: string }[];
+    imageSubs?: { i: number; label: string; lang: string; codec: string }[];
     external: { name: string; label: string; lang: string }[];
     chapters: { start: number; end: number; title: string }[];
     ai: boolean;
   };
-  const TEXT_SUBS = ['subrip', 'srt', 'ass', 'ssa', 'mov_text', 'webvtt', 'text'];
+  const TEXT_SUBS = ['subrip', 'srt', 'ass', 'ssa', 'mov_text', 'webvtt', 'text', 'ttml', 'microdvd', 'sami', 'subviewer', 'subviewer1', 'realtext', 'jacosub', 'stl', 'mpl2', 'pjs', 'vplayer'];
+  const IMAGE_SUBS = ['hdmv_pgs_subtitle', 'dvd_subtitle', 'dvb_subtitle', 'xsub'];
   function parseProbe(j: any): Info {
     const st: any[] = j.streams ?? [];
     const v = st.find((x) => x.codec_type === 'video' && x.height) ?? st.find((x) => x.codec_type === 'video');
@@ -342,7 +345,7 @@ export async function start(opts: StartOpts = {}) {
       duration: Number(j.format?.duration) || 0, bitrate: Number(j.format?.bit_rate) || 0,
       width: v?.width, height: v?.height, codec: v?.codec_name,
       fps: fb ? Math.round((fa / fb) * 100) / 100 : 0, channels: audio[0]?.channels ?? 2,
-      audio, subs, external: [], chapters, ai: false,
+      audio, subs, imageSubs: st.filter((x) => x.codec_type === 'subtitle').map((x, i) => ({ x, i })).filter(({ x }) => IMAGE_SUBS.includes(x.codec_name)).map(({ x, i }) => ({ i, label: label(x, i), lang: String(x.tags?.language ?? ''), codec: String(x.codec_name) })), external: [], chapters, ai: false,
     };
   }
   async function remoteInfo(B: Backend, full: string): Promise<Info> {
@@ -839,8 +842,9 @@ export async function start(opts: StartOpts = {}) {
   }));
 
   // What this machine and the server can do (used to show only options that will work).
-  app.get('/api/caps', h(async (_req, res) => {
+  app.get('/api/caps', h(async (req, res) => {
     const s = activeServer();
+    if (req.query.refresh && s) remoteCaps.delete(s.id);
     const remote = s ? await getRemoteCaps(s) : { ffmpeg: false, h264: false, hevc: false, av1: false };
     res.json({
       local: { ffmpeg: !!local.bins.ffmpeg, ffprobe: !!local.bins.ffprobe },
@@ -905,6 +909,61 @@ export async function start(opts: StartOpts = {}) {
   }));
 
   // Subtitles as WebVTT: embedded track (?s=N), file next to the video (?ext=name.srt) or AI (?s=ai). Always whole-file, cached.
+  // ---------- intro detection: find the theme music that repeats across episodes ----------
+  const introKey = (r: any) => { if (r.offline) { const o = readMeta(r.rel)?.origin; return o ? `${o.rootName}:${o.rel}` : `Offline:${r.rel}`; } return `${r.root.name}:${r.rel}`; };
+  const introStore = (): Record<string, [number, number] | 0> => ((store.allPrefs() as any).introfp as Record<string, [number, number] | 0>) ?? {};
+  const putIntro = (k: string, v: [number, number] | 0) => store.setPref('introfp', { ...introStore(), [k]: v });
+  let introQueue: Promise<unknown> = Promise.resolve();
+  const VIDEO_RE = /\.(mkv|mp4|m4v|avi|mov|webm|ts|wmv|flv|mpg|mpeg)$/i;
+  app.get('/api/intro', h(async (req, res) => {
+    const r = await resolve(req.query);
+    if (r.root.opened) return res.json({ state: 'none' });
+    const key = introKey(r);
+    const hit = introStore()[key];
+    if (Array.isArray(hit)) return res.json({ state: 'found', start: hit[0], end: hit[1] });
+    if (req.query.cached) return res.json({ state: hit === 0 ? 'none' : 'unknown' });
+    const ff = local.bins.ffmpeg;
+    if (!ff) throw new HttpError(400, 'Intro detection needs ffmpeg on this laptop.');
+    const port = req.socket.localPort;
+    const tk = opts.token ? `&tk=${encodeURIComponent(opts.token)}` : '';
+    const rel = String(req.query.path ?? '');
+    const dirRel = posix.dirname(rel) === '.' ? '' : posix.dirname(rel);
+    const selfName = posix.basename(rel);
+    let names: string[]; let inputOf: (n: string) => string; let keyOf: (n: string) => string;
+    if (r.offline) {
+      const base = store.settings().downloadDir;
+      const d = posix.dirname(r.rel) === '.' ? '' : posix.dirname(r.rel);
+      names = walkOffline(base).filter((f) => (posix.dirname(f.rel) === '.' ? '' : posix.dirname(f.rel)) === d).map((f) => posix.basename(f.rel));
+      inputOf = (n) => path.join(base, ...posix.join(d, n).split('/'));
+      keyOf = (n) => introKey({ offline: true, rel: posix.join(d, n), root: r.root });
+    } else {
+      names = (await r.B.list(posix.dirname(r.full))).filter((f) => !f.dir).map((f) => f.name);
+      inputOf = (n) => `http://127.0.0.1:${port}/api/stream?root=${encodeURIComponent(String(req.query.root))}&path=${encodeURIComponent(posix.join(dirRel, n))}&q=orig${tk}`;
+      keyOf = (n) => `${r.root.name}:${posix.join(dirRel, n)}`;
+    }
+    const own = r.offline ? posix.basename(r.rel) : selfName;
+    const sorted = names.filter((n) => VIDEO_RE.test(n)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const at = sorted.indexOf(own);
+    const neigh = [sorted[at + 1], sorted[at - 1], sorted[at + 2], sorted[at - 2]].filter((x): x is string => !!x).slice(0, 2);
+    if (!neigh.length) { putIntro(key, 0); return res.json({ state: 'none', reason: 'No other episode in this folder to compare with.' }); }
+    const run = async () => {
+      const again = introStore()[key];
+      if (Array.isArray(again)) return again;
+      const fa = fingerprint(await pcm(ff, r.offline ? r.full : inputOf(own), 420));
+      let found: [number, number] | null = null;
+      for (const n of neigh) {
+        const m = matchIntro(fa, fingerprint(await pcm(ff, inputOf(n), 420)));
+        if (m) { found = m.a; putIntro(keyOf(n), m.b); break; }
+      }
+      putIntro(key, found ?? 0);
+      return found;
+    };
+    const job = introQueue.then(run, run);
+    introQueue = job.catch(() => {});
+    const f = (await job) as [number, number] | null;
+    res.json(f ? { state: 'found', start: f[0], end: f[1] } : { state: 'none', reason: 'No repeating intro music was found.' });
+  }));
+
   app.get('/api/subs', h(async (req, res) => {
     const r = await resolve(req.query);
     const which = String(req.query.s ?? '0');
@@ -1000,7 +1059,7 @@ export async function start(opts: StartOpts = {}) {
 
   app.get('/api/thumb', h(async (req, res) => {
     const r = await resolve(req.query);
-    const send = (b: Buffer) => res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=2592000, immutable' }).send(b);
+    const send = (b: Buffer) => res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=300' }).send(b);
     if (r.offline) {
       const f = path.join(metaDir(), `${metaKey(r.rel)}.jpg`);
       if (fs.existsSync(f)) return send(fs.readFileSync(f));
@@ -1430,6 +1489,11 @@ export async function start(opts: StartOpts = {}) {
     const q = String(req.query.q ?? '').slice(0, 200);
     if (!q) throw new HttpError(400, 'Missing title');
     res.set('Cache-Control', 'private, max-age=3600').json(await online.meta(q, Number(req.query.year) || 0));
+  }));
+  app.get('/api/meta/search', h(async (req, res) => { res.json({ items: await online.candidates(String(req.query.q ?? '').slice(0, 200)) }); }));
+  app.post('/api/meta/choose', h(async (req, res) => {
+    const b = req.body ?? {};
+    res.json(await online.choose(String(b.q ?? '').slice(0, 200), Number(b.year) || 0, Number(b.id), String(b.kind)));
   }));
   app.get('/api/poster', h(async (req, res) => {
     const q = String(req.query.q ?? '').slice(0, 200), y = Number(req.query.year) || 0;

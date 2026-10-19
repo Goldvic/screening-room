@@ -1,7 +1,7 @@
 import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { EQ_PRESETS } from './audio';
 import {
-  ACCENTS, APP_NAME, ASPECTS, Icon, LANGS, MAX_VOLS, Prog, QUALITIES, SAVER, SettingsCtx,
+  Caps, ACCENTS, APP_NAME, ASPECTS, Icon, LANGS, MAX_VOLS, Prog, QUALITIES, SAVER, SettingsCtx,
   api, bridge, bytes, mbps, post, rate, speedTest, turboOk, useUpdates, moveDownloads } from './lib';
 
 export const Field = ({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) => (
@@ -10,6 +10,26 @@ export const Field = ({ label, hint, children }: { label: string; hint?: string;
 export const Toggle = ({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) => (
   <button className="toggle" role="switch" aria-checked={on} aria-label={label} onClick={onClick}><i className={on ? 'sw on' : 'sw'} /></button>
 );
+
+function ServerTools() {
+  const [c, setC] = useState<Caps | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = (refresh = false) => { setBusy(true); api<Caps>('caps', refresh ? { refresh: 1 } : {}).then(setC).catch(() => {}).finally(() => setBusy(false)); };
+  useEffect(() => { load(); }, []);
+  if (!c || !c.hasServer) return null;
+  const ok = c.remote.ffmpeg;
+  return (
+    <section>
+      <h4>Server tools</h4>
+      <Field label="ffmpeg on the server" hint={ok ? 'Found. Compressed downloads and the quality menu can work.' : 'Not found. Compressed downloads and the quality menu need it. Original downloads still work.'}>
+        <span className={'kstat ' + (ok ? 'ok' : 'bad')}>{ok ? '✓ Installed' : '✕ Missing'}</span>
+      </Field>
+      {!ok && <p className="mnote">Run this on your server over SSH, then press Check again:<br /><code>sudo apt update &amp;&amp; sudo apt install -y ffmpeg</code></p>}
+      <Field label="ffmpeg on this laptop"><span className={'kstat ' + (c.local.ffmpeg ? 'ok' : 'bad')}>{c.local.ffmpeg ? '✓ Built in' : '✕ Missing'}</span></Field>
+      <div className="dlg-actions"><button className="btn ghost" disabled={busy} onClick={() => load(true)}>{busy ? 'Checking…' : 'Check again'}</button></div>
+    </section>
+  );
+}
 
 function Updates() {
   const u = useUpdates();
@@ -178,7 +198,13 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           <Field label="Default screen shape">
             <select value={s.aspect} onChange={(e) => set({ aspect: e.target.value })}>{ASPECTS.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}</select>
           </Field>
-          <Field label="Show “Skip intro”" hint="Only on episodes whose file has an intro or recap chapter"><Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} /></Field>
+          <Field label="Power saving" hint="Lowers the video quality cap and turns off blur and animations to save battery">
+            <select value={s.eco} onChange={(e) => set({ eco: e.target.value as 'off' | 'on' | 'battery' })}>
+              <option value="off">Off</option><option value="battery">Only on battery</option><option value="on">Always on</option>
+            </select>
+          </Field>
+          <Field label="Detect intros automatically" hint="Finds the opening music by comparing episodes. Reads about 7 minutes of 3 videos once per episode, so it uses some data on a server"><Toggle on={s.autoIntro} label="Detect intros" onClick={() => set({ autoIntro: !s.autoIntro })} /></Field>
+          <Field label="Show “Skip intro" hint="Only on episodes whose file has an intro or recap chapter"><Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} /></Field>
           <Field label="Play next episode automatically"><Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} /></Field>
           <Field label="Download the next episode while I watch" hint="Saves it for offline in the background"><Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} /></Field>
         </section>
@@ -303,6 +329,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           </section>
         )}
 
+        {tab === 'app' && <ServerTools />}
         {tab === 'app' && <Updates />}
 
         {tab === 'app' && (

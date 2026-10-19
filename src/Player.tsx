@@ -119,6 +119,16 @@ export default function Player(p: Props) {
   const [barW, setBarW] = useState(0);
   const [suggest, setSuggest] = useState(false);
   const [noNext, setNoNext] = useState(false);
+  const [det, setDet] = useState<{ state: 'idle' | 'busy' | 'found' | 'none'; start?: number; end?: number; reason?: string }>({ state: 'idle' });
+  const detTimer = useRef(0);
+  const detect = async () => {
+    if (p.opened) { setDet({ state: 'none', reason: 'Not available for files opened from Explorer.' }); return; }
+    setDet({ state: 'busy' });
+    try {
+      const j = await api<{ state: string; start?: number; end?: number; reason?: string }>('intro', { root: p.root, path });
+      setDet(j.state === 'found' ? { state: 'found', start: j.start, end: j.end } : { state: 'none', reason: j.reason });
+    } catch (e: any) { setDet({ state: 'none', reason: e.message }); }
+  };
   const [ab, setAb] = useState<{ a: number | null; b: number | null }>({ a: null, b: null });
   const net = useNet(sid, 1000);
   // "Save while watching": the original is copied to this laptop in the background; the bar shows how much is saved.
@@ -571,12 +581,22 @@ export default function Player(p: Props) {
   const cbtn = (m: MenuId, icon: string, title: string, on = false) => (
     <button className={menu === m ? 'cbtn on' : on ? 'cbtn lit' : 'cbtn'} title={title} aria-label={title} onClick={() => toggle(m)}><Icon n={icon} s={20} /></button>
   );
+  useEffect(() => {
+    if (p.opened) return;
+    let dead = false;
+    api<{ state: string; start?: number; end?: number }>('intro', { root: p.root, path, cached: 1 }).then((j) => {
+      if (dead) return;
+      if (j.state === 'found') setDet({ state: 'found', start: j.start, end: j.end });
+      else if (j.state === 'unknown' && s.autoIntro && /[Ss]\d{1,2}[ ._-]*[Ee]\d{1,3}|\d{1,2}x\d{2}/.test(p.name)) detTimer.current = window.setTimeout(detect, 20000);
+    }).catch(() => {});
+    return () => { dead = true; clearTimeout(detTimer.current); };
+  }, [p.root, path]); // eslint-disable-line react-hooks/exhaustive-deps
   const fileKey = p.offline && info.origin ? `${info.origin.rootName}:${info.origin.rel}` : p.pkey;
   const baseLen = p.offline && info.origin ? (info.origin.rel.split('/').pop() ?? '').length : p.name.length;
   const ikey = title.episode ? fileKey.slice(0, fileKey.length - baseLen) : fileKey; // episodes share one setting per folder, movies get their own
   const mark = prefs.intros?.[ikey];
   const chapIntro = !s.skipIntro ? undefined : chapters.find((c) => /\b(intro|recap|previously)\b/i.test(c.title) && !/credit/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
-  const intro = !s.skipIntro ? undefined : chapIntro ?? (mark && pos >= mark.start - 1 && pos < mark.end - 1 ? { end: mark.end, title: 'Intro', start: mark.start } : undefined);
+  const intro = !s.skipIntro ? undefined : chapIntro ?? (det.state === 'found' && det.end && pos >= (det.start ?? 0) - 1 && pos < det.end - 1 ? { end: det.end, title: 'Intro', start: det.start ?? 0 } : undefined) ?? (mark && pos >= mark.start - 1 && pos < mark.end - 1 ? { end: mark.end, title: 'Intro', start: mark.start } : undefined);
   const qualityList = QUALITIES.filter((o) => {
     if (p.offline) return o.id === 'orig' || o.id === 'audio' || (o.id === 'remux' && !!p.caps?.local.ffmpeg);
     const h = Number(o.id); // hide sizes bigger than the video itself
@@ -760,7 +780,8 @@ export default function Player(p: Props) {
                   <button className="opt" onClick={genAi}><span><b><Icon n="sparkle" s={15} /> Generate subtitles with AI</b><small>Uses Whisper on the VPS. A full movie can take a while on a CPU.</small></span></button>
                 )}
                 {ai.state === 'error' && ai.error && <p className="mnote err">{ai.error}</p>}
-                {!info.ai && !(info.subs?.length || info.external?.length) && <p className="mnote">No subtitles found for this video. Search online or load a file below.</p>}
+                {(info.imageSubs?.length ?? 0) > 0 && <p className="mnote">This video has picture-based subtitles ({[...new Set(info.imageSubs!.map((t) => t.lang || 'unknown'))].join(', ')}). They are images, so they can’t be shown as text here. Use “Find subtitles online” below instead.</p>}
+                {!info.ai && !(info.subs?.length || info.external?.length) && !(info.imageSubs?.length) && <p className="mnote">No subtitles found for this video. Search online or load a file below.</p>}
                 {!p.offline && <button className="opt" onClick={searchOs}><span><b><Icon n="search" s={15} /> Find subtitles online</b><small>Searches OpenSubtitles for “{title.title}”</small></span></button>}
                 <label className="opt file"><span><b><Icon n="upload" s={15} /> Load .srt or .vtt from this device</b></span>
                   <input type="file" accept=".srt,.vtt" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) loadFile(f); e.target.value = ''; }} />
@@ -876,11 +897,15 @@ export default function Player(p: Props) {
                 <Opt on={sleep === null} label="Off" onClick={() => setSleep(null)} />
                 {[15, 30, 60].map((m) => <Opt key={m} on={typeof sleep === 'number' && Math.abs(sleep - Date.now() - m * 60000) < 90000} label={`${m} minutes`} onClick={() => { setSleep(Date.now() + m * 60000); flash(`Will pause in ${m} minutes`); }} />)}
                 <Opt on={sleep === 'end'} label="After this video" onClick={() => setSleep('end')} />
+                <div className="msec">Intro</div>
+                <button className="opt" disabled={det.state === 'busy' || !p.caps?.local.ffmpeg} onClick={detect}><span><b><Icon n="sparkle" s={15} /> {det.state === 'found' ? `Intro found: ${clock(det.start ?? 0)} to ${clock(det.end ?? 0)}` : det.state === 'busy' ? 'Looking for the intro…' : 'Detect intro automatically'}</b>
+                  <small>{det.state === 'none' ? det.reason ?? 'No repeating intro music was found.' : det.state === 'found' ? 'A Skip intro button shows at that point.' : 'Compares the opening music with another episode in this folder. Reads about 7 minutes of 3 videos once.'}</small></span></button>
+                <button className="opt" onClick={() => set({ eco: s.eco === 'on' ? 'off' : 'on' })}><span><b><Icon n="bolt" s={15} /> Power saving: {s.eco === 'on' ? 'On' : s.eco === 'battery' ? 'On battery only' : 'Off'}</b><small>Caps quality, turns off blur and animations</small></span></button>
                 <div className="msec">Skip intro for this {title.episode ? 'folder' : 'video'}</div>
                 <button className="opt" onClick={() => { setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: Math.floor(pos), end: mark && mark.end > pos ? mark.end : Math.floor(pos) + 90 } }); flash('Intro starts here'); }}><span><b>Intro starts here</b><small>{mark ? `Now ${clock(mark.start)} to ${clock(mark.end)}` : 'Pause at the start of the intro, then press this'}</small></span></button>
                 <button className="opt" onClick={() => { const st = mark && mark.start < pos ? mark.start : Math.max(0, Math.floor(pos) - 90); setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: st, end: Math.floor(pos) } }); flash('Skip intro is set for every video in this folder'); }}><span><b>Intro ends here</b><small>{title.episode ? 'Every video in this folder then gets a Skip intro button' : 'This video gets a Skip intro button'}</small></span></button>
                 {mark && <button className="opt" onClick={() => { const n = { ...(prefs.intros ?? {}) }; delete n[ikey]; setPref('intros', n); }}><span><b>Clear this folder’s intro</b></span></button>}
-                <div className="msec">Tools</div>
+                
                 <button className="opt" onClick={shot}><span><b><Icon n="camera" s={15} /> Save screenshot (S)</b></span></button>
                 <button className="opt" onClick={pip}><span><b><Icon n="pip" s={15} /> Picture-in-picture (P)</b></span></button>
                 {bridge && <button className="opt" onClick={toggleMini}><span><b><Icon n="pip" s={15} /> {mini ? 'Leave mini player' : 'Mini player (stays on top)'}</b></span></button>}
@@ -930,7 +955,9 @@ export default function Player(p: Props) {
             <span className="grow" />
             <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
             {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
+            {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track and language')}
             <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
+            {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
             {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
             {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
             <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>

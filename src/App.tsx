@@ -61,13 +61,13 @@ const gate = async <T,>(fn: () => Promise<T>): Promise<T> => {
   try { return await fn(); } finally { gateN--; gateQ.shift()?.(); }
 };
 const metaCache = new Map<string, Promise<Meta | null>>();
-const getMeta = (name: string): Promise<Meta | null> => {
-  const t = parseTitle(name), key = `${t.title}|${t.year}`;
+const getMeta = (name: string, folder = ''): Promise<Meta | null> => {
+  const t = parseTitle(name, folder), key = `${t.title}|${t.year}`;
   let p = metaCache.get(key);
   if (!p) { p = gate(() => api<Meta>('meta', { q: t.title, year: t.year })).catch(() => null); metaCache.set(key, p); }
   return p;
 };
-const posterUrl = (name: string) => { const t = parseTitle(name); return `/api/poster?${qs({ q: t.title, year: t.year })}`; };
+const posterUrl = (name: string, folder = '') => { const t = parseTitle(name, folder); return `/api/poster?${qs({ q: t.title, year: t.year })}`; };
 
 function Thumb({ root, path, v, icon }: { root: number; path: string; v: number; icon: string }) {
   const { s } = useContext(SettingsCtx);
@@ -92,7 +92,7 @@ function Art({ root, path, v, name }: { root: number; path: string; v: number; n
     const io = new IntersectionObserver((es) => {
       if (!es.some((e) => e.isIntersecting)) return;
       io.disconnect();
-      getMeta(name).then((m) => setState(m?.poster ? 'ok' : 'none'));
+      getMeta(name, path.split('/').slice(0, -1).join('/')).then((m) => setState(m?.poster ? 'ok' : 'none'));
     }, { rootMargin: '200px' });
     io.observe(ref.current);
     return () => io.disconnect();
@@ -100,15 +100,26 @@ function Art({ root, path, v, name }: { root: number; path: string; v: number; n
   return (
     <span className="art" ref={ref}>
       <Thumb root={root} path={path} v={v} icon="film" />
-      {s.posters && state === 'ok' && <img className="poster-img on" alt="" loading="lazy" src={posterUrl(name)} onError={() => setState('none')} />}
+      {s.posters && state === 'ok' && <img className="poster-img on" alt="" loading="lazy" src={posterUrl(name, path.split('/').slice(0, -1).join('/'))} onError={() => setState('none')} />}
     </span>
   );
 }
 
-function Details({ name, remote, onClose, onPlay, onSave }: { name: string; remote: boolean; onClose: () => void; onPlay: () => void; onSave: () => void }) {
+function Details({ name, folder, remote, onClose, onPlay, onSave }: { name: string; folder: string; remote: boolean; onClose: () => void; onPlay: () => void; onSave: () => void }) {
   const [m, setM] = useState<Meta | null | undefined>(undefined);
   const [err, setErr] = useState('');
-  const t = parseTitle(name);
+  const t = parseTitle(name, folder);
+  const [fix, setFix] = useState(false);
+  const [fq, setFq] = useState('');
+  const [cands, setCands] = useState<{ id: number; kind: string; title: string; year: number; poster: string; overview: string }[]>([]);
+  const [fbusy, setFbusy] = useState(false);
+  const search = async () => { setFbusy(true); try { setCands((await api<{ items: typeof cands }>('meta/search', { q: fq || t.title })).items); } catch (e: any) { setErr(e.message); } setFbusy(false); };
+  const choose = async (c: (typeof cands)[number]) => {
+    setFbusy(true);
+    try { const nm = await post<Meta>('meta/choose', { q: t.title, year: t.year, id: c.id, kind: c.kind }); metaCache.delete(`${t.title}|${t.year}`); setM(nm); setFix(false); setErr(''); setPv((x) => x + 1); } catch (e: any) { setErr(e.message); }
+    setFbusy(false);
+  };
+  const [pv, setPv] = useState(0);
   useEffect(() => {
     api<Meta>('meta', { q: t.title, year: t.year }).then(setM).catch((e) => { setErr(e.message); setM(null); });
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -120,7 +131,7 @@ function Details({ name, remote, onClose, onPlay, onSave }: { name: string; remo
       <div className="dialog wide details" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="About this video">
         <div className="dlg-head"><h3>{m?.title ?? t.title}{(m?.year ?? t.year) ? ` (${m?.year ?? t.year})` : ''}</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
         <div className="det-body">
-          {m?.poster && <img className="det-poster" alt="" src={posterUrl(name)} />}
+          {m?.poster && <img className="det-poster" alt="" src={`${posterUrl(name, folder)}&r=${pv}`} />}
           <div>
             {m === undefined && <p className="muted">Looking it up…</p>}
             {m?.found && (
@@ -131,6 +142,18 @@ function Details({ name, remote, onClose, onPlay, onSave }: { name: string; remo
             )}
             {m && !m.found && <p className="muted">Nothing found for “{t.title}”.</p>}
             {err && <p className="muted">{err}</p>}
+            <button className="btn ghost sm" onClick={() => { setFix(!fix); setFq(t.title); setCands([]); }}><Icon n="search" s={14} /> {m?.found ? 'Wrong match?' : 'Find it manually'}</button>
+            {fix && (
+              <div className="fixbox">
+                <span className="inline"><input value={fq} onChange={(e) => setFq(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="Type the real title" /><button className="btn" disabled={fbusy} onClick={search}>Search</button></span>
+                {cands.map((c) => (
+                  <button key={c.kind + c.id} className="cand" onClick={() => choose(c)}>
+                    {c.poster ? <img alt="" src={c.poster} /> : <span className="cand-ph"><Icon n="film" s={18} /></span>}
+                    <span><b>{c.title}{c.year ? ` (${c.year})` : ''}</b><small>{c.kind === 'tv' ? 'Series' : 'Movie'} · {c.overview.slice(0, 90)}{c.overview.length > 90 ? '…' : ''}</small></span>
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="small muted trunc" title={name}>{name}</p>
           </div>
         </div>
@@ -175,6 +198,7 @@ function Library() {
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [onBattery, setOnBattery] = useState(false);
   const [floating, setFloating] = useState(false);
   const [view, setView] = useState<'home' | 'library' | 'playlists'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
@@ -301,6 +325,16 @@ function Library() {
     if (view !== 'home' || panel) return;
     api<{ items: SavedFile[] }>('storage').then((d) => setSavedFiles([...d.items].sort((a, b) => b.mtime - a.mtime))).catch(() => {});
   }, [view, panel, play]);
+  useEffect(() => {
+    const nav = navigator as any;
+    if (!nav.getBattery) return;
+    let b: any, dead = false;
+    const upd = () => setOnBattery(!!b && !b.charging);
+    nav.getBattery().then((x: any) => { if (dead) return; b = x; upd(); x.addEventListener('chargingchange', upd); });
+    return () => { dead = true; b?.removeEventListener('chargingchange', upd); };
+  }, []);
+  const eco = s.eco === 'on' || (s.eco === 'battery' && onBattery);
+  useEffect(() => { document.documentElement.dataset.eco = eco ? '1' : '0'; }, [eco]);
   const lists: SavedList[] = prefs.playlists ?? [];
   const setLists = (l: SavedList[]) => setPref('playlists', l);
   const savePlaylist = () => {
@@ -704,7 +738,7 @@ function Library() {
       {play && root !== null && (
         <Player
           key={`${root}:${join(dir, play)}`} root={root} dir={dir} name={play} videos={playlist ?? videos} playlist={!!playlist} floating={floating} onFloat={setFloating}
-          pkey={pkey(play)} saved={prog[pkey(play)]} offline={offline} opened={opened} saver={saver} caps={caps}
+          pkey={pkey(play)} saved={prog[pkey(play)]} offline={offline} opened={opened} saver={eco ? Math.max(saver, 1) : saver} caps={caps}
           onClose={() => { setPlay(null); setPlaylist(null); setFloating(false); setTimeout(loadProg, 500); }}
           onNext={setPlay} onStarted={onStarted}
           onDownload={(n) => saveOffline([n], items.find((i) => i.name === n)?.size ?? 0)}
@@ -720,7 +754,7 @@ function Library() {
           onScheduled={(t) => { setTarget(null); flash(t); setPanel('downloads'); }}
           onQueued={(n) => { setTarget(null); flash(n ? `Added ${n} to Downloads` : 'Already saved or queued'); if (n) setPanel('downloads'); }} />
       )}
-      {detail && <Details name={detail} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
+      {detail && <Details name={detail} folder={dir} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
       {nameAsk && <NameDialog ask={nameAsk} onClose={() => setNameAsk(null)} />}
       {ask && <Confirm ask={ask} onClose={() => setAsk(null)} onError={flash} />}
       {dls.length > 0 && <Tray dls={dls} onDismiss={(id) => setDls((d) => d.filter((x) => x.id !== id))} />}

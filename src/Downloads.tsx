@@ -137,6 +137,7 @@ export function DownloadDialog(p: {
         {when === 'custom' && <input type="datetime-local" value={at} min={local(new Date())} onChange={(e) => setAt(e.target.value)} />}
         {when !== 'now' && <p className="mnote">Screening Room starts these by itself at that time. It only needs to be running (it can sit minimized).</p>}
         {err && <p className="err-t">{err}</p>}
+        {/ffmpeg/i.test(err) && profile !== 'orig' && <button className="btn ghost" onClick={() => { setProfile('orig'); setErr(''); }}>Download the original instead</button>}
         <div className="dlg-actions"><button className="btn ghost" onClick={p.onClose}>Cancel</button>
           <button className="btn" onClick={go} disabled={busy}><Icon n="down" s={15} /> {busy ? 'Adding…' : when !== 'now' ? 'Schedule' : p.names.length === 1 && single ? 'Download' : 'Download all'}</button></div>
       </div>

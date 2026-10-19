@@ -9,7 +9,7 @@ export type Ext = { name: string; label: string; lang: string };
 export type Chapter = { start: number; end: number; title: string };
 export type Info = {
   duration: number; width?: number; height?: number; codec?: string; bitrate?: number; fps?: number; channels?: number;
-  audio?: Track[]; subs?: Track[]; external?: Ext[]; ai?: boolean; chapters?: Chapter[]; size?: number; origin?: { rootName: string; rel: string };
+  audio?: Track[]; subs?: Track[]; imageSubs?: (Track & { codec: string })[]; external?: Ext[]; ai?: boolean; chapters?: Chapter[]; size?: number; origin?: { rootName: string; rel: string };
 };
 export type Caps = {
   local: { ffmpeg: boolean; ffprobe: boolean };
@@ -124,7 +124,7 @@ export type Settings = {
   turbo: boolean; conns: number; view: 'grid' | 'list'; thumbs: boolean;
   saver: number; saverAuto: boolean;
   vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
-  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean; skipIntro: boolean; theme: 'dark' | 'light';
+  dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean; skipIntro: boolean; autoIntro: boolean; eco: 'off' | 'on' | 'battery'; theme: 'dark' | 'light';
   posters: boolean; filter: 'all' | 'unwatched' | 'watched' | 'fav'; externalPlayer: string;
 };
 export const DEFAULTS: Settings = {
@@ -133,7 +133,7 @@ export const DEFAULTS: Settings = {
   turbo: true, conns: 8, view: 'grid', thumbs: true,
   saver: 0, saverAuto: true,
   vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
-  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true, skipIntro: true, theme: 'dark',
+  dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true, skipIntro: true, autoIntro: false, eco: 'off', theme: 'dark',
   posters: false, filter: 'all', externalPlayer: '',
 };
 export function loadSettings(): Settings {
@@ -370,16 +370,24 @@ export function useUpdates(): UpdateState | null {
 }
 
 // ---------- turn a messy file name into a searchable title ----------
-export function parseTitle(name: string): { title: string; year: number; season: number; episode: number } {
+export function parseTitle(name: string, folder = ''): { title: string; year: number; season: number; episode: number } {
   let t = name.replace(/\.[^.]+$/, '');
-  const ep = /[Ss](\d{1,2})[ ._-]*[Ee](\d{1,3})/.exec(t) ?? /(\d{1,2})x(\d{2})/.exec(t);
+  t = t.replace(/[\[(][^\])]*(?:\.(?:com|tv|net|org|to|cc|me|ws)|www|\b(?:1080p|720p|480p|x264|x265|webrip|bluray|web-dl)\b)[^\])]*[\])]/gi, ' '); // (SITE.COM) and [release tags]
+  t = t.replace(/\bwww\.[^\s]+/gi, ' ');
+  const ep = /[Ss](\d{1,2})[ ._-]*[Ee](\d{1,3})/.exec(t) ?? /\b(\d{1,2})x(\d{2})\b/.exec(t);
   const season = ep ? Number(ep[1]) : 0, episode = ep ? Number(ep[2]) : 0;
   if (ep) t = t.slice(0, ep.index);
   const ym = /[ ._(\[-]((?:19|20)\d{2})(?=[ ._)\]-]|$)/.exec(t);
   const year = ym ? Number(ym[1]) : 0;
   if (ym) t = t.slice(0, ym.index);
-  t = t.replace(/\b(2160p|1080p|720p|480p|360p|4k|uhd|bluray|brrip|bdrip|webrip|web-dl|webdl|hdrip|dvdrip|hdtv|x264|x265|h264|h265|hevc|av1|aac|ac3|dts|10bit|remux|proper|extended|unrated|yify|rarbg)\b.*$/i, '');
+  t = t.replace(/\b(2160p|1080p|720p|480p|360p|4k|uhd|bluray|blu-ray|brrip|bdrip|webrip|web-dl|webdl|web|hdrip|dvdrip|hdtv|x264|x265|h264|h265|hevc|av1|aac|ac3|dts|10bit|remux|proper|repack|extended|unrated|yify|rarbg|amzn|nf|dsnp|hmax|hdr|dv|multi|dual|subbed|dubbed|complete)\b.*$/i, '');
   t = t.replace(/[._]+/g, ' ').replace(/\s*[-\[(]+\s*$/, '').replace(/\s+/g, ' ').trim();
+  if (!t && folder) {
+    const segs = folder.split('/').filter(Boolean).reverse();
+    const pick = segs.find((x) => !/^(season|series|s)\s*\d+$/i.test(x.trim())) ?? '';
+    const f = parseTitle(pick + '.mkv');
+    if (f.title) return { title: f.title, year: f.year, season, episode };
+  }
   return { title: t || name.replace(/\.[^.]+$/, ''), year, season, episode };
 }
 

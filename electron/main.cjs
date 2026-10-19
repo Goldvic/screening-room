@@ -1,6 +1,6 @@
 // Cinema desktop shell. It starts the Cinema server inside this process, then shows it in a window.
 // Everything the window can ask of the computer goes through the small bridge in preload.cjs.
-const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, powerSaveBlocker, safeStorage, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Notification, Tray, dialog, ipcMain, nativeImage, powerSaveBlocker, safeStorage, session, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
@@ -121,6 +121,33 @@ const hasWork = async () => {
     return (j.active ?? 0) + (j.waiting ?? 0) > 0;
   } catch { return false; }
 };
+
+// Download progress on the taskbar icon and in the tray tooltip, plus a notice when everything is done.
+let lastBusy = false;
+function trackDownloads() {
+  const tick = async () => {
+    try {
+      const r = await fetch(`http://127.0.0.1:${port}/api/dl?tk=${token}`);
+      const j = await r.json();
+      const items = (j.items || []).filter((i) => ['encoding', 'downloading', 'finalizing', 'queued'].includes(i.state));
+      const live = items.filter((i) => i.state !== 'queued');
+      const busy = items.length > 0;
+      if (busy) {
+        const total = items.reduce((a, i) => a + (i.size || 0), 0), done = items.reduce((a, i) => a + (i.done || 0), 0);
+        const frac = total > 0 ? Math.min(1, done / total) : 0;
+        const pct = Math.round(frac * 100), mb = ((j.speed || 0) / 1048576).toFixed(1);
+        win?.setProgressBar?.(frac > 0 ? frac : 1, frac > 0 ? { mode: 'normal' } : { mode: 'indeterminate' });
+        tray?.setToolTip?.(`Cinema · ${live.length} downloading${j.waiting ? `, ${j.waiting} waiting` : ''} · ${pct}% · ${mb} MB/s`);
+      } else {
+        win?.setProgressBar?.(-1);
+        tray?.setToolTip?.('Cinema');
+        if (lastBusy && Notification.isSupported()) new Notification({ title: 'Cinema', body: 'Your downloads are finished.' }).show();
+      }
+      lastBusy = busy;
+    } catch { /* server not ready */ }
+  };
+  setInterval(tick, 1500).unref?.();
+}
 
 function createWindow() {
   const b = loadBounds();
@@ -271,5 +298,6 @@ app.whenReady().then(async () => {
   initUpdater();
   createWindow();
   createTray();
+  trackDownloads();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else win?.show(); });
 });
