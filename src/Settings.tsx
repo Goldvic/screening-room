@@ -68,7 +68,7 @@ function Updates() {
 
 type Srv = {
   downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string };
-  budgetGB: number; autoDeleteDays: number; quotaGB: number; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
+  budgetGB: number; autoDeleteDays: number; quotaGB: number; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small'; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
 };
 type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app';
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -299,6 +299,16 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
               </span>
             </Field>
           )}
+          <Field label="Compress on" hint="A laptop with an NVIDIA, Intel or AMD graphics chip compresses many times faster than a server. Auto picks the quickest">
+            <select value={srv?.encodeWhere ?? 'auto'} onChange={(e) => patch({ encodeWhere: e.target.value as 'auto' | 'laptop' | 'server' })}>
+              <option value="auto">Auto (recommended)</option><option value="laptop">This laptop</option><option value="server">The server</option>
+            </select>
+          </Field>
+          <Field label="Compression speed" hint="Fastest makes slightly bigger files. Smallest takes longer">
+            <select value={srv?.encodeSpeed ?? 'fast'} onChange={(e) => patch({ encodeSpeed: e.target.value as 'fast' | 'balanced' | 'small' })}>
+              <option value="fast">Fastest</option><option value="balanced">Balanced</option><option value="small">Smallest files</option>
+            </select>
+          </Field>
           <Field label="Space limit for saved videos" hint="When it is full, watched videos are removed first, then the oldest. Your copies on the server stay">
             <select value={srv?.quotaGB ?? 0} onChange={(e) => patch({ quotaGB: +e.target.value })}>
               <option value={0}>No limit</option>{[2, 5, 10, 20, 50].map((n) => <option key={n} value={n}>{n} GB</option>)}

@@ -1,4 +1,6 @@
 import { fingerprint, matchIntro, pcm } from './intro';
+import { detectEncoders, EncInfo } from './encoders';
+let boundPort = 0;
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import fs from 'node:fs';
@@ -562,8 +564,12 @@ export async function start(opts: StartOpts = {}) {
     fs.writeFileSync(path.join(dir, `${key}.json`), JSON.stringify(meta));
   }
 
+  let encInfo: EncInfo | null = null;
   const dl = new Downloads({
     dataDir: DATA,
+    localEnc: () => (encInfo && local.bins.ffmpeg && local.bins.ffprobe ? { ffmpeg: local.bins.ffmpeg, ffprobe: local.bins.ffprobe, enc: encInfo } : null),
+    loopback: (job) => `http://127.0.0.1:${boundPort}/api/stream?root=${encodeURIComponent(String(job.rootId ?? ''))}&path=${encodeURIComponent(job.rel)}&q=orig${opts.token ? `&tk=${encodeURIComponent(opts.token)}` : ''}`,
+    remoteHasFfmpeg: async (id) => { const sv = store.get(id); return sv ? (await getRemoteCaps(sv)).ffmpeg : false; },
     settings: () => store.settings(),
     backendFor: async (id) => { const s = store.get(id); if (!s) throw new Error('That server was removed'); return backendOf(s); },
     addBytes: (n) => add(n),
@@ -575,6 +581,8 @@ export async function start(opts: StartOpts = {}) {
     },
     pack,
   });
+
+  if (local.bins.ffmpeg) setTimeout(() => detectEncoders(local.bins.ffmpeg!).then((e) => { encInfo = e; }).catch(() => {}), 2500).unref();
 
   // ---------- offline library helpers ----------
   type OffFile = { rel: string; name: string; size: number; mtime: number };
@@ -843,6 +851,8 @@ export async function start(opts: StartOpts = {}) {
       fs.mkdirSync(dir, { recursive: true });
       patch.downloadDir = dir;
     }
+    if (['auto', 'laptop', 'server'].includes(b.encodeWhere)) patch.encodeWhere = b.encodeWhere;
+    if (['fast', 'balanced', 'small'].includes(b.encodeSpeed)) patch.encodeSpeed = b.encodeSpeed;
     for (const k of ['maxParallel', 'limitKBps', 'budgetGB', 'autoDeleteDays', 'quotaGB'] as const) if (b[k] !== undefined) patch[k] = Math.max(0, Number(b[k]) || 0);
     if (b.schedule) patch.schedule = { on: !!b.schedule.on, from: String(b.schedule.from ?? '01:00'), to: String(b.schedule.to ?? '07:00') };
     for (const k of ['tmdbKey', 'osKey', 'osUser', 'osPass'] as const) if (typeof b[k] === 'string') patch[k] = b[k].trim();
@@ -856,7 +866,7 @@ export async function start(opts: StartOpts = {}) {
     if (req.query.refresh && s) remoteCaps.delete(s.id);
     const remote = s ? await getRemoteCaps(s) : { ffmpeg: false, h264: false, hevc: false, av1: false };
     res.json({
-      local: { ffmpeg: !!local.bins.ffmpeg, ffprobe: !!local.bins.ffprobe },
+      local: { ffmpeg: !!local.bins.ffmpeg, ffprobe: !!local.bins.ffprobe, enc: encInfo },
       remote, platform: process.platform, embedded: !!opts.embedded, hasServer: !!s,
     });
   }));
@@ -1348,14 +1358,22 @@ export async function start(opts: StartOpts = {}) {
     if (!rels.length) throw new HttpError(400, 'Nothing selected');
     const profile = String(body?.profile ?? 'orig');
     const caps = await getRemoteCaps(s);
-    if (profile !== 'orig' && !caps.ffmpeg) throw new HttpError(400, 'ffmpeg is not installed on the server, so files cannot be compressed. Download the original instead.');
-    if (/^hevc/.test(profile) && !caps.hevc) throw new HttpError(400, 'The server cannot encode HEVC. Pick H.264 instead.');
-    if (/^av1/.test(profile) && !caps.av1) throw new HttpError(400, 'The server cannot encode AV1. Pick H.264 or HEVC instead.');
+    const lapOk = !!local.bins.ffmpeg && !!local.bins.ffprobe; // this laptop can compress when the server cannot
+    if (profile !== 'orig' && !caps.ffmpeg && !lapOk) throw new HttpError(400, 'Neither the server nor this laptop has ffmpeg, so files cannot be compressed. Download the original instead.');
+    if (/^hevc/.test(profile) && !caps.hevc && !encInfo?.hevc) throw new HttpError(400, 'Nothing here can encode HEVC. Pick H.264 instead.');
+    if (/^av1/.test(profile) && !caps.av1 && !encInfo?.av1) throw new HttpError(400, 'Nothing here can encode AV1. Pick H.264 or HEVC instead.');
     return dl.add({
-      serverId: s.id, B: r.B, rootName: r.root.name, rootDir: r.root.dir, rels, profile,
+      serverId: s.id, B: r.B, rootName: r.root.name, rootDir: r.root.dir, rootId: body?.root, rels, profile,
       opts: { loud: !!body?.opts?.loud, dialogue: !!body?.opts?.dialogue },
     });
   }
+  app.post('/api/dl/estimate', h(async (req, res) => {
+    const r = await resolve({ root: req.body?.root, path: '' } as any);
+    if (r.offline) return res.json({ files: 0, bytes: 0 });
+    const rels = (Array.isArray(req.body?.paths) ? req.body.paths : []).map((p: unknown) => posix.normalize('/' + String(p)).replace(/^\/+/, ''));
+    const list = await dl.expand(r.B, r.root.dir, rels);
+    res.json({ files: list.length, bytes: list.reduce((a, f) => a + f.size, 0) });
+  }));
   app.post('/api/dl/add', h(async (req, res) => { res.json({ queued: await enqueue(req.body) }); }));
 
   // Scheduled downloads: saved on disk, started by the app at the chosen time (the app has to be running then).
@@ -1535,7 +1553,7 @@ export async function start(opts: StartOpts = {}) {
     const listen = (p: number) => {
       const onErr = (e: any) => { if (e.code === 'EADDRINUSE' && opts.fallbackPort && p !== 0) listen(0); else no(e); };
       server.once('error', onErr);
-      server.listen(p, bind, () => { server.off('error', onErr); ok((server.address() as any).port); });
+      server.listen(p, bind, () => { server.off('error', onErr); boundPort = (server.address() as any).port; ok(boundPort); });
     };
     listen(want);
   });

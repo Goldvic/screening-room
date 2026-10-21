@@ -12,7 +12,7 @@ export type Info = {
   audio?: Track[]; subs?: Track[]; imageSubs?: (Track & { codec: string })[]; external?: Ext[]; ai?: boolean; chapters?: Chapter[]; size?: number; origin?: { rootName: string; rel: string };
 };
 export type Caps = {
-  local: { ffmpeg: boolean; ffprobe: boolean };
+  local: { ffmpeg: boolean; ffprobe: boolean; enc?: { h264: string | null; hevc: string | null; av1: string | null; hw: boolean; gpu: string } | null };
   remote: { ffmpeg: boolean; h264: boolean; hevc: boolean; av1: boolean };
   platform: string; embedded: boolean; hasServer: boolean;
 };
@@ -125,12 +125,12 @@ export type Settings = {
   saver: number; saverAuto: boolean;
   vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
   dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean; skipIntro: boolean; autoIntro: boolean; eco: 'off' | 'on' | 'battery'; theme: 'dark' | 'light';
-  posters: boolean; filter: 'all' | 'unwatched' | 'watched' | 'fav'; externalPlayer: string;
+  posters: boolean; filter: 'all' | 'unwatched' | 'progress' | 'watched' | 'fav'; density: number; externalPlayer: string;
 };
 export const DEFAULTS: Settings = {
   accent: 'Violet', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
   autoSub: true, subSmart: true, subLang: 'en', subSize: 28, subColor: '#ffffff', subBg: 55,
-  turbo: true, conns: 8, view: 'grid', thumbs: true,
+  turbo: true, conns: 8, view: 'grid', thumbs: true, density: 150,
   saver: 0, saverAuto: true,
   vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
   dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true, skipIntro: true, autoIntro: false, eco: 'off', theme: 'dark',

@@ -202,7 +202,7 @@ function Library() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [onBattery, setOnBattery] = useState(false);
   const [floating, setFloating] = useState(false);
-  const [view, setView] = useState<'home' | 'library' | 'playlists'>('home');
+  const [view, setView] = useState<'home' | 'library' | 'playlists' | 'insights'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
   const [nameAsk, setNameAsk] = useState<{ title: string; value: string; label: string; go: (v: string) => void } | null>(null);
   const [selecting, setSelecting] = useState(false);
@@ -447,7 +447,7 @@ function Library() {
       if (!i.name.toLowerCase().includes(query.toLowerCase())) return false;
       if (i.dir || s.filter === 'all') return true;
       const p = prog[pkey(i.name)];
-      return s.filter === 'unwatched' ? !p?.watched : s.filter === 'watched' ? !!p?.watched : favs.includes(pkey(i.name));
+      return s.filter === 'progress' ? !!p && !p.watched && p.pos > 20 : s.filter === 'unwatched' ? !p?.watched : s.filter === 'watched' ? !!p?.watched : favs.includes(pkey(i.name));
     });
     const c = (a: Entry, b: Entry) => sort === 'new' ? b.mtime - a.mtime : sort === 'size' ? b.size - a.size : a.name.localeCompare(b.name, undefined, { numeric: true });
     return [...f.filter((i) => i.dir).sort(c), ...f.filter((i) => !i.dir).sort(c)];
@@ -537,6 +537,7 @@ function Library() {
           <button className={view === 'home' ? 'nav on' : 'nav'} onClick={() => setView('home')} title="Home"><Icon n="home" s={20} /><span>Home</span></button>
           <button className={view === 'library' ? 'nav on' : 'nav'} onClick={() => setView('library')} title="Library"><Icon n="film" s={20} /><span>Library</span></button>
           <button className={view === 'playlists' ? 'nav on' : 'nav'} onClick={() => setView('playlists')} title="Playlists"><Icon n="list" s={20} /><span>Playlists</span></button>
+          <button className={view === 'insights' ? 'nav on' : 'nav'} onClick={() => setView('insights')} title="Insights"><Icon n="gauge" s={20} /><span>Insights</span></button>
           <button className="nav" onClick={() => setPanel('downloads')} title="Downloads">
             <Icon n="down" s={20} /><span>Downloads</span>
             {queueInfo.active + queueInfo.waiting > 0 && <em className="nav-badge">{queueInfo.active + queueInfo.waiting}</em>}
@@ -554,7 +555,7 @@ function Library() {
         <button className="nav" onClick={() => setPanel('settings')} title="Settings"><Icon n="sliders" s={20} /><span>Settings</span></button>
       </aside>
 
-      <main className="main">
+      <main className="main" style={{ ['--pw' as string]: `${s.density}px` }}>
         {saver > s.saver && <p className="note">Data Saver switched to Low because you used most of this month’s data budget.</p>}
         {rootsErr && (
           <div className="note err">
@@ -619,6 +620,34 @@ function Library() {
           );
         })()}
 
+        {view === 'insights' && (() => {
+          const all = Object.entries(prog);
+          const watchedSec = all.reduce((a, [, p]) => a + (p.watched ? p.dur : Math.min(p.pos, p.dur)), 0);
+          const week = all.filter(([, p]) => p.updated > Date.now() / 1000 - 7 * 86400 || p.updated > Date.now() - 7 * 86400_000);
+          const weekSec = week.reduce((a, [, p]) => a + (p.watched ? p.dur : Math.min(p.pos, p.dur)), 0);
+          const savedBytes = savedFiles.reduce((a, f) => a + f.size, 0);
+          const byFolder = new Map<string, number>();
+          for (const [k, p] of all) { const parts = k.split(':').slice(1).join(':').split('/'); const f = parts.length > 1 ? parts[parts.length - 2] : parts[0]; byFolder.set(f, (byFolder.get(f) ?? 0) + (p.watched ? p.dur : Math.min(p.pos, p.dur))); }
+          const top = [...byFolder.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+          const max = Math.max(1, ...top.map((x) => x[1]));
+          const hrs = (x: number) => `${Math.floor(x / 3600)} h ${Math.floor((x % 3600) / 60)} min`;
+          return (
+            <div className="home">
+              <h1 className="page-h">Insights</h1>
+              <div className="stat-grid">
+                <div className="stat"><small>Watched in total</small><b>{hrs(watchedSec)}</b><span className="muted small">{all.filter(([, p]) => p.watched).length} finished videos</span></div>
+                <div className="stat"><small>Last 7 days</small><b>{hrs(weekSec)}</b><span className="muted small">{week.length} videos touched</span></div>
+                <div className="stat"><small>Saved on this laptop</small><b>{bytes(savedBytes)}</b><span className="muted small">{savedFiles.length} videos, plays offline</span></div>
+                <div className="stat"><small>Data used this month</small><b>{bytes(net.month)}</b><span className="muted small">{bytes(net.today)} today</span></div>
+              </div>
+              <section className="rail">
+                <div className="rail-h"><h2>Most watched</h2></div>
+                {top.length ? <div className="bars">{top.map(([n, v]) => <div key={n} className="barrow"><span title={n}>{n.replace(/\.[^.]+$/, '')}</span><i><b style={{ width: `${(v / max) * 100}%` }} /></i><em>{hrs(v)}</em></div>)}</div> : <p className="muted">Watch something and it shows up here.</p>}
+              </section>
+            </div>
+          );
+        })()}
+
         {view === 'playlists' && (
           <div className="home">
             <h1 className="page-h">Playlists</h1>
@@ -675,13 +704,14 @@ function Library() {
           <div className="tools">
             <label className="search"><Icon n="search" s={16} /><input ref={search} placeholder="Search this folder  (press /)" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
             <select value={s.filter} onChange={(e) => set({ filter: e.target.value as Settings['filter'] })} aria-label="Show">
-              <option value="all">All</option><option value="unwatched">Not watched</option><option value="watched">Watched</option><option value="fav">Favorites</option>
+              <option value="all">All</option><option value="unwatched">Not watched</option><option value="progress">In progress</option><option value="watched">Watched</option><option value="fav">Favorites</option>
             </select>
             <select value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
               <option value="name">Name</option><option value="new">Newest</option><option value="size">Largest</option>
             </select>
             <button className="btn ghost" onClick={() => { refreshAll().then(() => flash('Refreshed')); }} title="Refresh (F5)"><Icon n="rotate" s={16} /> Refresh</button>
             {videos.length > 1 && <button className={selecting ? 'btn' : 'btn ghost'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Pick several videos to play as a playlist"><Icon n="list" s={16} /> {selecting ? 'Done' : 'Select'}</button>}
+            {s.view === 'grid' && <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />}
             <span className="seg" role="group" aria-label="View">
               <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
               <button className={s.view === 'list' ? 'on' : ''} onClick={() => set({ view: 'list' })} title="List view" aria-label="List view"><Icon n="list" s={16} /></button>

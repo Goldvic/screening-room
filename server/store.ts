@@ -27,6 +27,7 @@ export type Settings = {
   downloadDir: string; maxParallel: number; limitKBps: number;
   schedule: { on: boolean; from: string; to: string };
   budgetGB: number; autoDeleteDays: number; quotaGB: number;
+  encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small';
   tmdbKey: string; osKey: string; osUser: string; osPassSecret?: string;
 };
 
@@ -125,6 +126,8 @@ export class Store {
       budgetGB: Math.max(0, o.budgetGB ?? 0),
       autoDeleteDays: Math.max(0, o.autoDeleteDays ?? 0),
       quotaGB: Math.max(0, o.quotaGB ?? 0),
+      encodeWhere: (['auto', 'laptop', 'server'] as const).includes(o.encodeWhere as any) ? o.encodeWhere! : 'auto',
+      encodeSpeed: (['fast', 'balanced', 'small'] as const).includes(o.encodeSpeed as any) ? o.encodeSpeed! : 'fast',
       tmdbKey: o.tmdbKey ?? '', osKey: o.osKey ?? '', osUser: o.osUser ?? '', osPassSecret: o.osPassSecret,
     };
   }

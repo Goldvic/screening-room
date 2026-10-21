@@ -40,7 +40,7 @@ select { border-radius: 8px; padding: 6px 9px; }
 .card { border-radius: var(--r); }
 .tiles { gap: 8px; margin-bottom: 14px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 .tile { border-radius: var(--r); }
-.posters { grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)) !important; gap: 14px 12px !important; }
+.posters { grid-template-columns: repeat(auto-fill, minmax(var(--pw, 138px), 1fr)) !important; gap: 14px 12px !important; }
 .poster .frame { border-radius: var(--r); }
 .p-name { font-size: 12.5px; font-weight: 600; }
 .rows .row { padding: 5px 8px; border-radius: 8px; }
@@ -325,3 +325,17 @@ kbd { font: 600 11px var(--sans); padding: 2px 7px; border-radius: 6px; backgrou
 .sheet-box { width: min(720px, 94%); max-height: 88%; overflow: auto; padding: 18px 22px; border-radius: 16px; background: rgba(20,20,26,.92); border: 1px solid rgba(255,255,255,.14); }
 .sheet-box h3 { margin: 0 0 6px; font: 700 17px var(--sans); }
 @media (max-width: 720px) { .sheet-grid { grid-template-columns: 1fr; } }
+
+.sumline { margin: 10px 2px 2px; font-size: 13.5px; } .sumline b { font-size: 15px; }
+
+/* insights + density */
+.dens { width: 90px; accent-color: var(--lamp); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.stat { display: grid; gap: 4px; padding: 16px 18px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
+.stat small { color: var(--mute); text-transform: uppercase; letter-spacing: .08em; font-size: 10.5px; font-weight: 600; }
+.stat b { font: 800 24px/1.1 var(--sans); letter-spacing: -.02em; }
+.bars { display: grid; gap: 8px; }
+.barrow { display: grid; grid-template-columns: minmax(120px, 240px) 1fr 90px; gap: 12px; align-items: center; }
+.barrow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barrow i { display: block; height: 8px; border-radius: 4px; background: var(--raise); overflow: hidden; } .barrow i b { display: block; height: 100%; background: linear-gradient(90deg, var(--lamp), #2dd4bf); border-radius: 4px; }
+.barrow em { font-style: normal; color: var(--mute); font-size: 12px; text-align: right; }

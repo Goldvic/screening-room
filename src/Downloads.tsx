@@ -18,6 +18,16 @@ const estimate = (profile: string, dur: number, size: number) => {
   return size ? Math.min(size, e) : e;
 };
 
+// A folder has no single duration, so its estimate is a share of the original size, by size and codec.
+const SHARE: Record<number, number> = { 1080: 0.55, 720: 0.3, 480: 0.16, 360: 0.1 };
+const CODEC_SHARE: Record<string, number> = { h264: 1, hevc: 0.65, av1: 0.55 };
+const estimateTotal = (profile: string, total: number) => {
+  if (profile === 'orig') return total;
+  if (profile === 'fix') return total * 0.99;
+  const [c, h] = profile.split('-');
+  return Math.min(total, total * (SHARE[Number(h)] ?? 0.3) * (CODEC_SHARE[c] ?? 1));
+};
+
 export function DownloadDialog(p: {
   root: number; paths: string[]; names: string[]; sizes: number; caps: Caps | null;
   onClose: () => void; onQueued: (n: number) => void; onScheduled?: (text: string) => void;
@@ -36,22 +46,28 @@ export function DownloadDialog(p: {
   const [at, setAt] = useState(local(tonight()));
   const single = p.paths.length === 1 && /\.[a-z0-9]{2,4}$/i.test(p.paths[0]);
   const remote = p.caps?.remote;
-  const canEnc = !!remote?.ffmpeg;
+  const lap = p.caps?.local.enc;
+  const canEnc = !!remote?.ffmpeg || !!p.caps?.local.ffmpeg; // this laptop can compress when the server cannot
+  const [tot, setTot] = useState<{ files: number; bytes: number } | null>(null);
 
   useEffect(() => {
     if (single) api<Info>('info', { root: p.root, path: p.paths[0] }).then(setInfo).catch(() => {});
+    else post<{ files: number; bytes: number }>('dl/estimate', { root: p.root, paths: p.paths }).then(setTot).catch(() => {});
   }, [single, p.root, p.paths]);
 
   const ok = {
-    h264: !!remote?.h264 && canDecode('h264'),
-    hevc: !!remote?.hevc && canDecode('hevc'),
-    av1: !!remote?.av1 && canDecode('av1'),
+    h264: (!!remote?.h264 || !!lap?.h264 || (!lap && !!p.caps?.local.ffmpeg)) && canDecode('h264'),
+    hevc: (!!remote?.hevc || !!lap?.hevc) && canDecode('hevc'),
+    av1: (!!remote?.av1 || !!lap?.av1) && canDecode('av1'),
   };
   const best = ok.hevc ? 'hevc' : ok.h264 ? 'h264' : ok.av1 ? 'av1' : 'h264';
   const use = codec === 'auto' ? best : codec;
   const src = info?.height ?? 0;
   const dur = info?.duration ?? 0;
-  const size = single ? info?.size ?? p.sizes : p.sizes;
+  const size = single ? info?.size ?? p.sizes : tot?.bytes ?? p.sizes;
+  const files = single ? 1 : tot?.files ?? p.names.length;
+  const estFor = (id: string) => (single ? estimate(id, dur, size) : size ? estimateTotal(id, size) : 0);
+  const engine = lap?.hw ? `${lap.gpu} graphics on this laptop (fast)` : p.caps?.local.ffmpeg ? 'this laptop' : 'the server';
 
   const rows = useMemo(() => {
     const r: { id: string; label: string; hint: string }[] = [
@@ -94,19 +110,21 @@ export function DownloadDialog(p: {
     <div className="scrim" onClick={p.onClose}>
       <div className="dialog wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Save for offline">
         <div className="dlg-head"><h3>Save for offline</h3><button className="icon" onClick={p.onClose} aria-label="Close"><Icon n="close" /></button></div>
-        <p className="muted small trunc">{p.names.length === 1 ? p.names[0] : `${p.names.length} items`}{size ? ` · ${bytes(size)}` : ''}{dur ? ` · ${clock(dur)}` : ''}{src ? ` · ${src}p` : ''}</p>
-        {!canEnc && <p className="note">The server has no ffmpeg, so only the original file can be saved.</p>}
+        <p className="muted small trunc">{p.names.length === 1 ? p.names[0] : files > p.names.length ? `${p.names.length} folder${p.names.length > 1 ? 's' : ''}, ${files} videos` : `${p.names.length} items`}{size ? ` · ${bytes(size)} original` : !single && !tot ? ' · counting…' : ''}{dur ? ` · ${clock(dur)}` : ''}{src ? ` · ${src}p` : ''}</p>
+        {!canEnc && <p className="note">Neither the server nor this laptop has ffmpeg, so only the original file can be saved.</p>}
+        {canEnc && profile !== 'orig' && <p className="muted small">Compressing on {engine}.</p>}
         <div className="plist" role="radiogroup" aria-label="Quality">
           {rows.map((o) => {
-            const e = estimate(o.id, dur, single ? size : 0);
+            const e = estFor(o.id);
             return (
               <button key={o.id} role="radio" aria-checked={profile === o.id} className={profile === o.id ? 'opt on' : 'opt'} onClick={() => setProfile(o.id)}>
                 <span><b>{o.label}</b><small>{o.hint}</small></span>
-                <span className="est">{single && e ? `about ${bytes(e)}` : ''}{profile === o.id && <Icon n="check" s={16} />}</span>
+                <span className="est">{e ? `${single ? 'about ' : 'about ' }${bytes(e)}` : ''}{profile === o.id && <Icon n="check" s={16} />}</span>
               </button>
             );
           })}
         </div>
+        {size > 0 && <p className="sumline">Total: <b>{bytes(estFor(profile))}</b>{profile !== 'orig' && <span className="muted"> instead of {bytes(size)}</span>}{files > 1 ? <span className="muted"> · {files} videos</span> : null}</p>}
         {canEnc && (
           <>
             <div className="msec">Sound</div>
