@@ -262,6 +262,7 @@ export function useNet(sid: string | null, ms: number): Net {
         const prev = last.current;
         last.current = { t, b };
         setN((o) => {
+          if (o.ok && o.active === j.active && o.today === j.today && o.mode === j.mode && o.speed < 1 && (prev ? b - prev.b : 1) <= 0) return o; // nothing changed: do not redraw
           const inst = prev ? Math.max(0, (b - prev.b) / ((t - prev.t) / 1000)) : 0;
           return { speed: o.speed * 0.35 + inst * 0.65, bytes: b, today: j.today, month: j.month ?? 0, lifetime: j.lifetime, active: j.active, mode: j.mode, ok: true, hist: [...o.hist, inst].slice(-60) };
         });

@@ -578,13 +578,21 @@ export async function start(opts: StartOpts = {}) {
 
   // ---------- offline library helpers ----------
   type OffFile = { rel: string; name: string; size: number; mtime: number };
-  function walkOffline(dir: string, rel = '', out: OffFile[] = []): OffFile[] {
+  const walkCache = new Map<string, { t: number; v: OffFile[] }>();
+  function walkOffline(dir: string): OffFile[] { // scanned at most once every 5 seconds: it reads the disk synchronously
+    const c = walkCache.get(dir);
+    if (c && Date.now() - c.t < 5000) return c.v;
+    const v = walkOfflineRaw(dir);
+    walkCache.set(dir, { t: Date.now(), v });
+    return v;
+  }
+  function walkOfflineRaw(dir: string, rel = '', out: OffFile[] = []): OffFile[] {
     let ents: fs.Dirent[] = [];
     try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
     for (const e of ents) {
       if (e.name.startsWith('.')) continue;
       const p = path.join(dir, e.name), r = rel ? `${rel}/${e.name}` : e.name;
-      if (e.isDirectory()) walkOffline(p, r, out);
+      if (e.isDirectory()) walkOfflineRaw(p, r, out);
       else if (!e.name.endsWith('.part')) {
         try { const st = fs.statSync(p); out.push({ rel: r, name: e.name, size: st.size, mtime: Math.floor(st.mtimeMs / 1000) }); } catch { /* vanished */ }
       }
@@ -601,11 +609,12 @@ export async function start(opts: StartOpts = {}) {
     try { for (const f of fs.readdirSync(d)) if (f.startsWith(key + '.')) fs.rmSync(path.join(d, f), { force: true }); } catch { /* none */ }
   }
   function removeOffline(rel: string) {
+    walkCache.clear();
     const base = store.settings().downloadDir;
     const full = path.join(base, ...rel.split('/'));
     if (path.relative(base, full).startsWith('..') || full === base) throw new HttpError(400, 'Bad path');
     const st = fs.statSync(full);
-    if (st.isDirectory()) for (const f of walkOffline(full, rel)) removeMetaFor(f.rel);
+    if (st.isDirectory()) for (const f of walkOfflineRaw(full, rel)) removeMetaFor(f.rel);
     else removeMetaFor(rel);
     fs.rmSync(full, { recursive: true, force: true });
     for (const k of Object.keys(progress)) if (k === `Offline:${rel}` || k.startsWith(`Offline:${rel}/`)) delete progress[k];

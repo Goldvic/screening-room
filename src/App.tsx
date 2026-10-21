@@ -194,7 +194,7 @@ function Library() {
   const [skipSetup, setSkipSetup] = useState(() => { try { return localStorage.getItem('cinema.skipSetup') === '1'; } catch { return false; } });
   const search = useRef<HTMLInputElement>(null);
   const pre = useRef(new Set<string>());
-  const net = useNet(null, 2000);
+  const net = useNet(null, 30000); // month total and mode only; the live speed lives in <NetMini/>
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
   const [palette, setPalette] = useState(false);
@@ -238,7 +238,7 @@ function Library() {
   useEffect(() => { loadRoots(); loadProg(); loadSrv(); loadCaps(); }, [loadRoots, loadProg, loadSrv, loadCaps]);
   useEffect(() => { setQuery(''); load(); }, [load]);
   useEffect(() => {
-    const t = setInterval(() => api<{ active: number; waiting: number; speed: number }>('dl').then(setQueueInfo).catch(() => {}), 2500);
+    const t = setInterval(() => { if (document.hidden) return; api<{ active: number; waiting: number; speed: number }>('dl').then((j) => setQueueInfo((o) => (o.active === j.active && o.waiting === j.waiting ? o : j))).catch(() => {}); }, 2500);
     return () => clearInterval(t);
   }, []);
   useEffect(() => {
@@ -548,9 +548,7 @@ function Library() {
             <Icon n="cloud" s={20} /><span>{upd.state === 'ready' ? 'Restart to update' : upd.state === 'downloading' ? `Updating ${upd.percent}%` : 'Update'}</span>
           </button>
         )}
-        <button className="netmini" onClick={() => setPanel('settings')} title={`Network: ${net.ok ? rate(net.speed) : 'offline'} · today ${bytes(net.today)}`}>
-          <i className={net.active ? 'dot on' : 'dot'} /><span>{net.ok ? rate(net.speed) : 'offline'}</span><small>{bytes(net.today)} today</small>
-        </button>
+        <NetMini onClick={() => setPanel('settings')} />
         {bridge && <button className="nav" onClick={pickFile} title="Open a video from your computer (Ctrl+O)"><Icon n="folder" s={20} /><span>Open file</span></button>}
         <button className="nav" onClick={() => setPanel('servers')} title="Servers"><Icon n="server" s={20} /><span>Servers</span></button>
         <button className="nav" onClick={() => setPanel('settings')} title="Settings"><Icon n="sliders" s={20} /><span>Settings</span></button>
@@ -911,5 +909,16 @@ function Sheet({ onClose }: { onClose: () => void }) {
         <div className="sheet-grid">{rows.map(([k, d]) => <p key={k}><kbd>{k}</kbd><span>{d}</span></p>)}</div>
       </div>
     </div>
+  );
+}
+
+
+// Live network speed. It has its own timer, so the library is not redrawn every couple of seconds while videos download.
+function NetMini({ onClick }: { onClick: () => void }) {
+  const net = useNet(null, 2500);
+  return (
+    <button className="netmini" onClick={onClick} title={`Network: ${net.ok ? rate(net.speed) : 'offline'} · today ${bytes(net.today)}`}>
+      <i className={net.active ? 'dot on' : 'dot'} /><span>{net.ok ? rate(net.speed) : 'offline'}</span><small>{bytes(net.today)} today</small>
+    </button>
   );
 }

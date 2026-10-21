@@ -75,14 +75,20 @@ function initUpdater() {
   updater.autoInstallOnAppQuit = true;   // a downloaded update installs the next time Cinema closes
   updater.logger = null;
   updater.on('checking-for-update', () => setUpd({ state: 'checking', error: '' }));
-  updater.on('update-available', (i) => setUpd({ state: 'available', version: i.version, percent: 0 }));
+  updater.on('update-available', (i) => {
+    setUpd({ state: 'available', version: i.version, percent: 0 });
+    if (updCfg.auto) updater.downloadUpdate().catch(() => {}); // Automatic: fetch it quietly in the background
+  });
   updater.on('update-not-available', () => setUpd({ state: 'none' }));
   updater.on('download-progress', (p) => setUpd({ state: 'downloading', percent: Math.round(p.percent || 0) }));
-  updater.on('update-downloaded', (i) => setUpd({ state: 'ready', version: i.version, percent: 100 }));
+  updater.on('update-downloaded', (i) => {
+    setUpd({ state: 'ready', version: i.version, percent: 100 });
+    if (Notification.isSupported()) new Notification({ title: 'Cinema update ready', body: `Version ${i.version} installs when you close Cinema, or restart now from Settings.` }).show();
+  });
   updater.on('error', (e) => setUpd({ state: 'error', error: friendly(e) }));
   applyFeed();
   const auto = () => { if (updCfg.auto && updCfg.feed && ['idle', 'none', 'error'].includes(upd.state)) checkUpdates(); };
-  setTimeout(auto, 20000).unref();
+  setTimeout(auto, 8000).unref();
   setInterval(auto, 6 * 3600 * 1000).unref();
 }
 async function checkUpdates() {
@@ -163,7 +169,7 @@ function trackDownloads() {
       lastBusy = busy;
     } catch { /* server not ready */ }
   };
-  setInterval(tick, 1500).unref?.();
+  setInterval(tick, 3000).unref?.();
 }
 
 function createWindow() {

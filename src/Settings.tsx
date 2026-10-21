@@ -52,7 +52,7 @@ function Updates() {
       <Field label="Update address" hint="Paste your GitHub repository link (it must be public). A web folder with latest.yml also works">
         <input value={feed} placeholder="https://github.com/you/screening-room" autoComplete="off" onChange={(e) => setFeed(e.target.value)} onBlur={() => bridge!.updateConfig({ feed })} />
       </Field>
-      <Field label="Check automatically" hint="A few seconds after start, then every 6 hours. Nothing is installed without you"><Toggle on={u.auto} label="Check automatically" onClick={() => bridge!.updateConfig({ auto: !u.auto })} /></Field>
+      <Field label="Check automatically" hint="Checks every few hours and downloads new versions quietly in the background. They install when you close Cinema"><Toggle on={u.auto} label="Check automatically" onClick={() => bridge!.updateConfig({ auto: !u.auto })} /></Field>
       <p className={u.state === 'error' ? 'err-t' : 'muted small'} role="status">{status}</p>
       {u.state === 'downloading' && <i className="bar"><i style={{ width: `${u.percent}%` }} /></i>}
       <div className="dlg-actions spread">

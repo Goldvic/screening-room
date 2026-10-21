@@ -1,5 +1,12 @@
-; Wording for the Windows setup and uninstall screens.
+; Look and wording of the Windows setup and uninstall screens.
 !macro customHeader
+  ; Dark header, welcome page and finish page, with light text.
+  !ifndef MUI_BGCOLOR
+    !define MUI_BGCOLOR "0D0D12"
+  !endif
+  !ifndef MUI_TEXTCOLOR
+    !define MUI_TEXTCOLOR "FFFFFF"
+  !endif
   !define MUI_WELCOMEPAGE_TITLE "Welcome to Cinema"
   !define MUI_WELCOMEPAGE_TEXT "Your private screening room.$\r$\n$\r$\nStream from your own server, save videos to watch offline, and keep your whole library in one place.$\r$\n$\r$\nClick Next to continue."
   !define MUI_FINISHPAGE_TITLE "Cinema is ready"

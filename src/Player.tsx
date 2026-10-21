@@ -154,7 +154,7 @@ export default function Player(p: Props) {
       } catch { /* server not reachable */ }
     };
     tick();
-    const t = setInterval(tick, 3000);
+    const t = setInterval(() => { if (!document.hidden) tick(); }, 4000);
     return () => { dead = true; clearInterval(t); };
   }, [p.root, path, p.offline, p.opened]);
   const cachedFrac = p.offline && !p.opened ? 1 : cache.frac;

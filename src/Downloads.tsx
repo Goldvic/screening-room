@@ -165,7 +165,7 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
     let dead = false;
     const tick = () => api<Queue>('dl').then((j) => { if (!dead) setQ(j); }).catch(() => {});
     tick();
-    const t = setInterval(tick, 1000);
+    const t = setInterval(() => { if (!document.hidden) tick(); }, 1500);
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', k);
     return () => { dead = true; clearInterval(t); window.removeEventListener('keydown', k); };
