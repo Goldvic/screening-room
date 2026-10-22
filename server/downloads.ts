@@ -20,7 +20,8 @@ export type DlItem = {
 
 export interface DlCtx {
   dataDir: string;
-  settings(): { downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string }; budgetGB: number; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: Speed };
+  settings(): { downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string }; budgetGB: number; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: Speed; pauseOnBattery: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number } };
+  onBattery(): boolean;
   /** Compression on this laptop: ffmpeg/ffprobe paths, what it can encode, and a URL that streams the original from the server. */
   localEnc(): { ffmpeg: string; ffprobe: string; enc: EncInfo } | null;
   loopback(job: DlItem): string;
@@ -188,6 +189,7 @@ export class Downloads {
     if (i.force) return null;
     const s = this.ctx.settings();
     if (s.schedule.on && !inWindow(s.schedule.from, s.schedule.to)) return `Waiting for ${s.schedule.from}`;
+    if (s.pauseOnBattery && this.ctx.onBattery()) return 'Waiting for power (on battery)';
     if (s.budgetGB > 0 && this.ctx.monthBytes() >= s.budgetGB * 1e9) return 'Monthly data budget reached';
     return null;
   }
@@ -335,7 +337,9 @@ export class Downloads {
               job.eta = job.speed > 0 ? (job.size - job.done) / job.speed : 0;
               sinceT = now; since = 0;
             }
-            const lim = (settings().limitKBps * 1024) / Math.max(1, this.live.size);
+            const cfg = settings();
+            const kbps = cfg.limitWin.on && cfg.limitWin.kbps > 0 && inWindow(cfg.limitWin.from, cfg.limitWin.to) ? cfg.limitWin.kbps : cfg.limitKBps; // slower during the hours you choose
+            const lim = (kbps * 1024) / Math.max(1, this.live.size);
             if (lim > 0) {
               const wait = (limBytes / lim) * 1000 - (Date.now() - lim0);
               if (wait > 5) await sleep(Math.min(wait, 2000));

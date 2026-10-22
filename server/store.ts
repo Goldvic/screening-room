@@ -28,6 +28,7 @@ export type Settings = {
   schedule: { on: boolean; from: string; to: string };
   budgetGB: number; autoDeleteDays: number; quotaGB: number;
   encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small';
+  pauseOnBattery: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number };
   tmdbKey: string; osKey: string; osUser: string; osPassSecret?: string;
 };
 
@@ -48,10 +49,12 @@ export class Store {
   private prefs: Record<string, unknown>;
   private prefsT?: NodeJS.Timeout;
   private readonly dbFile: string;
-  private readonly prefsFile: string;
+  private prefsFile: string;
+  private dataDirPath: string;
 
   constructor(private dataDir: string, private crypt: Crypt = plainCrypt, private defaultDownloadDir: string) {
     this.dbFile = path.join(dataDir, 'servers.json');
+    this.dataDirPath = dataDir;
     this.prefsFile = path.join(dataDir, 'prefs.json');
     this.db = readJson<Db>(this.dbFile, { active: '', servers: [], settings: {} });
     this.prefs = readJson<Record<string, unknown>>(this.prefsFile, {});
@@ -126,6 +129,8 @@ export class Store {
       budgetGB: Math.max(0, o.budgetGB ?? 0),
       autoDeleteDays: Math.max(0, o.autoDeleteDays ?? 0),
       quotaGB: Math.max(0, o.quotaGB ?? 0),
+      pauseOnBattery: !!o.pauseOnBattery,
+      limitWin: { on: !!o.limitWin?.on, from: o.limitWin?.from ?? '18:00', to: o.limitWin?.to ?? '23:00', kbps: Math.max(0, Number(o.limitWin?.kbps) || 0) },
       encodeWhere: (['auto', 'laptop', 'server'] as const).includes(o.encodeWhere as any) ? o.encodeWhere! : 'auto',
       encodeSpeed: (['fast', 'balanced', 'small'] as const).includes(o.encodeSpeed as any) ? o.encodeSpeed! : 'fast',
       tmdbKey: o.tmdbKey ?? '', osKey: o.osKey ?? '', osUser: o.osUser ?? '', osPassSecret: o.osPassSecret,
@@ -152,6 +157,14 @@ export class Store {
     this.prefs[key] = value;
     clearTimeout(this.prefsT);
     this.prefsT = setTimeout(() => { try { writeJson(this.prefsFile, this.prefs); } catch { /* ignore */ } }, 300);
+  }
+  /** Switch to another profile's preferences (favourites, playlists, collections ...). */
+  switchProfile(id: string) {
+    this.flush();
+    this.prefsFile = path.join(this.dataDirPath, id === 'default' ? 'prefs.json' : `prefs.${id}.json`);
+    const keep: Record<string, unknown> = {};
+    for (const k of ['dlsched', 'dlrules', 'introfp']) if (k in this.prefs) keep[k] = this.prefs[k];
+    this.prefs = { ...readJson<Record<string, unknown>>(this.prefsFile, {}), ...keep };
   }
   flush() { clearTimeout(this.prefsT); try { writeJson(this.prefsFile, this.prefs); } catch { /* ignore */ } }
 }

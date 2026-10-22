@@ -31,6 +31,9 @@ export const VIDEO_EXTS = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'm4v'];
 export type Bridge = {
   selectFile(filters?: { name: string; extensions: string[] }[]): Promise<string | null>;
   selectFiles(filters?: { name: string; extensions: string[] }[]): Promise<string[]>;
+  loginItemGet(): Promise<boolean>; loginItemSet(on: boolean): Promise<boolean>;
+  popout(qs: string): Promise<void>; mediaState(playing: boolean): Promise<void>;
+  onMediaKey(cb: (k: string) => void): () => void;
   selectFolder(): Promise<string | null>;
   powerSave(on: boolean): Promise<void>;
   miniPlayer(on: boolean): Promise<void>;
@@ -120,16 +123,16 @@ export const ACCENTS: Record<string, string> = {
 // ---------- settings (saved in this browser) ----------
 export type Settings = {
   accent: string; quality: string; speed: number; aspect: string; autoNext: boolean;
-  autoSub: boolean; subSmart: boolean; subLang: string; subSize: number; subColor: string; subBg: number;
-  turbo: boolean; conns: number; view: 'grid' | 'list'; thumbs: boolean;
+  autoSub: boolean; subSmart: boolean; subLang: string; subSize: number; subColor: string; subBg: number; subOutline: boolean; subPos: number; themePreset: string; accentCustom: string; compact: boolean; pauseOnBattery: boolean;
+  turbo: boolean; conns: number; view: 'grid' | 'list' | 'wall'; thumbs: boolean;
   saver: number; saverAuto: boolean;
   vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
   dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean; skipIntro: boolean; autoIntro: boolean; eco: 'off' | 'on' | 'battery'; theme: 'dark' | 'light';
-  posters: boolean; filter: 'all' | 'unwatched' | 'progress' | 'watched' | 'fav'; density: number; externalPlayer: string;
+  posters: boolean; filter: 'all' | 'unwatched' | 'progress' | 'watched' | 'fav' | 'rated'; density: number; externalPlayer: string;
 };
 export const DEFAULTS: Settings = {
   accent: 'Violet', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
-  autoSub: true, subSmart: true, subLang: 'en', subSize: 28, subColor: '#ffffff', subBg: 55,
+  autoSub: true, subSmart: true, subLang: 'en', subSize: 28, subColor: '#ffffff', subBg: 55, subOutline: true, subPos: 6, themePreset: 'default', accentCustom: '', compact: false, pauseOnBattery: false,
   turbo: true, conns: 8, view: 'grid', thumbs: true, density: 150,
   saver: 0, saverAuto: true,
   vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
@@ -150,7 +153,11 @@ export const SettingsCtx = createContext<{ s: Settings; set: (p: Partial<Setting
 export type Fx = { eq: number[]; dialogue: boolean; night: boolean; mono: boolean };
 export type Bookmark = { t: number; label: string };
 export type SavedList = { id: string; name: string; root: string; dir: string; items: string[] };
-export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]>; playlists?: SavedList[]; intros?: Record<string, { start: number; end: number }> };
+export type Prefs = { favs?: string[]; audio?: Record<string, Fx>; bookmarks?: Record<string, Bookmark[]>; playlists?: SavedList[]; intros?: Record<string, { start: number; end: number }>;
+  collections?: { id: string; name: string; items: { root: string; path: string }[] }[];
+  meta?: Record<string, { r?: number; t?: string[] }>; homeRows?: { id: string; on: boolean }[];
+  daylog?: Record<string, number>; goal?: number; shows?: Record<string, { speed?: number; audio?: string }>;
+  credits?: Record<string, number>; subdelay?: Record<string, number>; tourDone?: boolean; lastVisit?: number };
 export const PrefsCtx = createContext<{ prefs: Prefs; setPref: <K extends keyof Prefs>(k: K, v: Prefs[K]) => void }>({ prefs: {}, setPref: () => {} });
 
 // ---------- helpers ----------
@@ -168,6 +175,7 @@ export async function post<T>(p: string, body: unknown = {}): Promise<T> {
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j as T;
 }
+export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export const bytes = (n: number) => {
   const u = ['B', 'KB', 'MB', 'GB', 'TB'];
   let i = 0;

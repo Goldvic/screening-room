@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('cinema', {
   // opening files from Explorer, drag and drop
   pathForFile: (file) => { try { return webUtils.getPathForFile(file); } catch { return ''; } },
   takePendingOpen: () => ipcRenderer.invoke('take-pending-open'),
+  loginItemGet: () => ipcRenderer.invoke('login-item-get'),
+  loginItemSet: (on) => ipcRenderer.invoke('login-item-set', !!on),
+  popout: (qs) => ipcRenderer.invoke('popout', String(qs)),
+  mediaState: (playing) => ipcRenderer.invoke('media-state', !!playing),
+  onMediaKey: (cb) => { const f = (_e, k) => cb(k); ipcRenderer.on('media-key', f); return () => ipcRenderer.removeListener('media-key', f); },
   onOpenFile: (cb) => { const f = (_e, file) => cb(file); ipcRenderer.on('open-file', f); return () => ipcRenderer.removeListener('open-file', f); },
   // updates
   updateGet: () => ipcRenderer.invoke('update-get'),

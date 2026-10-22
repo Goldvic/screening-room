@@ -1,5 +1,6 @@
 import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { EQ_PRESETS } from './audio';
+import { BackupBlock, ProfilesBlock, RemoteBlock } from './Extras';
 import {
   Caps, ACCENTS, APP_NAME, ASPECTS, Icon, LANGS, MAX_VOLS, Prog, QUALITIES, SAVER, SettingsCtx,
   api, bridge, bytes, mbps, post, rate, speedTest, turboOk, useUpdates, moveDownloads } from './lib';
@@ -68,8 +69,12 @@ function Updates() {
 
 type Srv = {
   downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string };
-  budgetGB: number; autoDeleteDays: number; quotaGB: number; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small'; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
+  budgetGB: number; autoDeleteDays: number; quotaGB: number; pauseOnBattery: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number }; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small'; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
 };
+const PRESETS = [
+  { id: 'default', name: 'Graphite', c: '#131318' }, { id: 'midnight', name: 'Midnight', c: '#0f1a33' }, { id: 'oled', name: 'OLED black', c: '#000000' },
+  { id: 'warm', name: 'Warm', c: '#2a1d14' }, { id: 'forest', name: 'Forest', c: '#0f2219' }, { id: 'paper', name: 'Paper (light)', c: '#f1f1f5' },
+];
 type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app';
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'look', label: 'Appearance', icon: 'eye' }, { id: 'play', label: 'Playback & sound', icon: 'play' },
@@ -78,12 +83,276 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 const LIMITS = [0, 250, 500, 1000, 2000, 5000, 10000];
 
-export default function SettingsDialog({ onClose, mode, prog, onStorage, onServers, onSaved }: {
-  onClose: () => void; mode: string; prog: Record<string, Prog>; onStorage: () => void; onServers: () => void; onSaved: () => void;
+
+const SEARCH_INDEX: { tab: Tab; label: string; hint: string }[] = [
+{
+"tab": "look",
+"label": "Accent color",
+"hint": ""
+},
+{
+"tab": "look",
+"label": "Theme",
+"hint": ""
+},
+{
+"tab": "look",
+"label": "Colour style",
+"hint": ""
+},
+{
+"tab": "look",
+"label": "Custom accent colour",
+"hint": "Overrides the accent colour above"
+},
+{
+"tab": "look",
+"label": "Compact mode",
+"hint": "Tighter spacing, good for small screens"
+},
+{
+"tab": "look",
+"label": "Video thumbnails",
+"hint": "Made once on the server, then cached"
+},
+{
+"tab": "data",
+"label": "Monthly data budget",
+"hint": "0 means no limit. Counts streaming and downloads"
+},
+{
+"tab": "data",
+"label": "Switch to Low at 80% of the budget",
+"hint": "Automatically, until the month ends"
+},
+{
+"tab": "play",
+"label": "Default quality",
+"hint": ""
+},
+{
+"tab": "play",
+"label": "Default screen shape",
+"hint": ""
+},
+{
+"tab": "play",
+"label": "Power saving",
+"hint": "Lowers the video quality cap and turns off blur and animations to save battery"
+},
+{
+"tab": "play",
+"label": "Detect intros automatically",
+"hint": "Finds the opening music by comparing episodes. Reads about 7 minutes of 3 videos once per episode, so it uses some data on a server"
+},
+{
+"tab": "play",
+"label": "Show \u201cSkip intro",
+"hint": "Only on episodes whose file has an intro or recap chapter"
+},
+{
+"tab": "play",
+"label": "Play next episode automatically",
+"hint": ""
+},
+{
+"tab": "play",
+"label": "Download the next episode while I watch",
+"hint": "Saves it for offline in the background"
+},
+{
+"tab": "play",
+"label": "Maximum volume",
+"hint": "How far the volume slider can go. Above 100% a limiter keeps it clean"
+},
+{
+"tab": "play",
+"label": "Remember boost above 100%",
+"hint": "Off: every time the app starts, volume goes back to 100% or lower to protect your ears"
+},
+{
+"tab": "play",
+"label": "Default equalizer",
+"hint": ""
+},
+{
+"tab": "subs",
+"label": "Turn on subtitles automatically",
+"hint": "Picks a track in your language, inside the video or next to it"
+},
+{
+"tab": "subs",
+"label": "Your language",
+"hint": ""
+},
+{
+"tab": "subs",
+"label": "Subtitle size",
+"hint": ""
+},
+{
+"tab": "subs",
+"label": "Subtitle colour",
+"hint": ""
+},
+{
+"tab": "subs",
+"label": "Subtitle background",
+"hint": "How dark the box behind the words is"
+},
+{
+"tab": "subs",
+"label": "Subtitle outline",
+"hint": ""
+},
+{
+"tab": "subs",
+"label": "Subtitle position",
+"hint": "Distance from the bottom of the picture"
+},
+{
+"tab": "subs",
+"label": "Skip if the audio is already in that language",
+"hint": ""
+},
+{
+"tab": "subs",
+"label": "OpenSubtitles",
+"hint": "Free key at opensubtitles.com. The account is only needed to download. Stored encrypted on this computer"
+},
+{
+"tab": "look",
+"label": "TMDB key",
+"hint": "Free at themoviedb.org. Adds posters, ratings and descriptions"
+},
+{
+"tab": "look",
+"label": "Show posters instead of thumbnails",
+"hint": "Needs the TMDB key"
+},
+{
+"tab": "look",
+"label": "Watching so far",
+"hint": ""
+},
+{
+"tab": "offline",
+"label": "Save downloads to",
+"hint": ""
+},
+{
+"tab": "offline",
+"label": "Save while I watch",
+"hint": "Keeps a full-quality copy on this laptop in the background, so next time it plays offline and uses no data"
+},
+{
+"tab": "offline",
+"label": "Files at the same time",
+"hint": ""
+},
+{
+"tab": "offline",
+"label": "Speed limit",
+"hint": "Keeps some bandwidth for other things"
+},
+{
+"tab": "offline",
+"label": "Only download at night",
+"hint": "Downloads wait until the time window opens"
+},
+{
+"tab": "offline",
+"label": "Between",
+"hint": ""
+},
+{
+"tab": "offline",
+"label": "Tidy saved videos",
+"hint": "Find duplicates and check that saved copies are not broken"
+},
+{
+"tab": "offline",
+"label": "Pause on battery",
+"hint": "Downloads wait until the laptop is plugged in"
+},
+{
+"tab": "offline",
+"label": "Slow down at certain hours",
+"hint": "Limit the download speed between two times, for example while you work"
+},
+{
+"tab": "offline",
+"label": "Compress on",
+"hint": "A laptop with an NVIDIA, Intel or AMD graphics chip compresses many times faster than a server. Auto picks the quickest"
+},
+{
+"tab": "offline",
+"label": "Compression speed",
+"hint": "Fastest makes slightly bigger files. Smallest takes longer"
+},
+{
+"tab": "offline",
+"label": "Space limit for saved videos",
+"hint": "When it is full, watched videos are removed first, then the oldest. Your copies on the server stay"
+},
+{
+"tab": "offline",
+"label": "Delete watched downloads after",
+"hint": "Frees space automatically. Your copy on the server stays"
+},
+{
+"tab": "offline",
+"label": "Turbo browser download",
+"hint": ""
+},
+{
+"tab": "offline",
+"label": "Connections per file",
+"hint": ""
+},
+{
+"tab": "play",
+"label": "Open in another player",
+"hint": "For example VLC. Leave empty to use your computer\u2019s default player"
+},
+{
+"tab": "app",
+"label": "Open Cinema when I sign in",
+"hint": "It starts quietly in the tray and closes itself again unless a scheduled download or auto-save rule needs it"
+},
+{
+"tab": "app",
+"label": "Control playback from your phone",
+"hint": "Also lets a phone or smart TV browser watch what is playing"
+},
+{
+"tab": "app",
+"label": "Where your movies are stored",
+"hint": ""
+}
+];
+
+function SearchResults({ q, onPick }: { q: string; onPick: (t: Tab) => void }) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hits = SEARCH_INDEX.filter((f) => words.every((w) => `${f.label} ${f.hint}`.toLowerCase().includes(w))).slice(0, 14);
+  return (
+    <section className="sres">
+      <h4>{hits.length ? 'Matching settings' : 'Nothing matches'}</h4>
+      {hits.map((f, i) => <button key={i} className="opt" onClick={() => onPick(f.tab)}><span><b>{f.label}</b><small>{TABS.find((t) => t.id === f.tab)?.label}{f.hint ? ` · ${f.hint}` : ''}</small></span></button>)}
+    </section>
+  );
+}
+
+export default function SettingsDialog({ onClose, mode, prog, onStorage, onServers, onSaved, onTidy }: {
+  onClose: () => void; mode: string; prog: Record<string, Prog>; onStorage: () => void; onServers: () => void; onSaved: () => void; onTidy: () => void;
 }) {
   const { s, set } = useContext(SettingsCtx);
   const [tab, setTab] = useState<Tab>('look');
   const [moveMsg, setMoveMsg] = useState('');
+  const [q, setQ] = useState('');
+  const [login, setLogin] = useState(false);
+  useEffect(() => { bridge?.loginItemGet?.().then(setLogin).catch(() => {}); }, []);
+  const cur = q ? '' : tab;
   const [kd, setKd] = useState({ tmdb: '', os: '', user: '' });
   const [kMsg, setKMsg] = useState<Record<string, { ok: boolean; text: string } | undefined>>({});
   const [kBusy, setKBusy] = useState('');
@@ -152,11 +421,13 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         <div className="dlg-head"><h3>Settings</h3><button className="icon" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button></div>
         <div className="set-layout">
         <nav className="set-nav" aria-label="Settings sections">
+          <input className="set-search" type="search" placeholder="Search settings" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
           {TABS.map((x) => <button key={x.id} className={tab === x.id ? 'on' : ''} onClick={() => setTab(x.id)}><Icon n={x.icon} s={16} /> {x.label}</button>)}
         </nav>
         <div className="set-body">
+        {q && <SearchResults q={q} onPick={(t) => { setTab(t); setQ(''); }} />}
 
-        {tab === 'look' && (
+        {cur === 'look' && (
         <section>
           <h4>Look</h4>
           <Field label="Accent color">
@@ -170,11 +441,18 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
               <button className={s.theme === 'light' ? 'on' : ''} onClick={() => set({ theme: 'light' })}>Light</button>
             </span>
           </Field>
+          <Field label="Colour style">
+            <span className="swatches">{PRESETS.map((p) => <button key={p.id} className={s.themePreset === p.id ? 'swt on' : 'swt'} style={{ background: p.c }} title={p.name} aria-label={p.name} onClick={() => set({ themePreset: p.id })} />)}</span>
+          </Field>
+          <Field label="Custom accent colour" hint="Overrides the accent colour above">
+            <span className="inline"><input type="color" value={/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : '#8b7bff'} onChange={(e) => set({ accentCustom: e.target.value })} /><button className="btn ghost sm" onClick={() => set({ accentCustom: '' })}>Use the preset</button></span>
+          </Field>
+          <Field label="Compact mode" hint="Tighter spacing, good for small screens"><Toggle on={s.compact} label="Compact" onClick={() => set({ compact: !s.compact })} /></Field>
           <Field label="Video thumbnails" hint="Made once on the server, then cached"><Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} /></Field>
         </section>
         )}
 
-        {tab === 'data' && (
+        {cur === 'data' && (
         <section>
           <h4>Data Saver</h4>
           <p className="muted small">Lowers how much data streaming uses. It caps the quality that Auto may choose and squeezes the bitrate. It does not change Original playback or downloads.</p>
@@ -189,7 +467,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {tab === 'play' && (
+        {cur === 'play' && (
         <section>
           <h4>Playback</h4>
           <Field label="Default quality">
@@ -210,7 +488,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {tab === 'play' && (
+        {cur === 'play' && (
         <section>
           <h4>Sound</h4>
           <Field label="Maximum volume" hint="How far the volume slider can go. Above 100% a limiter keeps it clean">
@@ -225,7 +503,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {tab === 'subs' && (
+        {cur === 'subs' && (
         <section>
           <h4>Subtitles</h4>
           <Field label="Turn on subtitles automatically" hint="Picks a track in your language, inside the video or next to it">
@@ -234,6 +512,12 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           <Field label="Your language">
             <select value={s.subLang} onChange={(e) => set({ subLang: e.target.value })}>{LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select>
           </Field>
+          <Field label="Subtitle size"><input type="range" min={16} max={60} value={s.subSize} onChange={(e) => set({ subSize: +e.target.value })} /></Field>
+          <Field label="Subtitle colour"><input type="color" value={s.subColor} onChange={(e) => set({ subColor: e.target.value })} /></Field>
+          <Field label="Subtitle background" hint="How dark the box behind the words is"><input type="range" min={0} max={100} value={s.subBg} onChange={(e) => set({ subBg: +e.target.value })} /></Field>
+          <Field label="Subtitle outline"><Toggle on={s.subOutline} label="Outline" onClick={() => set({ subOutline: !s.subOutline })} /></Field>
+          <Field label="Subtitle position" hint="Distance from the bottom of the picture"><input type="range" min={2} max={30} value={s.subPos} onChange={(e) => set({ subPos: +e.target.value })} /></Field>
+          <div className="subprev"><span style={{ fontSize: Math.min(s.subSize, 40), color: s.subColor, background: `rgba(0,0,0,${s.subBg / 100})`, textShadow: s.subOutline ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000' : undefined }}>This is how your subtitles will look.</span></div>
           <Field label="Skip if the audio is already in that language"><Toggle on={s.subSmart} label="Skip when audio matches" onClick={() => set({ subSmart: !s.subSmart })} /></Field>
           <Field label="OpenSubtitles" hint="Free key at opensubtitles.com. The account is only needed to download. Stored encrypted on this computer">
             <span className="keybox">
@@ -252,7 +536,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {tab === 'look' && (
+        {cur === 'look' && (
         <section>
           <h4>Library</h4>
           <Field label="TMDB key" hint="Free at themoviedb.org. Adds posters, ratings and descriptions">
@@ -270,7 +554,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {tab === 'offline' && (
+        {cur === 'offline' && (
         <section>
           <h4>Downloads and offline</h4>
           <Field label="Save downloads to" hint={moveMsg || `${srv?.downloadDir ?? ''}. Pick a folder on another drive to keep videos off your system drive; saved videos move with it.`}>
@@ -299,6 +583,16 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
               </span>
             </Field>
           )}
+          <Field label="Tidy saved videos" hint="Find duplicates and check that saved copies are not broken"><button className="btn" onClick={onTidy}>Open</button></Field>
+          <Field label="Pause on battery" hint="Downloads wait until the laptop is plugged in"><Toggle on={!!srv?.pauseOnBattery} label="Pause on battery" onClick={() => patch({ pauseOnBattery: !srv?.pauseOnBattery })} /></Field>
+          <Field label="Slow down at certain hours" hint="Limit the download speed between two times, for example while you work">
+            <span className="inline">
+              <Toggle on={!!srv?.limitWin?.on} label="Slow down" onClick={() => patch({ limitWin: { ...(srv?.limitWin ?? { from: '18:00', to: '23:00', kbps: 2000 }), on: !srv?.limitWin?.on } })} />
+              <input type="time" value={srv?.limitWin?.from ?? '18:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, to: '23:00', kbps: 2000 }), from: e.target.value } })} />
+              <input type="time" value={srv?.limitWin?.to ?? '23:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', kbps: 2000 }), to: e.target.value } })} />
+              <input type="number" min={0} step={100} style={{ width: 90 }} value={srv?.limitWin?.kbps ?? 2000} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', to: '23:00' }), kbps: +e.target.value } })} /> KB/s
+            </span>
+          </Field>
           <Field label="Compress on" hint="A laptop with an NVIDIA, Intel or AMD graphics chip compresses many times faster than a server. Auto picks the quickest">
             <select value={srv?.encodeWhere ?? 'auto'} onChange={(e) => patch({ encodeWhere: e.target.value as 'auto' | 'laptop' | 'server' })}>
               <option value="auto">Auto (recommended)</option><option value="laptop">This laptop</option><option value="server">The server</option>
@@ -330,7 +624,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {bridge && tab === 'play' && (
+        {bridge && cur === 'play' && (
           <section>
             <h4>Other players</h4>
             <Field label="Open in another player" hint="For example VLC. Leave empty to use your computer’s default player">
@@ -339,17 +633,26 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           </section>
         )}
 
-        {tab === 'app' && <ServerTools />}
-        {tab === 'app' && <Updates />}
+        {cur === 'app' && (
+          <section>
+            <h4>Start with Windows</h4>
+            {bridge ? <Field label="Open Cinema when I sign in" hint="It starts quietly in the tray and closes itself again unless a scheduled download or auto-save rule needs it"><Toggle on={login} label="Start with Windows" onClick={() => bridge?.loginItemSet?.(!login).then(setLogin)} /></Field> : <p className="muted small">Available in the installed app.</p>}
+          </section>
+        )}
+        {cur === 'app' && <section><h4>Phone and TV remote</h4><Field label="Control playback from your phone" hint="Also lets a phone or smart TV browser watch what is playing"><RemoteBlock /></Field></section>}
+        {cur === 'app' && <section><h4>Profiles</h4><ProfilesBlock /></section>}
+        {cur === 'app' && <section><h4>Backup</h4><BackupBlock clientSettings={s} restoreClient={() => {}} /></section>}
+        {cur === 'app' && <ServerTools />}
+        {cur === 'app' && <Updates />}
 
-        {tab === 'app' && (
+        {cur === 'app' && (
         <section>
           <h4>Servers</h4>
           <Field label="Where your movies are stored"><button className="btn ghost" onClick={onServers}><Icon n="server" s={15} /> Manage servers</button></Field>
         </section>
         )}
 
-        {tab === 'data' && (
+        {cur === 'data' && (
         <section>
           <h4>Speed test</h4>
           <p className="muted small">Measures how fast your server can send data to this laptop. That number is the real limit for streaming and downloads. Server disk path: {mode === 'local' ? 'direct (fastest)' : mode && mode !== 'none' ? 'through SSH' : 'unknown'}.</p>
@@ -363,7 +666,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {tab === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
+        {cur === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
         </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 // Cinema desktop shell. It starts the Cinema server inside this process, then shows it in a window.
 // Everything the window can ask of the computer goes through the small bridge in preload.cjs.
-const { app, BrowserWindow, Menu, Notification, Tray, dialog, ipcMain, nativeImage, powerSaveBlocker, safeStorage, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Notification, Tray, dialog, globalShortcut, powerMonitor, ipcMain, nativeImage, powerSaveBlocker, safeStorage, session, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
@@ -125,12 +125,15 @@ async function startServer() {
 const pendingSchedules = async () => {
   try { const j = await (await fetch(`http://127.0.0.1:${port}/api/dl/schedules?tk=${token}`)).json(); return j.items || []; } catch { return []; }
 };
+const rulesOn = async () => {
+  try { const j = await (await fetch(`http://127.0.0.1:${port}/api/dl/rules?tk=${token}`)).json(); return (j.items || []).some((x) => x.on); } catch { return false; }
+};
 const hasWork = async () => {
   try {
     const j = await (await fetch(`http://127.0.0.1:${port}/api/dl?tk=${token}`)).json();
     if ((j.active ?? 0) + (j.waiting ?? 0) > 0) return true;
   } catch { /* server not ready */ }
-  return (await pendingSchedules()).length > 0;
+  return (await pendingSchedules()).length > 0 || (await rulesOn());
 };
 function showWin() {
   if (!win || win.isDestroyed()) { createWindow(); return; }
@@ -164,8 +167,10 @@ function trackDownloads() {
         const next = Math.min(...sched.map((x) => x.at));
         tray?.setToolTip?.(`Cinema · next download ${new Date(next).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}`);
       }
+      const rules = await rulesOn();
       const hidden = hadWindow && (!win || win.isDestroyed() || (!win.isVisible() && !win.isMinimized()));
-      if (hidden && !busy && !sched.length && !quitting) { quitting = true; app.quit(); }
+      if (hidden && !busy && !sched.length && !rules && !quitting) { quitting = true; app.quit(); }
+      try { fetch(`http://127.0.0.1:${port}/api/power?tk=${token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ battery: powerMonitor.isOnBatteryPower() }) }).catch(() => {}); } catch { /* no power info */ }
       lastBusy = busy;
     } catch { /* server not ready */ }
   };
@@ -181,7 +186,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false },
   });
   if (b.max) win.maximize();
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => { win.show(); updateThumbar(); });
   win.on('closed', () => { win = null; });
   win.loadURL(origin);
   win.on('resize', saveBounds); win.on('move', saveBounds);
@@ -301,6 +306,31 @@ ipcMain.handle('update-install', () => {
   try { server?.close(); } catch { /* ignore */ } // pauses and saves the download queue
   updater.quitAndInstall(false, true);
 });
+// ----- extras: start with Windows, pop-out window, media keys and taskbar buttons -----
+const hiddenStart = process.argv.includes('--hidden');
+ipcMain.handle('login-item-get', () => app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin);
+ipcMain.handle('login-item-set', (_e, on) => { app.setLoginItemSettings({ openAtLogin: !!on, args: ['--hidden'] }); return app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin; });
+ipcMain.handle('popout', (_e, qs) => {
+  if (!/^[\w&=%.\-~]+$/.test(String(qs))) return;
+  const w = new BrowserWindow({ width: 960, height: 560, backgroundColor: '#000000', title: 'Cinema', icon: ICON, autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false } });
+  w.loadURL(`${origin}/?pop=1&${qs}`);
+});
+let mediaPlaying = false;
+const sendMedia = (k) => { if (win && !win.isDestroyed()) win.webContents.send('media-key', k); };
+function updateThumbar() {
+  if (!win || win.isDestroyed() || process.platform !== 'win32') return;
+  const img = (n) => nativeImage.createFromPath(path.join(__dirname, '..', 'build', n));
+  win.setThumbarButtons([
+    { tooltip: 'Previous', icon: img('media-prev.png'), click: () => sendMedia('prev') },
+    { tooltip: mediaPlaying ? 'Pause' : 'Play', icon: img(mediaPlaying ? 'media-pause.png' : 'media-play.png'), click: () => sendMedia('toggle') },
+    { tooltip: 'Next', icon: img('media-next.png'), click: () => sendMedia('next') },
+  ]);
+}
+ipcMain.handle('media-state', (_e, playing) => { if (mediaPlaying !== !!playing) { mediaPlaying = !!playing; updateThumbar(); } });
+function registerMediaKeys() {
+  for (const [key, cmd] of [['MediaPlayPause', 'toggle'], ['MediaNextTrack', 'next'], ['MediaPreviousTrack', 'prev'], ['MediaStop', 'stop']]) { try { globalShortcut.register(key, () => sendMedia(cmd)); } catch { /* key taken by another app */ } }
+}
 ipcMain.handle('reveal', (_e, file) => { if (str(file)) shell.showItemInFolder(file); });
 ipcMain.handle('open-folder', (_e, dir) => { if (str(dir)) return shell.openPath(dir); });
 
@@ -308,6 +338,7 @@ app.on('second-instance', (_e, argv, cwd) => {
   showWin();
   deliver(fileFromArgv(argv, cwd));
 });
+app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch { /* ignore */ } });
 app.on('before-quit', () => { quitting = true; saveBounds(); try { server?.close(); } catch { /* ignore */ } });
 app.on('window-all-closed', () => { if (quitting) app.quit(); });
 
@@ -325,8 +356,11 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write'].includes(perm)));
   buildMenu();
   initUpdater();
-  createWindow();
-  createTray();
-  trackDownloads();
+  registerMediaKeys();
+  if (hiddenStart) {
+    // Started with Windows: stay in the tray only when there is something to do (a scheduled download or an auto-save rule).
+    createTray(); trackDownloads();
+    setTimeout(async () => { if (!(await hasWork()) && !quitting) { quitting = true; app.quit(); } }, 45000);
+  } else { createWindow(); createTray(); trackDownloads(); }
   app.on('activate', () => showWin());
 });

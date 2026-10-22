@@ -6,14 +6,14 @@ import {
   api, bridge, bytes, clock, join, mbps, parseCues, parseTitle, qs, rate, useNet,
 } from './lib';
 
-type MenuId = 'quality' | 'speed' | 'aspect' | 'subs' | 'audio' | 'sound' | 'picture' | 'more';
+type MenuId = 'quality' | 'speed' | 'aspect' | 'subs' | 'audio' | 'sound' | 'picture' | 'chapters' | 'more';
 type Sprite = { interval: number; cols: number; rows: number; w: number; h: number; count: number; url: string };
 type Ai = { available: boolean; state: string; elapsed: number; error?: string };
 type OsHit = { id: number; name: string; lang: string; downloads: number };
 type Props = {
   root: number; dir: string; name: string; videos: string[]; pkey: string; saved?: Prog;
   offline: boolean; opened?: boolean; saver: number; caps: Caps | null; playlist?: boolean;
-  floating?: boolean; onFloat?: (on: boolean) => void;
+  floating?: boolean; onFloat?: (on: boolean) => void; onTick?: (sec: number) => void;
   onClose: () => void; onNext: (n: string) => void; onDelete: (n: string) => void;
   onDownload?: (n: string) => void; onStarted?: (n: string) => void;
 };
@@ -79,6 +79,7 @@ export default function Player(p: Props) {
   const [info, setInfo] = useState<Info>({ duration: 0 });
   const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const playingRef = useRef(false);
   const [buffering, setBuffering] = useState(true);
   const maxVol = Math.max(1, s.maxVol / 100);
   const [vol, setVol] = useState(() => Math.min(maxVol, sessionVol ?? (s.rememberBoost ? s.vol : Math.min(1, s.vol))));
@@ -119,6 +120,8 @@ export default function Player(p: Props) {
   const [barW, setBarW] = useState(0);
   const [suggest, setSuggest] = useState(false);
   const [noNext, setNoNext] = useState(false);
+  const [subDelay, setSubDelay] = useState(0);
+  const nudgeSub = (d: number) => setSubDelay((x) => { const n = Math.round((x + d) * 10) / 10; flash(`Subtitles ${n > 0 ? 'later' : n < 0 ? 'earlier' : 'on time'} ${n ? `by ${Math.abs(n)} s` : ''}`); return n; });
   const [help, setHelp] = useState(false);
   useEffect(() => { // after a mouse click, do not leave a button focused: Space must play/pause, not press that button again
     const f = (e: MouseEvent) => { if (e.detail > 0 && (e.target as HTMLElement).closest?.('.theatre button')) setTimeout(() => (document.activeElement as HTMLElement | null)?.blur?.(), 0); };
@@ -436,6 +439,42 @@ export default function Player(p: Props) {
   };
   const togglePlay = () => { const v = vref.current; if (v) (v.paused ? v.play().catch(() => {}) : v.pause()); };
   const skip = (d: number) => seekTo(offset + (vref.current?.currentTime ?? 0) + d);
+  playingRef.current = playing;
+  // Commands from the phone remote and from the keyboard's media keys / taskbar buttons.
+  const handleCmd = (c: { cmd: string; value?: number }) => {
+    switch (c.cmd) {
+      case 'toggle': togglePlay(); break;
+      case 'back': skip(-10); break;
+      case 'fwd': skip(10); break;
+      case 'next': if (next) p.onNext(next); break;
+      case 'prev': if (idx > 0) p.onNext(p.videos[idx - 1]); break;
+      case 'seek': if (c.value !== undefined) seekTo(c.value); break;
+      case 'vup': setMuted(false); setVol((x) => Math.min(maxVol, +(x + 0.1).toFixed(2))); break;
+      case 'vdown': setVol((x) => Math.max(0, +(x - 0.1).toFixed(2))); break;
+      case 'mute': setMuted((m) => !m); break;
+      case 'fs': toggleFs(); break;
+      case 'stop': p.onClose(); break;
+    }
+  };
+  const cmdRef = useRef(handleCmd); cmdRef.current = handleCmd;
+  const stateRef = useRef<object>({});
+  stateRef.current = { title: p.name.replace(/\.[^.]+$/, ''), pos, dur: total, playing, vol, hasNext: !!next, stream: p.offline || p.opened ? undefined : `/api/stream?root=${p.root}&path=${encodeURIComponent(path)}&q=orig` };
+  useEffect(() => {
+    const f = (e: Event) => cmdRef.current((e as CustomEvent).detail);
+    window.addEventListener('cinema-remote', f);
+    const off = bridge?.onMediaKey?.((k) => cmdRef.current({ cmd: k }));
+    const t = setInterval(() => { if ((window as any).__remoteOn) fetch('/api/remote/state', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(stateRef.current) }).catch(() => {}); }, 1000);
+    return () => {
+      window.removeEventListener('cinema-remote', f); off?.(); clearInterval(t);
+      if ((window as any).__remoteOn) fetch('/api/remote/state', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => {});
+    };
+  }, []);
+  useEffect(() => { bridge?.mediaState?.(playing); }, [playing]);
+  const popout = () => {
+    const enc = (x: string) => encodeURIComponent(x).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    vref.current?.pause();
+    bridge?.popout(`root=${p.root}&dir=${enc(p.dir)}&name=${enc(p.name)}`);
+  };
   const toggleFs = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else if (box.current?.requestFullscreen) box.current.requestFullscreen().catch(() => {});
@@ -557,6 +596,8 @@ export default function Player(p: Props) {
       else if (k === ']') setSpd(SPEEDS[Math.min(SPEEDS.length - 1, SPEEDS.indexOf(speed) + 1)]);
       else if (k === 't' && p.onFloat) p.onFloat(true);
       else if (k === ' ' || k === 'k') { e.preventDefault(); togglePlay(); }
+      else if (k === 'z') nudgeSub(e.shiftKey ? -0.5 : -0.1)
+      else if (k === 'x') nudgeSub(e.shiftKey ? 0.5 : 0.1)
       else if (k === 'ArrowRight' || k === 'l') { e.preventDefault(); skip(10); }
       else if (k === 'ArrowLeft' || k === 'j') { e.preventDefault(); skip(-10); }
       else if (k === 'ArrowUp') { e.preventDefault(); setMuted(false); setVol((x) => Math.min(maxVol, +(x + 0.05).toFixed(2))); }
@@ -596,7 +637,7 @@ export default function Player(p: Props) {
     return { ...base, width: wide ? H * r : W, height: wide ? H : W / r, objectFit: 'fill' };
   })();
   const t = pos - delay;
-  const active = sub === 'off' ? [] : cues.filter((c) => t >= c.s && t < c.e);
+  const active = sub === 'off' ? [] : cues.filter((c) => t - subDelay >= c.s && t - subDelay < c.e);
   const shown = scrub ?? pos;
   const frac = total ? Math.min(1, shown / total) : 0;
   const pw = sprite?.w ?? 44;
@@ -623,13 +664,49 @@ export default function Player(p: Props) {
     }).catch(() => {});
     return () => { dead = true; clearTimeout(detTimer.current); };
   }, [p.root, path]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Remember speed and audio language per show, and the subtitle timing per video.
+  const showKey = (p.offline && info.origin ? `${info.origin.rootName}:${info.origin.rel}` : p.pkey).replace(/[^/]*$/, '');
+  const appliedShow = useRef(false);
+  useEffect(() => {
+    if (appliedShow.current) return;
+    const m = prefs.shows?.[showKey];
+    if (m?.speed) setSpeed(m.speed);
+    const sd = prefs.subdelay?.[p.pkey];
+    if (sd) setSubDelay(sd);
+    if (m?.audio && info.audio?.length) { const k = info.audio.findIndex((x) => x.lang === m.audio); if (k > 0) setA(k); appliedShow.current = true; }
+    else if (info.audio) appliedShow.current = true;
+  }, [info.audio, showKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!appliedShow.current) return;
+    const cur = prefs.shows?.[showKey] ?? {};
+    const lang = info.audio?.[a]?.lang;
+    if (cur.speed === speed && (cur.audio ?? '') === (lang ?? '')) return;
+    const t = setTimeout(() => setPref('shows', { ...(prefs.shows ?? {}), [showKey]: { speed, audio: lang } }), 1500);
+    return () => clearTimeout(t);
+  }, [speed, a]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!appliedShow.current && subDelay === 0) return;
+    const t = setTimeout(() => setPref('subdelay', { ...(prefs.subdelay ?? {}), [p.pkey]: subDelay }), 1200);
+    return () => clearTimeout(t);
+  }, [subDelay]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { // watch time for the daily goal
+    const t = setInterval(() => { if (playingRef.current) p.onTick?.(30); }, 30000);
+    return () => clearInterval(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const fileKey = p.offline && info.origin ? `${info.origin.rootName}:${info.origin.rel}` : p.pkey;
   const baseLen = p.offline && info.origin ? (info.origin.rel.split('/').pop() ?? '').length : p.name.length;
   const ikey = title.episode ? fileKey.slice(0, fileKey.length - baseLen) : fileKey; // episodes share one setting per folder, movies get their own
   const mark = prefs.intros?.[ikey];
   const chapIntro = !s.skipIntro ? undefined : chapters.find((c) => /\b(intro|recap|previously)\b/i.test(c.title) && !/credit/i.test(c.title) && pos >= c.start && pos < c.end - 1 && c.end - c.start <= 300);
   const intro = !s.skipIntro ? undefined : chapIntro ?? (det.state === 'found' && det.end && pos >= (det.start ?? 0) - 1 && pos < det.end - 1 ? { end: det.end, title: 'Intro', start: det.start ?? 0 } : undefined) ?? (mark && pos >= mark.start - 1 && pos < mark.end - 1 ? { end: mark.end, title: 'Intro', start: mark.start } : undefined);
-  const qualityList = QUALITIES.filter((o) => {
+
+  const creditsAt = (() => {
+    const ch = chapters.find((c) => /\bcredits?\b/i.test(c.title) && !/opening|intro/i.test(c.title) && c.start > total * 0.5);
+    if (ch) return ch.start;
+    const fromEnd = prefs.credits?.[ikey];
+    return fromEnd && total ? total - fromEnd : 0;
+  })();
+  const credits = s.skipIntro && creditsAt > 0 && total > 0 && pos >= creditsAt - 1 && pos < total - 2 ? true : false;  const qualityList = QUALITIES.filter((o) => {
     if (p.offline) return o.id === 'orig' || o.id === 'audio' || (o.id === 'remux' && !!p.caps?.local.ffmpeg);
     const h = Number(o.id); // hide sizes bigger than the video itself
     return !(h > 0 && info.height && h > info.height * 1.1 && o.id !== q);
@@ -668,7 +745,7 @@ export default function Player(p: Props) {
         )}
 
         {active.length > 0 && (
-          <div className={'cues' + (show ? ' lift' : '')} style={{ fontSize: s.subSize, color: s.subColor }}>
+          <div className={'cues' + (show ? ' lift' : '')} style={{ fontSize: s.subSize, color: s.subColor, bottom: show ? undefined : `${s.subPos}%`, textShadow: s.subOutline ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000' : undefined }}>
             {active.map((c, i) => <span key={i} style={{ background: `rgba(0,0,0,${s.subBg / 100})` }} dangerouslySetInnerHTML={{ __html: c.html }} />)}
           </div>
         )}
@@ -680,6 +757,7 @@ export default function Player(p: Props) {
             if (x < 0.3) skip(-10); else if (x > 0.7) skip(10); else toggleFs();
           }} />
         {buffering && !failed && <div className="spin" aria-label="Buffering" />}
+        {credits && <button className="skipintro credits" onClick={() => (next ? p.onNext(next) : seekTo(Math.max(0, total - 1)))}><Icon n="skip" s={16} /> {next ? 'Next episode' : 'Skip credits'}</button>}
         {intro && <button className="skipintro" onClick={() => seekTo(intro.end)}><Icon n="skip" s={16} /> Skip intro</button>}
 
         <div className="hud top">
@@ -755,7 +833,7 @@ export default function Player(p: Props) {
                 {[['Space / K', 'Play or pause'], ['← → / J L', 'Back or forward 10 s'], ['Shift + ← →', '5 s'], ['Ctrl + ← →', '1 minute'], ['↑ ↓', 'Volume'], ['Ctrl + ↑ ↓', 'Volume, bigger steps'],
                   ['0 to 9', 'Jump to 0% to 90%'], ['Home / End', 'Start or end'], ['PageUp / PageDown', 'Previous or next video'], ['N, Alt + →', 'Next video'], ['F, Enter', 'Full screen'], ['M', 'Mute'],
                   ['C', 'Subtitles on or off'], ['A', 'Picture shape'], ['< >  [ ]', 'Speed down or up'], ['Backspace', 'Normal speed'], ['E / Shift+E', 'Next or previous frame'], ['B', 'Loop a section'],
-                  ['D', 'Add a bookmark'], ['S, Ctrl + S', 'Screenshot'], ['P, Ctrl + P', 'Picture-in-picture'], ['T, Ctrl + M', 'Mini player'], ['I', 'Video info'], ['G', 'Sound panel'], ['H or ?', 'This sheet'], ['Esc', 'Close']]
+                  ['D', 'Add a bookmark'], ['S, Ctrl + S', 'Screenshot'], ['P, Ctrl + P', 'Picture-in-picture'], ['T, Ctrl + M', 'Mini player'], ['I', 'Video info'], ['G', 'Sound panel'], ['Z / X', 'Subtitles earlier or later'], ['H or ?', 'This sheet'], ['Esc', 'Close']]
                   .map(([k, d]) => <p key={k}><kbd>{k}</kbd><span>{d}</span></p>)}
               </div>
             </div>
@@ -781,11 +859,11 @@ export default function Player(p: Props) {
         {menu && (
           <div className="menu" onClick={(e) => e.stopPropagation()}>
             <div className="menu-h">
-              <strong>{{ quality: 'Quality and data', speed: 'Speed', aspect: 'Screen shape', subs: 'Subtitles', audio: 'Audio track', sound: 'Sound', picture: 'Picture', more: 'More' }[menu]}</strong>
+              <strong>{{ quality: 'Quality and data', speed: 'Speed', aspect: 'Screen shape', subs: 'Subtitles', audio: 'Audio track', sound: 'Sound', picture: 'Picture', chapters: 'Chapters', more: 'More' }[menu]}</strong>
               <button className="cbtn sm" onClick={() => setMenu(null)} aria-label="Close menu"><Icon n="close" s={16} /></button>
             </div>
             <div className="menu-tabs" role="tablist">
-              {([['quality', 'Quality'], ['speed', 'Speed'], ['subs', 'Subtitles'], ...((info.audio?.length ?? 0) > 1 ? [['audio', 'Audio']] : []), ['sound', 'Sound'], ['picture', 'Picture'], ['aspect', 'Shape'], ['more', 'More']] as [MenuId, string][]).map(([id, l]) => (
+              {([['quality', 'Quality'], ['speed', 'Speed'], ['subs', 'Subtitles'], ...((info.audio?.length ?? 0) > 1 ? [['audio', 'Audio']] : []), ['sound', 'Sound'], ['picture', 'Picture'], ['aspect', 'Shape'], ...(chapters.length > 1 ? [['chapters', 'Chapters']] : []), ['more', 'More']] as [MenuId, string][]).map(([id, l]) => (
                 <button key={id} role="tab" aria-selected={menu === id} className={menu === id ? 'on' : ''} onClick={() => (id === 'sound' ? (menu !== 'sound' && openSound()) : setMenu(id))}>{l}</button>
               ))}
             </div>
@@ -807,6 +885,15 @@ export default function Player(p: Props) {
             )}
             {menu === 'speed' && SPEEDS.map((v) => <Opt key={v} on={speed === v} label={`${v}×`} onClick={() => { setSpd(v); setMenu(null); }} />)}
             {menu === 'aspect' && ASPECTS.map((o) => <Opt key={o.id} on={aspect === o.id} label={o.label} hint={o.hint} onClick={() => { setAspect(o.id); set({ aspect: o.id }); }} />)}
+            {menu === 'chapters' && (
+              <div className="chlist">
+                {chapters.map((c, i) => (
+                  <button key={i} className={t >= c.start && t < c.end ? 'opt on' : 'opt'} onClick={() => seekTo(c.start)}>
+                    <span><b>{c.title || `Chapter ${i + 1}`}</b><small>{clock(c.start)}</small></span>
+                  </button>
+                ))}
+              </div>
+            )}
             {menu === 'audio' && (
               <>
                 {(info.audio ?? []).map((t) => <Opt key={t.i} on={a === t.i} label={t.label} onClick={() => { reload({ a: t.i, q: q === 'orig' && t.i !== a ? 'remux' : undefined }, false); setMenu(null); }} />)}
@@ -826,6 +913,9 @@ export default function Player(p: Props) {
                   <button className="opt" onClick={genAi}><span><b><Icon n="sparkle" s={15} /> Generate subtitles with AI</b><small>Uses Whisper on the VPS. A full movie can take a while on a CPU.</small></span></button>
                 )}
                 {ai.state === 'error' && ai.error && <p className="mnote err">{ai.error}</p>}
+                <div className="msec">Timing</div>
+                <div className="nudge"><button className="btn ghost sm" onClick={() => nudgeSub(-0.5)}>−0.5 s</button><button className="btn ghost sm" onClick={() => nudgeSub(-0.1)}>−0.1 s</button><b>{subDelay > 0 ? '+' : ''}{subDelay} s</b><button className="btn ghost sm" onClick={() => nudgeSub(0.1)}>+0.1 s</button><button className="btn ghost sm" onClick={() => nudgeSub(0.5)}>+0.5 s</button><button className="btn ghost sm" onClick={() => setSubDelay(0)}>Reset</button></div>
+                <p className="mnote">Keys: Z earlier, X later (Shift for bigger steps). Saved for this video.</p>
                 {(info.imageSubs?.length ?? 0) > 0 && <p className="mnote">This video has picture-based subtitles ({[...new Set(info.imageSubs!.map((t) => t.lang || 'unknown'))].join(', ')}). They are images, so they can’t be shown as text here. Use “Find subtitles online” below instead.</p>}
                 {!info.ai && !(info.subs?.length || info.external?.length) && !(info.imageSubs?.length) && <p className="mnote">No subtitles found for this video. Search online or load a file below.</p>}
                 {!p.offline && <button className="opt" onClick={searchOs}><span><b><Icon n="search" s={15} /> Find subtitles online</b><small>Searches OpenSubtitles for “{title.title}”</small></span></button>}
@@ -947,6 +1037,7 @@ export default function Player(p: Props) {
                 <button className="opt" disabled={det.state === 'busy' || !p.caps?.local.ffmpeg} onClick={detect}><span><b><Icon n="sparkle" s={15} /> {det.state === 'found' ? `Intro found: ${clock(det.start ?? 0)} to ${clock(det.end ?? 0)}` : det.state === 'busy' ? 'Looking for the intro…' : 'Detect intro automatically'}</b>
                   <small>{det.state === 'none' ? det.reason ?? 'No repeating intro music was found.' : det.state === 'found' ? 'A Skip intro button shows at that point.' : 'Compares the opening music with another episode in this folder. Reads about 7 minutes of 3 videos once.'}</small></span></button>
                 <button className="opt" onClick={() => set({ eco: s.eco === 'on' ? 'off' : 'on' })}><span><b><Icon n="bolt" s={15} /> Power saving: {s.eco === 'on' ? 'On' : s.eco === 'battery' ? 'On battery only' : 'Off'}</b><small>Caps quality, turns off blur and animations</small></span></button>
+                <button className="opt" onClick={() => { if (total) { setPref('credits', { ...(prefs.credits ?? {}), [ikey]: Math.max(10, Math.round(total - pos)) }); flash('Credits start here for this ' + (title.episode ? 'folder' : 'video')); } }}><span><b>Credits start here</b><small>{prefs.credits?.[ikey] ? `Now ${clock(prefs.credits[ikey])} before the end. Shows a Skip credits button.` : 'Pause where the credits begin, then press this'}</small></span></button>
                 <div className="msec">Skip intro for this {title.episode ? 'folder' : 'video'}</div>
                 <button className="opt" onClick={() => { setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: Math.floor(pos), end: mark && mark.end > pos ? mark.end : Math.floor(pos) + 90 } }); flash('Intro starts here'); }}><span><b>Intro starts here</b><small>{mark ? `Now ${clock(mark.start)} to ${clock(mark.end)}` : 'Pause at the start of the intro, then press this'}</small></span></button>
                 <button className="opt" onClick={() => { const st = mark && mark.start < pos ? mark.start : Math.max(0, Math.floor(pos) - 90); setPref('intros', { ...(prefs.intros ?? {}), [ikey]: { start: st, end: Math.floor(pos) } }); flash('Skip intro is set for every video in this folder'); }}><span><b>Intro ends here</b><small>{title.episode ? 'Every video in this folder then gets a Skip intro button' : 'This video gets a Skip intro button'}</small></span></button>
@@ -1004,6 +1095,8 @@ export default function Player(p: Props) {
             {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track and language')}
             <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
             {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
+            {bridge && <button className="cbtn" onClick={popout} title="Pop out into its own window (for a second screen)" aria-label="Pop out"><Icon n="grid" s={20} /></button>}
+            {!bridge && typeof HTMLMediaElement !== 'undefined' && 'remote' in HTMLMediaElement.prototype && <button className="cbtn" onClick={() => (vref.current as any)?.remote?.prompt().catch(() => flash('No cast device found'))} title="Cast to a TV (needs a Cast device on this network)" aria-label="Cast"><Icon n="external" s={20} /></button>}
             {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
             {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
             <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>

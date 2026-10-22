@@ -1,3 +1,4 @@
+import { RulesBlock } from './Extras';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { Caps, Icon, Info, SettingsCtx, api, bridge, bytes, canDecode, clock, moveDownloads, post, rate } from './lib';
 
@@ -228,6 +229,7 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
     <div className="scrim side" onClick={onClose}>
       <aside className="drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Downloads">
         <div className="dlg-head"><h3>Downloads</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
+        <RulesBlock />
         {sched.length > 0 && (
           <div className="sched">
             <div className="msec">Scheduled</div>

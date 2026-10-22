@@ -1,5 +1,7 @@
 import { fingerprint, matchIntro, pcm } from './intro';
 import { detectEncoders, EncInfo } from './encoders';
+import { Remote } from './remote';
+import { spawn as spawnProc } from 'node:child_process';
 let boundPort = 0;
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
@@ -116,7 +118,11 @@ export async function start(opts: StartOpts = {}) {
   // =====================================================================================
   //  Saved state: watch progress + data usage
   // =====================================================================================
-  const STATE = path.join(DATA, 'state.json');
+  const stateFileOf = (id: string) => path.join(DATA, id === 'default' ? 'state.json' : `state.${id}.json`);
+  const PROFILES = path.join(DATA, 'profiles.json');
+  let profiles: { active: string; list: { id: string; name: string }[] } = { active: 'default', list: [{ id: 'default', name: 'Main' }] };
+  try { profiles = { ...profiles, ...JSON.parse(fs.readFileSync(PROFILES, 'utf8')) }; } catch { /* first run */ }
+  let STATE = stateFileOf(profiles.active);
   let progress: Record<string, Prog> = {};
   try { progress = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { /* first run */ }
   let saveT: NodeJS.Timeout | undefined;
@@ -565,8 +571,10 @@ export async function start(opts: StartOpts = {}) {
   }
 
   let encInfo: EncInfo | null = null;
+  let onBattery = false;
   const dl = new Downloads({
     dataDir: DATA,
+    onBattery: () => onBattery,
     localEnc: () => (encInfo && local.bins.ffmpeg && local.bins.ffprobe ? { ffmpeg: local.bins.ffmpeg, ffprobe: local.bins.ffprobe, enc: encInfo } : null),
     loopback: (job) => `http://127.0.0.1:${boundPort}/api/stream?root=${encodeURIComponent(String(job.rootId ?? ''))}&path=${encodeURIComponent(job.rel)}&q=orig${opts.token ? `&tk=${encodeURIComponent(opts.token)}` : ''}`,
     remoteHasFfmpeg: async (id) => { const sv = store.get(id); return sv ? (await getRemoteCaps(sv)).ffmpeg : false; },
@@ -653,8 +661,10 @@ export async function start(opts: StartOpts = {}) {
     if (total <= cap) return;
     const newest = files.reduce((a, f) => (f.mtime > (a?.mtime ?? 0) ? f : a), undefined as OffFile | undefined);
     const recent = Date.now() - 30 * 60_000;
+    const favs = new Set(((store.allPrefs() as any).favs as string[]) ?? []);
+    const isFav = (f: OffFile) => { const o = readMeta(f.rel)?.origin; return favs.has(`Offline:${f.rel}`) || (!!o && favs.has(`${o.rootName}:${o.rel}`)); };
     const order = files
-      .filter((f) => f !== newest && !((progress[`Offline:${f.rel}`]?.updated ?? 0) > recent))
+      .filter((f) => f !== newest && !isFav(f) && !((progress[`Offline:${f.rel}`]?.updated ?? 0) > recent))
       .sort((a, b) => Number(!!progress[`Offline:${b.rel}`]?.watched) - Number(!!progress[`Offline:${a.rel}`]?.watched) || a.mtime - b.mtime);
     for (const f of order) {
       if (total <= cap) break;
@@ -851,6 +861,8 @@ export async function start(opts: StartOpts = {}) {
       fs.mkdirSync(dir, { recursive: true });
       patch.downloadDir = dir;
     }
+    if (typeof b.pauseOnBattery === 'boolean') patch.pauseOnBattery = b.pauseOnBattery;
+    if (b.limitWin && typeof b.limitWin === 'object') patch.limitWin = { on: !!b.limitWin.on, from: String(b.limitWin.from || '18:00'), to: String(b.limitWin.to || '23:00'), kbps: Math.max(0, Number(b.limitWin.kbps) || 0) };
     if (['auto', 'laptop', 'server'].includes(b.encodeWhere)) patch.encodeWhere = b.encodeWhere;
     if (['fast', 'balanced', 'small'].includes(b.encodeSpeed)) patch.encodeSpeed = b.encodeSpeed;
     for (const k of ['maxParallel', 'limitKBps', 'budgetGB', 'autoDeleteDays', 'quotaGB'] as const) if (b[k] !== undefined) patch[k] = Math.max(0, Number(b[k]) || 0);
@@ -1143,6 +1155,33 @@ export async function start(opts: StartOpts = {}) {
     if (n + 1 < count && hlsGate.idle()) wantSeg(keyOf(n + 1), () => encodeSeg(B, full, H, a, n + 1, pr.duration, ds)).catch(() => {});
   }));
 
+  const loopbackUrl = (rootId: string, rel: string) => `http://127.0.0.1:${boundPort}/api/stream?root=${encodeURIComponent(rootId)}&path=${encodeURIComponent(rel)}&q=orig${opts.token ? `&tk=${encodeURIComponent(opts.token)}` : ''}`;
+  const seekSprite = async (url: string, interval: number, count: number, cols: number, rows: number) => {
+    const ff = local.bins.ffmpeg!;
+    const frames: Buffer[] = [];
+    for (let i = 0; i < count; i++) {
+      frames.push(await new Promise<Buffer>((ok) => {
+        const chunks: Buffer[] = [];
+        const p = spawnProc(ff, ['-hide_banner', '-loglevel', 'error', '-ss', String(i * interval), '-i', url, '-an', '-sn', '-dn', '-frames:v', '1',
+          '-vf', 'scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2', '-q:v', '6', '-f', 'mjpeg', 'pipe:1'], { stdio: ['ignore', 'pipe', 'ignore'] });
+        p.stdout.on('data', (d) => chunks.push(d));
+        p.on('close', () => ok(Buffer.concat(chunks)));
+        p.on('error', () => ok(Buffer.alloc(0)));
+      }));
+    }
+    const good = frames.filter((f) => f.length > 0);
+    if (!good.length) throw new Error('No frames');
+    while (good.length < count) good.push(good[good.length - 1]);
+    return await new Promise<Buffer>((ok, no) => {
+      const chunks: Buffer[] = [];
+      const p = spawnProc(ff, ['-hide_banner', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '1', '-c:v', 'mjpeg', '-i', 'pipe:0', '-vf', `tile=${cols}x${rows}`, '-frames:v', '1', '-q:v', '6', '-f', 'mjpeg', 'pipe:1'], { stdio: ['pipe', 'pipe', 'ignore'] });
+      p.stdout.on('data', (d) => chunks.push(d));
+      p.on('close', () => (chunks.length ? ok(Buffer.concat(chunks)) : no(new Error('Could not build the preview'))));
+      p.on('error', no);
+      for (const f of good) p.stdin.write(f);
+      p.stdin.end();
+    });
+  };
   app.get('/api/sprite', h(async (req, res) => {
     const r = await resolve(req.query);
     const send = (f: string) => res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=2592000, immutable' }).send(fs.readFileSync(f));
@@ -1192,10 +1231,151 @@ export async function start(opts: StartOpts = {}) {
       const j: { state: 'building' | 'error'; error?: string } = { state: 'building' };
       spriteJobs.set(key, j);
       job = j;
-      buildSprite(B, full, st, key).then(() => spriteJobs.delete(key)).catch((e) => { j.state = 'error'; j.error = e.message; });
+      (async () => {
+        const sv = activeServer();
+        const caps = sv ? await getRemoteCaps(sv).catch(() => null) : null;
+        if (caps?.ffmpeg || !local.bins.ffmpeg) return buildSprite(B, full, st, key);
+        await spriteGate.acquire(); // the server has no ffmpeg: take a few frames here, seeking instead of reading the whole file
+        try {
+          const url = loopbackUrl(String(req.query.root), r.rel);
+          const dur = Number((await local.probeJson(url)).format?.duration) || 0;
+          if (!dur) throw new Error('Unknown length');
+          const count = Math.min(40, Math.max(1, Math.ceil(dur / 30))), interval = Math.max(2, Math.ceil(dur / count));
+          const cols = Math.min(10, count), rows = Math.ceil(count / cols);
+          const buf = await seekSprite(url, interval, count, cols, rows);
+          fs.mkdirSync(SPRITES, { recursive: true });
+          fs.writeFileSync(img, buf);
+          fs.writeFileSync(meta, JSON.stringify({ interval, cols, rows, w: 160, h: 90, count }));
+        } finally { spriteGate.release(); }
+      })().then(() => spriteJobs.delete(key)).catch((e) => { j.state = 'error'; j.error = e.message; });
     }
     res.json({ state: job.state, error: job.error });
   }));
+
+  // ---------- power state (sent by the desktop app) ----------
+  app.post('/api/power', (req, res) => { onBattery = !!req.body?.battery; res.json({ ok: true }); });
+
+  // ---------- verify a saved copy ----------
+  app.get('/api/storage/verify', h(async (req, res) => {
+    const rel = String(req.query.rel ?? '');
+    const full = path.join(store.settings().downloadDir, ...rel.split('/'));
+    if (!fs.existsSync(full)) return res.json({ ok: false, note: 'The file is missing.' });
+    const size = fs.statSync(full).size;
+    const item = dl.list().find((i) => i.dest === rel && i.state === 'done' && i.profile === 'orig');
+    if (item && item.size && item.size !== size) return res.json({ ok: false, note: `Different size from the server's copy (${size} vs ${item.size} bytes). Delete it and save again.` });
+    if (!local.bins.ffmpeg) return res.json({ ok: true, note: 'Size looks right. Install ffmpeg to also check playback.' });
+    try {
+      const dur = Number((await local.probeJson(full)).format?.duration) || 0;
+      if (!dur) return res.json({ ok: false, note: 'The file opens but has no length. It is probably cut short.' });
+      const tail = await new Promise<boolean>((ok) => { const p = spawnProc(local.bins.ffmpeg!, ['-v', 'error', '-ss', String(Math.max(0, dur - 8)), '-i', full, '-t', '5', '-f', 'null', '-'], { stdio: 'ignore' }); p.on('close', (c) => ok(c === 0)); p.on('error', () => ok(false)); });
+      res.json(tail ? { ok: true, note: 'Plays all the way to the end.' } : { ok: false, note: 'The end of the file cannot be read. Delete it and save again.' });
+    } catch { res.json({ ok: false, note: 'This file cannot be read.' }); }
+  }));
+
+  // ---------- backup and restore ----------
+  app.get('/api/backup', (_req, res) => {
+    const { tmdbKey, osKey, osUser, ...settings } = store.publicSettings() as any;
+    res.json({ app: 'cinema', version: 1, at: Date.now(), prefs: store.allPrefs(), progress, settings });
+  });
+  app.post('/api/restore', h(async (req, res) => {
+    const b = req.body;
+    if (!b || b.app !== 'cinema') throw new HttpError(400, 'This is not a Cinema backup file.');
+    for (const [k, v] of Object.entries(b.prefs ?? {})) if (!['dlsched', 'remote'].includes(k)) store.setPref(k, v);
+    if (b.progress && typeof b.progress === 'object') { progress = { ...progress, ...b.progress }; saveProgress(); }
+    const st = b.settings ?? {};
+    const patch: any = {};
+    for (const k of ['maxParallel', 'limitKBps', 'budgetGB', 'autoDeleteDays', 'quotaGB']) if (typeof st[k] === 'number') patch[k] = st[k];
+    for (const k of ['encodeWhere', 'encodeSpeed']) if (typeof st[k] === 'string') patch[k] = st[k];
+    store.patchSettings(patch);
+    res.json({ ok: true });
+  }));
+
+  // ---------- profiles ----------
+  const saveProfiles = () => fs.writeFileSync(PROFILES, JSON.stringify(profiles));
+  app.get('/api/profiles', (_req, res) => res.json(profiles));
+  app.post('/api/profiles', h(async (req, res) => {
+    const name = String(req.body?.name ?? '').trim().slice(0, 30);
+    if (!name) throw new HttpError(400, 'Give the profile a name');
+    profiles.list.push({ id: Math.random().toString(36).slice(2, 8), name });
+    saveProfiles(); res.json(profiles);
+  }));
+  app.post('/api/profiles/switch', h(async (req, res) => {
+    const id = String(req.body?.id);
+    if (!profiles.list.some((p) => p.id === id)) throw new HttpError(404, 'No such profile');
+    clearTimeout(saveT); fs.writeFileSync(STATE, JSON.stringify(progress)); // save the current profile first
+    store.switchProfile(id);
+    STATE = stateFileOf(id); progress = {};
+    try { progress = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { /* new profile */ }
+    profiles.active = id; saveProfiles(); res.json(profiles);
+  }));
+  app.delete('/api/profiles', h(async (req, res) => {
+    const id = String(req.query.id);
+    if (id === 'default' || id === profiles.active) throw new HttpError(400, 'Switch to another profile first. The main profile cannot be deleted.');
+    profiles.list = profiles.list.filter((p) => p.id !== id); saveProfiles();
+    for (const f of [stateFileOf(id), path.join(DATA, `prefs.${id}.json`)]) fs.rmSync(f, { force: true });
+    res.json(profiles);
+  }));
+
+  // ---------- auto-save rules ----------
+  type Rule = { id: string; rootName: string; rootId: number | string; dir: string; mode: 'new' | 'next3'; profile: string; since: number; on: boolean; label: string };
+  const rulesOf = (): Rule[] => (Array.isArray((store.allPrefs() as any).dlrules) ? ((store.allPrefs() as any).dlrules as Rule[]) : []);
+  const saveRules = (l: Rule[]) => store.setPref('dlrules', l);
+  const natural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+  let rulesBusy = false;
+  async function runRules() {
+    if (rulesBusy || !activeServer()) return;
+    rulesBusy = true;
+    try {
+      for (const r of rulesOf().filter((x) => x.on)) {
+        try {
+          const rr = await resolve({ root: r.rootId, path: r.dir } as any);
+          if (rr.offline || rr.root.name !== r.rootName) continue;
+          const entries = (await rr.B.list(posix.join(rr.root.dir, r.dir))).filter((f) => !f.dir && VIDEO_RE.test(f.name)).sort((a, b) => natural(a.name, b.name));
+          const queued = new Set(dl.list().filter((i) => i.rootName === r.rootName && i.state !== 'cancelled' && i.state !== 'error').map((i) => i.rel));
+          for (const f of walkOffline(store.settings().downloadDir)) { const o = readMeta(f.rel)?.origin; if (o && o.rootName === r.rootName) queued.add(o.rel); }
+          const relOf = (n: string) => (r.dir ? `${r.dir}/${n}` : n);
+          let want: typeof entries = [];
+          if (r.mode === 'new') want = entries.filter((f) => ((f as any).mtime ?? 0) * (((f as any).mtime ?? 0) < 1e11 ? 1000 : 1) > r.since);
+          else { const first = entries.findIndex((f) => !progress[`${r.rootName}:${relOf(f.name)}`]?.watched); want = first < 0 ? [] : entries.slice(first, first + 3); }
+          const todo = want.filter((f) => !queued.has(relOf(f.name))).map((f) => relOf(f.name));
+          if (todo.length) await enqueue({ root: r.rootId, paths: todo, profile: r.profile, opts: {} });
+        } catch { /* try again next round */ }
+      }
+    } finally { rulesBusy = false; }
+  }
+  setInterval(runRules, 15 * 60_000).unref();
+  setTimeout(runRules, 45_000).unref();
+  app.get('/api/dl/rules', (_req, res) => res.json({ items: rulesOf() }));
+  app.post('/api/dl/rules', h(async (req, res) => {
+    const b = req.body ?? {};
+    const r = await resolve({ root: b.root, path: '' } as any);
+    if (r.offline) throw new HttpError(400, 'Pick a folder on your server');
+    const rule: Rule = { id: Date.now().toString(36), rootName: r.root.name, rootId: b.root, dir: String(b.dir ?? ''), mode: b.mode === 'new' ? 'new' : 'next3', profile: String(b.profile ?? 'orig'), since: Date.now(), on: true, label: String(b.label ?? '').slice(0, 80) };
+    saveRules([...rulesOf(), rule]); setTimeout(runRules, 500);
+    res.json({ items: rulesOf() });
+  }));
+  app.post('/api/dl/rules/toggle', h(async (req, res) => { saveRules(rulesOf().map((x) => (x.id === String(req.body?.id) ? { ...x, on: !x.on } : x))); setTimeout(runRules, 500); res.json({ items: rulesOf() }); }));
+  app.delete('/api/dl/rules', h(async (req, res) => { saveRules(rulesOf().filter((x) => x.id !== String(req.query.id))); res.json({ items: rulesOf() }); }));
+
+  // ---------- phone / TV remote ----------
+  const remote = new Remote(() => boundPort, opts.token ?? '');
+  type RCfg = { on: boolean; port: number; pin: string };
+  const rcfg = (): RCfg => ({ on: false, port: 8765, pin: '', ...(((store.allPrefs() as any).remote as Partial<RCfg>) ?? {}) });
+  let remoteErr = '';
+  async function applyRemote() {
+    const c = rcfg(); remoteErr = '';
+    if (c.on && c.pin) { try { await remote.start(c.port, c.pin); } catch (e: any) { remoteErr = e?.code === 'EADDRINUSE' ? `Port ${c.port} is already in use` : (e?.message ?? 'Could not start'); store.setPref('remote', { ...c, on: false }); } } else remote.stop();
+  }
+  const remoteStatus = () => ({ ...rcfg(), running: remote.on, urls: remote.on ? remote.urls() : [], error: remoteErr });
+  setTimeout(applyRemote, 2500).unref();
+  app.get('/api/remote/info', (_req, res) => res.json(remoteStatus()));
+  app.post('/api/remote/config', h(async (req, res) => {
+    const c = rcfg(); const b = req.body ?? {};
+    const next: RCfg = { on: typeof b.on === 'boolean' ? b.on : c.on, port: Number(b.port) > 1023 && Number(b.port) < 65536 ? Number(b.port) : c.port, pin: b.newPin || !c.pin ? String(Math.floor(100000 + Math.random() * 900000)) : c.pin };
+    store.setPref('remote', next); await applyRemote(); res.json(remoteStatus());
+  }));
+  app.post('/api/remote/state', (req, res) => { if (remote.on) { const b = req.body ?? {}; remote.state = b && b.title ? { title: String(b.title).slice(0, 200), pos: Number(b.pos) || 0, dur: Number(b.dur) || 0, playing: !!b.playing, vol: Number(b.vol) || 0, hasNext: !!b.hasNext, stream: typeof b.stream === 'string' && b.stream.startsWith('/api/stream?') ? b.stream : undefined, at: Date.now() } : null; } res.json({ on: remote.on }); });
+  app.get('/api/remote/poll', (_req, res) => { const c = remote.cmds; remote.cmds = []; res.json({ on: remote.on, cmds: c }); });
 
   app.get('/api/progress', (_req, res) => res.json(progress));
   app.post('/api/progress', (req, res) => {
