@@ -305,3 +305,57 @@ export function BackupBlock({ clientSettings, restoreClient }: { clientSettings:
     </div>
   );
 }
+
+/* ---------------- cast to a TV ---------------- */
+type CastDev = { id: string; name: string; kind: 'cast' | 'dlna'; host: string; port: number; control?: string; render?: string };
+type CastSt = { state: string; pos: number; dur: number; device: string; error?: string };
+export function CastDialog({ title, stream, getPos, onStart, onClose }: { title: string; stream: string; getPos: () => number; onStart: () => void; onClose: () => void }) {
+  const [devs, setDevs] = useState<CastDev[] | null>(null);
+  const [st, setSt] = useState<CastSt | null | undefined>(undefined);
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+  const [vol, setVol] = useState(50);
+  const scan = () => { setDevs(null); setErr(''); api<{ items: CastDev[] }>('cast/devices').then((d) => setDevs(d.items)).catch((e) => { setErr(e.message); setDevs([]); }); };
+  useEffect(() => { api<{ status: CastSt | null }>('cast/status').then((d) => { setSt(d.status); if (!d.status) scan(); }).catch(() => { setSt(null); scan(); }); }, []);
+  useEffect(() => {
+    if (!st) return;
+    const t = setInterval(() => api<{ status: CastSt | null }>('cast/status').then((d) => setSt(d.status)).catch(() => {}), 1500);
+    return () => clearInterval(t);
+  }, [!!st]); // eslint-disable-line react-hooks/exhaustive-deps
+  const play = async (d: CastDev) => {
+    setBusy(d.id); setErr('');
+    try { await post('cast/play', { device: d, stream, title, start: getPos() }); onStart(); setSt({ state: 'loading', pos: 0, dur: 0, device: d.name }); }
+    catch (e: any) { setErr(e.message); }
+    setBusy('');
+  };
+  const ctl = (action: string, value?: number) => post('cast/control', { action, value }).catch((e) => setErr(e.message));
+  const fmt = (x: number) => { x = Math.max(0, Math.floor(x)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
+  return (
+    <div className="castbox" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Cast to a TV">
+      <div className="castbox-h"><b><Icon n="cast" s={16} /> Cast to a TV</b><button className="cbtn sm" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button></div>
+      {st ? (
+        <div className="castctl">
+          <span className="muted small">Playing on</span><b>{st.device}</b>
+          <span className={'kstat ' + (st.state === 'error' ? 'bad' : 'ok')}>{st.state === 'loading' ? 'Starting…' : st.state === 'playing' ? 'Playing' : st.state === 'paused' ? 'Paused' : st.state === 'error' ? 'Problem' : 'Stopped'}</span>
+          {st.error && <span className="kstat bad">{st.error}</span>}
+          <input type="range" min={0} max={Math.max(1, Math.floor(st.dur))} value={Math.floor(st.pos)} onChange={(e) => ctl('seek', +e.target.value)} aria-label="Position" />
+          <span className="muted small">{fmt(st.pos)} / {fmt(st.dur)}</span>
+          <span className="inline"><button className="btn ghost" onClick={() => ctl('seek', Math.max(0, st.pos - 10))}>−10</button>
+            <button className="btn" onClick={() => ctl(st.state === 'playing' ? 'pause' : 'play')}>{st.state === 'playing' ? 'Pause' : 'Play'}</button>
+            <button className="btn ghost" onClick={() => ctl('seek', st.pos + 10)}>+10</button></span>
+          <label className="small muted">TV volume <input type="range" min={0} max={100} value={vol} onChange={(e) => { setVol(+e.target.value); ctl('volume', +e.target.value); }} /></label>
+          <span className="inline"><button className="btn ghost danger" onClick={async () => { await post('cast/stop', {}).catch(() => {}); setSt(null); scan(); }}>Stop casting</button></span>
+        </div>
+      ) : (
+        <div className="castlist">
+          {devs === null ? <p className="muted">Looking for TVs on your Wi-Fi…</p> : devs.length === 0 ? <p className="muted small">No TV found. Turn the TV on, put it on the same Wi-Fi as this laptop, and try again.</p> : devs.map((d) => (
+            <button key={d.id} className="opt" disabled={!!busy} onClick={() => play(d)}><span><b>{busy === d.id ? 'Connecting…' : d.name}</b><small>{d.kind === 'cast' ? 'Chromecast / Google TV' : 'Smart TV (DLNA)'} · {d.host}</small></span></button>
+          ))}
+          {err && <span className="kstat bad">{err}</span>}
+          <span className="inline"><button className="btn ghost" onClick={scan}>Scan again</button></span>
+          <p className="muted small">The TV plays the file itself, so it must support the format. MP4 with H.264 works best. Windows may ask to allow Cinema through the firewall: say yes for private networks.</p>
+        </div>
+      )}
+    </div>
+  );
+}

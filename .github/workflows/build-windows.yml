@@ -2,10 +2,12 @@ name: Build Windows installers
 
 # Every push to main/master:
 #   1. picks the next version automatically (1.1.0, then 1.1.1, 1.1.2, ...)
-#   2. builds the EXE and the MSI in two separate jobs, with that version inside the app
-#   3. creates the tag (v1.1.1 ...) and a release with ONLY the .exe and the .msi as separate downloads
+#   2. builds the EXE (and the dark "Cinema-Installer" window) and the MSI in separate jobs
+#   3. creates the tag (v1.1.1 ...) and a release with each file as its own download
 # Open the repo's "Releases" page and click the file you want. No zip, no folder.
-# The first version is the "version" in package.json; after that it goes up by 1 on every push.
+#   Cinema-Installer-x.exe  the dark installer window (small, downloads the app while it installs)
+#   Cinema-Setup-x.exe      the full standard installer (also used by the in-app updater)
+#   Cinema-x.msi            for offline or managed installs
 on:
   push:
     branches: [main, master]
@@ -55,6 +57,17 @@ jobs:
         run: npm run build:app && npx electron-builder --win nsis --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Build the dark installer window (optional, never blocks the release)
+        continue-on-error: true
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          node scripts/make-buildinfo.cjs
+          $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          & $csc /nologo /target:winexe /optimize+ /win32icon:build\icon.ico /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "/out:release\Cinema-Installer-$($env:VERSION).exe" installer\CinemaSetup.cs installer\BuildInfo.cs
+          if ($LASTEXITCODE -ne 0) { throw 'csc failed' }
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.version }}
@@ -63,7 +76,9 @@ jobs:
           make_latest: true
           generate_release_notes: true
           files: |
-            release/*.exe
+            release/Cinema-Setup-*.exe
+            release/Cinema-Installer-*.exe
+            release/*.exe.blockmap
             release/latest.yml
 
   msi:
@@ -76,10 +91,19 @@ jobs:
       - run: npm version "${{ needs.version.outputs.version }}" --no-git-tag-version --allow-same-version
         shell: bash
       - run: npm install --no-audit --no-fund
-      - name: Build the MSI installer
-        run: npm run build:app && npx electron-builder --win msi --publish never
+      - name: Build the MSI installer (branded, with a plain fallback)
+        shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm run build:app
+          node scripts/msi-brand.cjs on
+          if ! npx electron-builder --win msi --publish never; then
+            echo "::warning::The branded MSI failed to build, building the plain one instead"
+            node scripts/msi-brand.cjs off
+            rm -f release/Cinema-*.msi
+            npx electron-builder --win msi --publish never
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.version }}

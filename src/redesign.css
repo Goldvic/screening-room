@@ -394,3 +394,8 @@ html[data-compact="1"] .home { gap: 16px; } html[data-compact="1"] .hero { min-h
 .nudge { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .nudge b { min-width: 52px; text-align: center; }
 .chlist { display: grid; gap: 4px; }
 html.pop .side, html.pop .main, html.pop .selbar { display: none !important; }
+
+/* cast */
+.castbox { position: absolute; right: 24px; bottom: 110px; z-index: 40; width: min(360px, 90%); padding: 14px 16px; border-radius: 16px; background: rgba(16,16,22,.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.14); color: #fff; display: grid; gap: 8px; }
+.castbox-h { display: flex; align-items: center; justify-content: space-between; }
+.castctl, .castlist { display: grid; gap: 8px; } .castctl input[type=range] { width: 100%; accent-color: var(--lamp); }

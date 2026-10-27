@@ -1,6 +1,7 @@
 import { fingerprint, matchIntro, pcm } from './intro';
 import { detectEncoders, EncInfo } from './encoders';
 import { Remote } from './remote';
+import { castControl, castPlay, castStatus, castStop, CastDevice, discover, lanIpFor, mimeOf } from './cast';
 import { spawn as spawnProc } from 'node:child_process';
 let boundPort = 0;
 import 'dotenv/config';
@@ -572,9 +573,11 @@ export async function start(opts: StartOpts = {}) {
 
   let encInfo: EncInfo | null = null;
   let onBattery = false;
+  let onMetered = false;
   const dl = new Downloads({
     dataDir: DATA,
     onBattery: () => onBattery,
+    onMetered: () => onMetered,
     localEnc: () => (encInfo && local.bins.ffmpeg && local.bins.ffprobe ? { ffmpeg: local.bins.ffmpeg, ffprobe: local.bins.ffprobe, enc: encInfo } : null),
     loopback: (job) => `http://127.0.0.1:${boundPort}/api/stream?root=${encodeURIComponent(String(job.rootId ?? ''))}&path=${encodeURIComponent(job.rel)}&q=orig${opts.token ? `&tk=${encodeURIComponent(opts.token)}` : ''}`,
     remoteHasFfmpeg: async (id) => { const sv = store.get(id); return sv ? (await getRemoteCaps(sv)).ffmpeg : false; },
@@ -862,6 +865,7 @@ export async function start(opts: StartOpts = {}) {
       patch.downloadDir = dir;
     }
     if (typeof b.pauseOnBattery === 'boolean') patch.pauseOnBattery = b.pauseOnBattery;
+    if (typeof b.pauseOnMetered === 'boolean') patch.pauseOnMetered = b.pauseOnMetered;
     if (b.limitWin && typeof b.limitWin === 'object') patch.limitWin = { on: !!b.limitWin.on, from: String(b.limitWin.from || '18:00'), to: String(b.limitWin.to || '23:00'), kbps: Math.max(0, Number(b.limitWin.kbps) || 0) };
     if (['auto', 'laptop', 'server'].includes(b.encodeWhere)) patch.encodeWhere = b.encodeWhere;
     if (['fast', 'balanced', 'small'].includes(b.encodeSpeed)) patch.encodeSpeed = b.encodeSpeed;
@@ -1159,16 +1163,15 @@ export async function start(opts: StartOpts = {}) {
   const seekSprite = async (url: string, interval: number, count: number, cols: number, rows: number) => {
     const ff = local.bins.ffmpeg!;
     const frames: Buffer[] = [];
-    for (let i = 0; i < count; i++) {
-      frames.push(await new Promise<Buffer>((ok) => {
+    const grab = (i: number) => new Promise<Buffer>((ok) => {
         const chunks: Buffer[] = [];
-        const p = spawnProc(ff, ['-hide_banner', '-loglevel', 'error', '-ss', String(i * interval), '-i', url, '-an', '-sn', '-dn', '-frames:v', '1',
+        const p = spawnProc(ff, ['-hide_banner', '-loglevel', 'error', '-probesize', '2M', '-analyzeduration', '1M', '-noaccurate_seek', '-ss', String(i * interval), '-i', url, '-an', '-sn', '-dn', '-frames:v', '1',
           '-vf', 'scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2', '-q:v', '6', '-f', 'mjpeg', 'pipe:1'], { stdio: ['ignore', 'pipe', 'ignore'] });
         p.stdout.on('data', (d) => chunks.push(d));
         p.on('close', () => ok(Buffer.concat(chunks)));
         p.on('error', () => ok(Buffer.alloc(0)));
-      }));
-    }
+    });
+    for (let i = 0; i < count; i += 4) frames.push(...(await Promise.all([0, 1, 2, 3].filter((k) => i + k < count).map((k) => grab(i + k)))));
     const good = frames.filter((f) => f.length > 0);
     if (!good.length) throw new Error('No frames');
     while (good.length < count) good.push(good[good.length - 1]);
@@ -1253,7 +1256,7 @@ export async function start(opts: StartOpts = {}) {
   }));
 
   // ---------- power state (sent by the desktop app) ----------
-  app.post('/api/power', (req, res) => { onBattery = !!req.body?.battery; res.json({ ok: true }); });
+  app.post('/api/power', (req, res) => { onBattery = !!req.body?.battery; onMetered = !!req.body?.metered; res.json({ ok: true, wantMetered: store.settings().pauseOnMetered }); });
 
   // ---------- verify a saved copy ----------
   app.get('/api/storage/verify', h(async (req, res) => {
@@ -1375,6 +1378,28 @@ export async function start(opts: StartOpts = {}) {
     store.setPref('remote', next); await applyRemote(); res.json(remoteStatus());
   }));
   app.post('/api/remote/state', (req, res) => { if (remote.on) { const b = req.body ?? {}; remote.state = b && b.title ? { title: String(b.title).slice(0, 200), pos: Number(b.pos) || 0, dur: Number(b.dur) || 0, playing: !!b.playing, vol: Number(b.vol) || 0, hasNext: !!b.hasNext, stream: typeof b.stream === 'string' && b.stream.startsWith('/api/stream?') ? b.stream : undefined, at: Date.now() } : null; } res.json({ on: remote.on }); });
+  // ---------- casting to a TV ----------
+  app.get('/api/cast/devices', h(async (_req, res) => { res.json({ items: await discover(2500) }); }));
+  app.post('/api/cast/play', h(async (req, res) => {
+    const b = req.body ?? {};
+    const dev = b.device as CastDevice;
+    if (!dev || typeof dev.host !== 'string' || !/^\d+\.\d+\.\d+\.\d+$/.test(dev.host) || !['cast', 'dlna'].includes(dev.kind)) throw new HttpError(400, 'Pick a TV first');
+    if (typeof b.stream !== 'string' || !b.stream.startsWith('/api/stream?')) throw new HttpError(400, 'Nothing to cast');
+    const c = rcfg();
+    if (!remote.on) { // the TV fetches the video from this laptop, so the small network page has to be open
+      const pin = c.pin || String(Math.floor(100000 + Math.random() * 900000));
+      store.setPref('remote', { ...c, pin });
+      try { await remote.start(c.port, pin); } catch { throw new HttpError(500, `Could not open port ${c.port} so the TV can reach this laptop. Change the port in Settings, or allow Cinema in the Windows firewall.`); }
+    }
+    const name = String(b.title ?? 'video').replace(/\.[^.]+$/, '').replace(/[^\w\- ]/g, '_').slice(0, 60) || 'video';
+    const ext = /\.(mkv|webm|mov)$/i.exec(String(b.title ?? ''))?.[0] ?? '.mp4';
+    const url = `http://${lanIpFor(dev.host)}:${remote.port}/c/${remote.addCast(b.stream)}/${encodeURIComponent(name)}${ext}`;
+    await castPlay(dev, url, String(b.title ?? 'Video').slice(0, 120), Math.max(0, Number(b.start) || 0), mimeOf(name + ext));
+    res.json({ ok: true });
+  }));
+  app.post('/api/cast/control', h(async (req, res) => { await castControl(String(req.body?.action), Number(req.body?.value)); res.json({ ok: true }); }));
+  app.get('/api/cast/status', (_req, res) => res.json({ status: castStatus() }));
+  app.post('/api/cast/stop', h(async (_req, res) => { await castStop(); res.json({ ok: true }); }));
   app.get('/api/remote/poll', (_req, res) => { const c = remote.cmds; remote.cmds = []; res.json({ on: remote.on, cmds: c }); });
 
   app.get('/api/progress', (_req, res) => res.json(progress));

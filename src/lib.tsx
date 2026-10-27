@@ -224,6 +224,7 @@ export function parseCues(text: string): Cue[] {
 // ---------- icons ----------
 const ICONS: Record<string, string> = {
   home: 'M3 11l9-8 9 8v10h-6v-6H9v6H3z',
+  cast: 'M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6M2 12a9 9 0 0 1 8 8M2 16a5 5 0 0 1 4 4M2 20h.01',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   film: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M16 9h4M4 15h4M16 15h4',
   down: 'M12 4v11m0 0l-4-4m4 4l4-4M5 19h14', trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',

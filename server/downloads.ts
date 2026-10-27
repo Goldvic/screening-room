@@ -20,8 +20,9 @@ export type DlItem = {
 
 export interface DlCtx {
   dataDir: string;
-  settings(): { downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string }; budgetGB: number; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: Speed; pauseOnBattery: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number } };
+  settings(): { downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string }; budgetGB: number; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: Speed; pauseOnBattery: boolean; pauseOnMetered: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number } };
   onBattery(): boolean;
+  onMetered(): boolean;
   /** Compression on this laptop: ffmpeg/ffprobe paths, what it can encode, and a URL that streams the original from the server. */
   localEnc(): { ffmpeg: string; ffprobe: string; enc: EncInfo } | null;
   loopback(job: DlItem): string;
@@ -190,6 +191,7 @@ export class Downloads {
     const s = this.ctx.settings();
     if (s.schedule.on && !inWindow(s.schedule.from, s.schedule.to)) return `Waiting for ${s.schedule.from}`;
     if (s.pauseOnBattery && this.ctx.onBattery()) return 'Waiting for power (on battery)';
+    if (s.pauseOnMetered && this.ctx.onMetered()) return 'Waiting for an unmetered connection';
     if (s.budgetGB > 0 && this.ctx.monthBytes() >= s.budgetGB * 1e9) return 'Monthly data budget reached';
     return null;
   }

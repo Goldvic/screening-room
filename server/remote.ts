@@ -1,5 +1,6 @@
 import http from 'node:http';
 import os from 'node:os';
+import crypto from 'node:crypto';
 
 export type RemoteState = { title: string; pos: number; dur: number; playing: boolean; vol: number; hasNext: boolean; stream?: string; at: number };
 export type RemoteCmd = { cmd: string; value?: number };
@@ -46,6 +47,17 @@ const WATCH = `<!doctype html><meta name="viewport" content="width=device-width,
 export class Remote {
   state: RemoteState | null = null;
   cmds: RemoteCmd[] = [];
+  private casts = new Map<string, string>();
+  /** A link a TV can open to fetch one video. The long random part is the only key, so it works without a PIN. */
+  addCast(stream: string): string { const t = crypto.randomBytes(16).toString('hex'); this.casts.set(t, stream); if (this.casts.size > 20) this.casts.delete(this.casts.keys().next().value!); return t; }
+  private proxy(req: http.IncomingMessage, res: http.ServerResponse, stream: string) {
+    const headers: Record<string, string> = {};
+    if (req.headers.range) headers.range = String(req.headers.range);
+    const up = http.request({ host: '127.0.0.1', port: this.mainPort(), method: req.method === 'HEAD' ? 'HEAD' : 'GET', path: `${stream}&tk=${encodeURIComponent(this.token)}`, headers }, (r) => { res.writeHead(r.statusCode ?? 200, r.headers); r.pipe(res); });
+    up.on('error', () => res.destroy());
+    res.on('close', () => up.destroy());
+    up.end();
+  }
   port = 0;
   private srv: http.Server | null = null;
   private pin = '';
@@ -83,6 +95,7 @@ export class Remote {
 
   private handle(req: http.IncomingMessage, res: http.ServerResponse) {
     const url = new URL(req.url ?? '/', 'http://x');
+    if (url.pathname.startsWith('/c/')) { const s = this.casts.get(url.pathname.split('/')[2] ?? ''); if (s) { this.proxy(req, res, s); return; } res.writeHead(404).end('Expired'); return; }
     if (url.pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(PAGE); return; }
     if (!this.authed(req, url, res)) return;
     if (url.pathname === '/state') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(this.state && Date.now() - this.state.at < 6000 ? this.state : null)); return; }
@@ -92,17 +105,7 @@ export class Remote {
       return;
     }
     if (url.pathname === '/watch') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(WATCH); return; }
-    if (url.pathname === '/stream' && this.state?.stream) {
-      const headers: Record<string, string> = {};
-      if (req.headers.range) headers.range = String(req.headers.range);
-      const up = http.request({ host: '127.0.0.1', port: this.mainPort(), method: 'GET', path: `${this.state.stream}&tk=${encodeURIComponent(this.token)}`, headers }, (r) => {
-        res.writeHead(r.statusCode ?? 200, r.headers); r.pipe(res);
-      });
-      up.on('error', () => res.destroy());
-      res.on('close', () => up.destroy());
-      up.end();
-      return;
-    }
+    if (url.pathname === '/stream' && this.state?.stream) { this.proxy(req, res, this.state.stream); return; }
     res.writeHead(404).end('Not found');
   }
 }

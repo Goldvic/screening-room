@@ -1,4 +1,5 @@
 import Hls from 'hls.js';
+import { CastDialog } from './Extras';
 import { CSSProperties, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AudioRig, EQ_FLAT, EQ_LABELS, EQ_PRESETS, isNeutral } from './audio';
 import {
@@ -123,6 +124,7 @@ export default function Player(p: Props) {
   const [subDelay, setSubDelay] = useState(0);
   const nudgeSub = (d: number) => setSubDelay((x) => { const n = Math.round((x + d) * 10) / 10; flash(`Subtitles ${n > 0 ? 'later' : n < 0 ? 'earlier' : 'on time'} ${n ? `by ${Math.abs(n)} s` : ''}`); return n; });
   const [help, setHelp] = useState(false);
+  const [castOpen, setCastOpen] = useState(false);
   useEffect(() => { // after a mouse click, do not leave a button focused: Space must play/pause, not press that button again
     const f = (e: MouseEvent) => { if (e.detail > 0 && (e.target as HTMLElement).closest?.('.theatre button')) setTimeout(() => (document.activeElement as HTMLElement | null)?.blur?.(), 0); };
     window.addEventListener('click', f);
@@ -825,6 +827,7 @@ export default function Player(p: Props) {
             <button className="btn ghost" onClick={() => { setSuggest(false); dismissed.current = true; }}>Not now</button>
           </div>
         )}
+        {castOpen && <CastDialog title={p.name} stream={`/api/stream?root=${p.root}&path=${encodeURIComponent(path)}&q=orig`} getPos={() => pos} onStart={() => vref.current?.pause()} onClose={() => setCastOpen(false)} />}
         {help && (
           <div className="sheet" onClick={() => setHelp(false)} role="dialog" aria-label="Keyboard shortcuts">
             <div className="sheet-box" onClick={(e) => e.stopPropagation()}>
@@ -1096,7 +1099,7 @@ export default function Player(p: Props) {
             <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
             {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
             {bridge && <button className="cbtn" onClick={popout} title="Pop out into its own window (for a second screen)" aria-label="Pop out"><Icon n="grid" s={20} /></button>}
-            {!bridge && typeof HTMLMediaElement !== 'undefined' && 'remote' in HTMLMediaElement.prototype && <button className="cbtn" onClick={() => (vref.current as any)?.remote?.prompt().catch(() => flash('No cast device found'))} title="Cast to a TV (needs a Cast device on this network)" aria-label="Cast"><Icon n="external" s={20} /></button>}
+            <button className="cbtn" onClick={() => setCastOpen((x) => !x)} title="Cast to a TV (Chromecast or smart TV)" aria-label="Cast to a TV"><Icon n="cast" s={20} /></button>
             {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
             {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
             <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>

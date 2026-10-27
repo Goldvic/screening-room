@@ -143,6 +143,13 @@ function showWin() {
 
 // Download progress on the taskbar icon and in the tray tooltip, plus a notice when everything is done.
 let lastBusy = false;
+let meteredNow = false, lastMeteredCheck = 0;
+function checkMetered() {
+  if (process.platform !== 'win32') return;
+  lastMeteredCheck = Date.now();
+  const ps = "$null=[Windows.Networking.Connectivity.NetworkInformation,Windows.Networking.Connectivity,ContentType=WindowsRuntime];$p=[Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile();if($p){$p.GetConnectionCost().NetworkCostType}else{'None'}";
+  require('child_process').execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 8000, windowsHide: true }, (err, out) => { if (!err) meteredNow = /Fixed|Variable/i.test(String(out)); });
+}
 function trackDownloads() {
   const tick = async () => {
     try {
@@ -170,7 +177,10 @@ function trackDownloads() {
       const rules = await rulesOn();
       const hidden = hadWindow && (!win || win.isDestroyed() || (!win.isVisible() && !win.isMinimized()));
       if (hidden && !busy && !sched.length && !rules && !quitting) { quitting = true; app.quit(); }
-      try { fetch(`http://127.0.0.1:${port}/api/power?tk=${token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ battery: powerMonitor.isOnBatteryPower() }) }).catch(() => {}); } catch { /* no power info */ }
+      try {
+        fetch(`http://127.0.0.1:${port}/api/power?tk=${token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ battery: powerMonitor.isOnBatteryPower(), metered: meteredNow }) })
+          .then((r) => r.json()).then((j) => { if (j.wantMetered && Date.now() - lastMeteredCheck > 60000) checkMetered(); if (!j.wantMetered) meteredNow = false; }).catch(() => {});
+      } catch { /* no power info */ }
       lastBusy = busy;
     } catch { /* server not ready */ }
   };

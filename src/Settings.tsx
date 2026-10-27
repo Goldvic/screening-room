@@ -69,7 +69,7 @@ function Updates() {
 
 type Srv = {
   downloadDir: string; maxParallel: number; limitKBps: number; schedule: { on: boolean; from: string; to: string };
-  budgetGB: number; autoDeleteDays: number; quotaGB: number; pauseOnBattery: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number }; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small'; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
+  budgetGB: number; autoDeleteDays: number; quotaGB: number; pauseOnBattery: boolean; pauseOnMetered: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number }; encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small'; tmdbKey: string; osKey: string; osUser: string; hasOsPass: boolean;
 };
 const PRESETS = [
   { id: 'default', name: 'Graphite', c: '#131318' }, { id: 'midnight', name: 'Midnight', c: '#0f1a33' }, { id: 'oled', name: 'OLED black', c: '#000000' },
@@ -585,6 +585,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           )}
           <Field label="Tidy saved videos" hint="Find duplicates and check that saved copies are not broken"><button className="btn" onClick={onTidy}>Open</button></Field>
           <Field label="Pause on battery" hint="Downloads wait until the laptop is plugged in"><Toggle on={!!srv?.pauseOnBattery} label="Pause on battery" onClick={() => patch({ pauseOnBattery: !srv?.pauseOnBattery })} /></Field>
+          <Field label="Pause on a metered connection" hint="If Windows marks your Wi-Fi or mobile hotspot as metered, downloads wait"><Toggle on={!!srv?.pauseOnMetered} label="Pause on metered" onClick={() => patch({ pauseOnMetered: !srv?.pauseOnMetered })} /></Field>
           <Field label="Slow down at certain hours" hint="Limit the download speed between two times, for example while you work">
             <span className="inline">
               <Toggle on={!!srv?.limitWin?.on} label="Slow down" onClick={() => patch({ limitWin: { ...(srv?.limitWin ?? { from: '18:00', to: '23:00', kbps: 2000 }), on: !srv?.limitWin?.on } })} />

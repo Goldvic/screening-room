@@ -28,7 +28,7 @@ export type Settings = {
   schedule: { on: boolean; from: string; to: string };
   budgetGB: number; autoDeleteDays: number; quotaGB: number;
   encodeWhere: 'auto' | 'laptop' | 'server'; encodeSpeed: 'fast' | 'balanced' | 'small';
-  pauseOnBattery: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number };
+  pauseOnBattery: boolean; pauseOnMetered: boolean; limitWin: { on: boolean; from: string; to: string; kbps: number };
   tmdbKey: string; osKey: string; osUser: string; osPassSecret?: string;
 };
 
@@ -130,6 +130,7 @@ export class Store {
       autoDeleteDays: Math.max(0, o.autoDeleteDays ?? 0),
       quotaGB: Math.max(0, o.quotaGB ?? 0),
       pauseOnBattery: !!o.pauseOnBattery,
+      pauseOnMetered: !!o.pauseOnMetered,
       limitWin: { on: !!o.limitWin?.on, from: o.limitWin?.from ?? '18:00', to: o.limitWin?.to ?? '23:00', kbps: Math.max(0, Number(o.limitWin?.kbps) || 0) },
       encodeWhere: (['auto', 'laptop', 'server'] as const).includes(o.encodeWhere as any) ? o.encodeWhere! : 'auto',
       encodeSpeed: (['fast', 'balanced', 'small'] as const).includes(o.encodeSpeed as any) ? o.encodeSpeed! : 'fast',
