@@ -190,7 +190,7 @@ export async function runBuf(B: Backend, cmd: string): Promise<Buffer> {
   p.err.on('data', (d: Buffer) => { err = (err + d).slice(-2000); });
   const code = await p.closed;
   if (code !== 0) throw new Error(err.trim() || `exit ${code}`);
-  return Buffer.concat(out);
+  return Buffer.concat(out); 
 }
 export const runText = async (B: Backend, cmd: string) => (await runBuf(B, cmd)).toString();
 
