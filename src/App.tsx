@@ -223,6 +223,7 @@ function Library() {
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
   const [nameAsk, setNameAsk] = useState<{ title: string; value: string; label: string; go: (v: string) => void } | null>(null);
   const [selecting, setSelecting] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [playlist, setPlaylist] = useState<string[] | null>(null);
 
@@ -627,6 +628,7 @@ function Library() {
           <button className={view === 'library' ? 'nav on' : 'nav'} onClick={() => setView('library')} title="Library"><Icon n="film" s={20} /><span>Library</span></button>
           <button className={view === 'playlists' ? 'nav on' : 'nav'} onClick={() => setView('playlists')} title="Playlists"><Icon n="list" s={20} /><span>Playlists</span></button>
           <button className={view === 'collections' ? 'nav on' : 'nav'} onClick={() => setView('collections')} title="Collections"><Icon n="folder" s={20} /><span>Collections</span></button>
+          <i className="nav-sep" />
           <button className={view === 'insights' ? 'nav on' : 'nav'} onClick={() => setView('insights')} title="Insights"><Icon n="gauge" s={20} /><span>Insights</span></button>
           <button className="nav" onClick={() => setPanel('downloads')} title="Downloads">
             <Icon n="down" s={20} /><span>Downloads</span>
@@ -634,6 +636,7 @@ function Library() {
           </button>
         </nav>
         <span className="grow" />
+        <div className="dock-foot">
         {upd && (upd.state === 'available' || upd.state === 'downloading' || upd.state === 'ready') && (
           <button className="nav hot" title="Update available" onClick={() => (upd.state === 'available' ? bridge?.updateDownload() : upd.state === 'ready' ? bridge?.updateInstall() : undefined)}>
             <Icon n="cloud" s={20} /><span>{upd.state === 'ready' ? 'Restart to update' : upd.state === 'downloading' ? `Updating ${upd.percent}%` : 'Update'}</span>
@@ -643,6 +646,7 @@ function Library() {
         {bridge && <button className="nav" onClick={pickFile} title="Open a video from your computer (Ctrl+O)"><Icon n="folder" s={20} /><span>Open file</span></button>}
         <button className="nav" onClick={() => setPanel('servers')} title="Servers"><Icon n="server" s={20} /><span>Servers</span></button>
         <button className="nav" onClick={() => setPanel('settings')} title="Settings"><Icon n="sliders" s={20} /><span>Settings</span></button>
+        </div>
       </aside>
 
       <main className="main" style={{ ['--pw' as string]: `${s.density}px` }}>
@@ -717,19 +721,15 @@ function Library() {
             <div className="home">
               <div className="greet">
                 <span className="greet-top">
-                  <h1>{new Date().getHours() < 5 ? 'Late night' : new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}</h1>
-                  <button className="btn ghost sm" onClick={() => setCustomize(true)}><Icon n="sliders" s={14} /> Customise</button>
+                  <span className="greet-t">
+                    <small className="eyebrow">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</small>
+                    <h1>{new Date().getHours() < 5 ? 'Late night' : new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}</h1>
+                  </span>
+                  <span className="inline">
+                    <button className="btn ghost" onClick={() => setPalette(true)}><Icon n="search" s={15} /> Search everything <kbd>Ctrl K</kbd></button>
+                    <button className="btn ghost" onClick={() => setCustomize(true)}><Icon n="sliders" s={15} /> Customise</button>
+                  </span>
                 </span>
-                <div className="chips">
-                  <button onClick={() => setNameAsk({ title: 'Daily goal (minutes)', value: String(goal), label: 'Save', go: (v) => setPref('goal', Math.max(5, Math.min(600, parseInt(v, 10) || 30))) })} title="Change your daily goal"><b>{todayMin}</b> / {goal} min today</button>
-                  {streak > 0 && <span><b>{streak}</b> day streak</span>}
-                  {resumable.length > 0 && <span><b>{resumable.length}</b> in progress</span>}
-                  {savedFiles.length > 0 && <span><b>{savedFiles.length}</b> saved offline</span>}
-                  {queueInfo.active + queueInfo.waiting > 0 && <button onClick={() => setPanel('downloads')}><b>{queueInfo.active + queueInfo.waiting}</b> downloading</button>}
-                  {lists.length > 0 && <button onClick={() => setView('playlists')}><b>{lists.length}</b> playlist{lists.length > 1 ? 's' : ''}</button>}
-                  <button onClick={() => setPalette(true)}>Search everything <kbd>Ctrl K</kbd></button>
-                </div>
-                <i className="goalbar"><b style={{ width: `${Math.min(100, (todayMin / goal) * 100)}%` }} /></i>
               </div>
               {hero && t ? (
                 <Hero key={hero.k} eyebrow="Continue watching" title={t.title + (t.season ? `  ·  S${String(t.season).padStart(2, '0')}E${String(t.episode).padStart(2, '0')}` : '')}
@@ -739,6 +739,16 @@ function Library() {
                 <Hero eyebrow="Saved on this laptop" title={t.title} line={savedSub(first)} label="Play"
                   art={<Art root={OFFLINE_ID} path={first.rel} v={first.mtime} name={first.name} />} onPlay={() => playOffline(first.rel)} />
               ) : <Welcome onLibrary={() => setView('library')} onOpen={bridge ? pickFile : undefined} />}
+              <div className="dash">
+                <button className="dcard goal" onClick={() => setNameAsk({ title: 'Daily goal (minutes)', value: String(goal), label: 'Save', go: (v) => setPref('goal', Math.max(5, Math.min(600, parseInt(v, 10) || 30))) })} title="Change your daily goal">
+                  <span className="ring" style={{ ['--p' as string]: Math.min(100, (todayMin / goal) * 100) }}><b>{todayMin}</b><small>/ {goal} min</small></span>
+                  <span className="dtxt"><strong>Today’s goal</strong><small>{streak > 0 ? `${streak} day streak` : 'Watch 10 minutes to start a streak'}</small></span>
+                </button>
+                {resumable.length > 0 && <div className="dcard"><Icon n="play" s={20} /><b>{resumable.length}</b><small>in progress</small></div>}
+                {savedFiles.length > 0 && <div className="dcard"><Icon n="save" s={20} /><b>{savedFiles.length}</b><small>saved offline</small></div>}
+                {queueInfo.active + queueInfo.waiting > 0 && <button className="dcard" onClick={() => setPanel('downloads')}><Icon n="down" s={20} /><b>{queueInfo.active + queueInfo.waiting}</b><small>downloading</small></button>}
+                {lists.length > 0 && <button className="dcard" onClick={() => setView('playlists')}><Icon n="list" s={20} /><b>{lists.length}</b><small>playlist{lists.length > 1 ? 's' : ''}</small></button>}
+              </div>
               {order.filter((r) => r.on).map((r) => rowsJsx[r.id])}
             </div>
           );
@@ -830,35 +840,46 @@ function Library() {
           </div>
           <div className="actions">
             {nextUp && <button className="btn" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {nextUp.label}</button>}
-            {videos.length > 1 && <button className="btn ghost" onClick={randomPick} title="Pick something for me"><Icon n="random" s={16} /> Surprise me</button>}
-            {!offline && dir && <button className="btn ghost" onClick={() => setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 })}><Icon n="save" s={16} /> Save folder for offline</button>}
-            {seen.length > 0 && (
-              <button className="btn ghost" onClick={() => confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`)}>
-                <Icon n="trash" s={16} /> Delete {seen.length} watched
-              </button>
+            {(videos.length > 1 || (!offline && dir) || seen.length > 0) && (
+              <span className="morewrap">
+                <button className="btn ghost" onClick={() => setMoreOpen((o) => !o)} aria-haspopup="menu" aria-expanded={moreOpen}><Icon n="more" s={16} /> Actions</button>
+                {moreOpen && (
+                  <>
+                    <div className="amenu-bg" onClick={() => setMoreOpen(false)} />
+                    <div className="amenu" role="menu">
+                      {videos.length > 1 && <button onClick={() => { setMoreOpen(false); randomPick(); }}><Icon n="random" s={16} /> Surprise me</button>}
+                      {!offline && dir && <button onClick={() => { setMoreOpen(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={16} /> Save folder for offline</button>}
+                      {!offline && !bridge && dir && <a className="amenu-link" href={`/api/download?${qs({ root: rid, path: dir })}`}><Icon n="down" s={16} /> Download folder</a>}
+                      {seen.length > 0 && <><i className="amenu-sep" /><button className="del" onClick={() => { setMoreOpen(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={16} /> Delete {seen.length} watched</button></>}
+                    </div>
+                  </>
+                )}
+              </span>
             )}
-            {!offline && !bridge && dir && <a className="btn ghost" href={`/api/download?${qs({ root: rid, path: dir })}`}><Icon n="down" s={16} /> Download folder</a>}
           </div>
         </header>
 
         {items.length > 0 && (
           <div className="tools">
             <label className="search"><Icon n="search" s={16} /><input ref={search} placeholder="Search this folder  (press /)" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-            <select value={s.filter} onChange={(e) => set({ filter: e.target.value as Settings['filter'] })} aria-label="Show">
-              <option value="all">All</option><option value="unwatched">Not watched</option><option value="progress">In progress</option><option value="rated">Rated 4+ ★</option><option value="watched">Watched</option><option value="fav">Favorites</option>
-            </select>
+            <span className="filters" role="group" aria-label="Show">
+              {([['all', 'All'], ['unwatched', 'Not watched'], ['progress', 'In progress'], ['watched', 'Watched'], ['fav', 'Favorites'], ['rated', 'Rated 4+ ★']] as const).map(([k, label]) => (
+                <button key={k} className={s.filter === k ? 'pill on' : 'pill'} onClick={() => set({ filter: k as Settings['filter'] })}>{label}</button>
+              ))}
+            </span>
+            <span className="grow" />
             {allTags.length > 0 && <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag"><option value="">All tags</option>{allTags.map((t) => <option key={t} value={t}>{t}</option>)}</select>}
             <select value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
-              <option value="name">Name</option><option value="new">Newest</option><option value="size">Largest</option>
+              <option value="name">Sort: Name</option><option value="new">Sort: Newest</option><option value="size">Sort: Largest</option>
             </select>
-            <button className="btn ghost" onClick={() => { refreshAll().then(() => flash('Refreshed')); }} title="Refresh (F5)"><Icon n="rotate" s={16} /> Refresh</button>
-            {videos.length > 1 && <button className={selecting ? 'btn' : 'btn ghost'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Pick several videos to play as a playlist"><Icon n="list" s={16} /> {selecting ? 'Done' : 'Select'}</button>}
             {s.view !== 'list' && <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />}
             <span className="seg" role="group" aria-label="View">
               <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
               <button className={s.view === 'list' ? 'on' : ''} onClick={() => set({ view: 'list' })} title="List view" aria-label="List view"><Icon n="list" s={16} /></button>
               <button className={s.view === 'wall' ? 'on' : ''} onClick={() => set({ view: 'wall' })} title="Wall view: big posters" aria-label="Wall view"><Icon n="full" s={16} /></button>
             </span>
+            {videos.length > 1 && <button className={selecting ? 'btn' : 'btn ghost'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Pick several videos to play as a playlist"><Icon n="list" s={16} /> {selecting ? 'Done' : 'Select'}</button>}
+            <button className="icon" onClick={() => { refreshAll().then(() => flash('Refreshed')); }} title="Refresh (F5)" aria-label="Refresh"><Icon n="rotate" s={18} /></button>
           </div>
         )}
 

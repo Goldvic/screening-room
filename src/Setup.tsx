@@ -102,12 +102,17 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
 
       {form && (
         <div className="sform">
+          <fieldset className="fgroup">
+          <legend><i>1</i> Connection</legend>
           <F label="Name" hint="Anything you like"><input value={form.name} onChange={(e) => up({ name: e.target.value })} placeholder="My VPS" /></F>
           <F label="Address" hint="IP address or domain of the server"><input value={form.host} onChange={(e) => up({ host: e.target.value })} placeholder="203.0.113.10" autoFocus /></F>
           <div className="two">
             <F label="SSH port"><input value={form.port} inputMode="numeric" onChange={(e) => up({ port: e.target.value })} /></F>
             <F label="User"><input value={form.user} onChange={(e) => up({ user: e.target.value })} /></F>
           </div>
+          </fieldset>
+          <fieldset className="fgroup">
+          <legend><i>2</i> Sign in</legend>
           <F label="Sign in with">
             <span className="seg">
               <button className={form.auth === 'key' ? 'on' : ''} onClick={() => up({ auth: 'key' })}>SSH key</button>
@@ -130,12 +135,16 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
               <span className="inline pw"><input type={showPw ? 'text' : 'password'} value={form.password} onChange={(e) => up({ password: e.target.value })} autoComplete="off" /><button type="button" className="btn ghost" onClick={() => setShowPw((x) => !x)}>{showPw ? 'Hide' : 'Show'}</button></span>
             </F>
           )}
+          </fieldset>
+          <details className="fgroup adv" open={!!form.rootsText.trim()}>
+          <summary><i>3</i> Media folders <small>optional</small></summary>
           <F label="Docker container of the downloader bot" hint="Used to find the media folder automatically. Leave empty if you list folders below.">
             <input value={form.container} onChange={(e) => up({ container: e.target.value })} placeholder="media-downloader-bot" />
           </F>
           <F label="Media folders (optional)" hint="One per line as Name=/path. Overrides the automatic search.">
             <textarea rows={3} value={form.rootsText} onChange={(e) => up({ rootsText: e.target.value })} placeholder={'Movies=/srv/media/movies\nSeries=/srv/media/series'} spellCheck={false} />
           </F>
+          </details>
 
           {test && (
             <div className={test.ok ? 'note good' : 'note err'}>
