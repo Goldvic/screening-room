@@ -125,7 +125,6 @@ export default function Player(p: Props) {
   const nudgeSub = (d: number) => setSubDelay((x) => { const n = Math.round((x + d) * 10) / 10; flash(`Subtitles ${n > 0 ? 'later' : n < 0 ? 'earlier' : 'on time'} ${n ? `by ${Math.abs(n)} s` : ''}`); return n; });
   const [help, setHelp] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
-  const [winOpen, setWinOpen] = useState(false);
   useEffect(() => { // after a mouse click, do not leave a button focused: Space must play/pause, not press that button again
     const f = (e: MouseEvent) => { if (e.detail > 0 && (e.target as HTMLElement).closest?.('.theatre button')) setTimeout(() => (document.activeElement as HTMLElement | null)?.blur?.(), 0); };
     window.addEventListener('click', f);
@@ -1083,39 +1082,27 @@ export default function Player(p: Props) {
             )}
           </div>
           <div className="ctl">
-            <div className="ctl-left">
-              <button className="cbtn big" onClick={togglePlay} title="Play / pause (Space)" aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} s={24} /></button>
-              <button className="cbtn" onClick={() => skip(-10)} title="Back 10 seconds" aria-label="Back 10 seconds"><Icon n="back10" s={20} /></button>
-              <button className="cbtn" onClick={() => skip(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds"><Icon n="fwd10" s={20} /></button>
-              {next && <button className="cbtn" onClick={() => p.onNext(next)} title="Next episode (N)" aria-label="Next episode"><Icon n="next" s={20} /></button>}
-              <span className="vol">
-                <button className="cbtn" onClick={() => setMuted((x) => !x)} title="Mute (M)" aria-label="Mute"><Icon n={muted || vol === 0 ? 'mute' : 'volume'} s={20} /></button>
-                <Slider label="Volume" value={Math.round((muted ? 0 : vol) * 100)} min={0} max={Math.round(maxVol * 100)} step={5} onChange={(v) => { setMuted(false); setVol(v / 100); }} />
-                <span className={'volpct' + (vol > 1 ? ' hot' : '')}>{volPct}%</span>
-              </span>
-            </div>
+            <button className="cbtn big" onClick={togglePlay} title="Play / pause (Space)" aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} s={24} /></button>
+            <button className="cbtn" onClick={() => skip(-10)} title="Back 10 seconds" aria-label="Back 10 seconds"><Icon n="back10" s={20} /></button>
+            <button className="cbtn" onClick={() => skip(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds"><Icon n="fwd10" s={20} /></button>
+            {next && <button className="cbtn" onClick={() => p.onNext(next)} title="Next episode (N)" aria-label="Next episode"><Icon n="next" s={20} /></button>}
+            <span className="vol">
+              <button className="cbtn" onClick={() => setMuted((x) => !x)} title="Mute (M)" aria-label="Mute"><Icon n={muted || vol === 0 ? 'mute' : 'volume'} s={20} /></button>
+              <Slider label="Volume" value={Math.round((muted ? 0 : vol) * 100)} min={0} max={Math.round(maxVol * 100)} step={5} onChange={(v) => { setMuted(false); setVol(v / 100); }} />
+              <span className={'volpct' + (vol > 1 ? ' hot' : '')}>{volPct}%</span>
+            </span>
             <span className="time">{clock(shown)} <i>/</i> {total ? clock(total) : '–:––'}</span>
             <span className="grow" />
-            <div className="ctl-right">
-              <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
-              {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track and language')}
-              <span className="morewrap">
-                <button className={winOpen || mini ? 'cbtn lit' : 'cbtn'} onClick={() => setWinOpen((o) => !o)} title="Cast, picture-in-picture and windows" aria-label="Cast and windows" aria-haspopup="menu" aria-expanded={winOpen}><Icon n="cast" s={20} /></button>
-                {winOpen && (
-                  <>
-                    <div className="amenu-bg" onClick={() => setWinOpen(false)} />
-                    <div className="amenu up" role="menu">
-                      <button onClick={() => { setWinOpen(false); setCastOpen((x) => !x); }}><Icon n="cast" s={16} /> Cast to a TV</button>
-                      <button onClick={() => { setWinOpen(false); pip(); }}><Icon n="pip" s={16} /> Picture-in-picture</button>
-                      {p.onFloat && <button onClick={() => { setWinOpen(false); p.onFloat!(true); }}><Icon n="exitfs" s={16} /> Mini player in the app</button>}
-                      {bridge && <><i className="amenu-sep" /><button onClick={() => { setWinOpen(false); toggleMini(); }}><Icon n="external" s={16} /> {mini ? 'Leave mini player' : 'Mini player over other apps'}</button><button onClick={() => { setWinOpen(false); popout(); }}><Icon n="grid" s={16} /> Pop out to a second screen</button></>}
-                    </div>
-                  </>
-                )}
-              </span>
-              {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
-              <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
-            </div>
+            <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
+            {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
+            {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track and language')}
+            <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
+            {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
+            {bridge && <button className="cbtn" onClick={popout} title="Pop out into its own window (for a second screen)" aria-label="Pop out"><Icon n="grid" s={20} /></button>}
+            <button className="cbtn" onClick={() => setCastOpen((x) => !x)} title="Cast to a TV (Chromecast or smart TV)" aria-label="Cast to a TV"><Icon n="cast" s={20} /></button>
+            {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
+            {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
+            <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
           </div>
         </div>
       </div>

@@ -422,23 +422,10 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         <div className="set-layout">
         <nav className="set-nav" aria-label="Settings sections">
           <input className="set-search" type="search" placeholder="Search settings" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
-          {([['Experience', ['look', 'play', 'subs']], ['Data and storage', ['data', 'offline']], ['System', ['app']]] as [string, Tab[]][]).map(([g, ids]) => (
-            <div key={g} className="set-group">
-              <small>{g}</small>
-              {TABS.filter((x) => ids.includes(x.id)).map((x) => <button key={x.id} className={tab === x.id ? 'on' : ''} onClick={() => setTab(x.id)}><Icon n={x.icon} s={16} /> {x.label}</button>)}
-            </div>
-          ))}
+          {TABS.map((x) => <button key={x.id} className={tab === x.id ? 'on' : ''} onClick={() => setTab(x.id)}><Icon n={x.icon} s={16} /> {x.label}</button>)}
         </nav>
         <div className="set-body">
         {q && <SearchResults q={q} onPick={(t) => { setTab(t); setQ(''); }} />}
-        {!q && (
-          <div className="quick" role="group" aria-label="Quick settings">
-            <button className={s.theme === 'dark' ? 'qcard on' : 'qcard'} onClick={() => set({ theme: s.theme === 'dark' ? 'light' : 'dark' })}><Icon n="moon" s={18} /><b>{s.theme === 'dark' ? 'Dark' : 'Light'}</b><small>Theme</small></button>
-            <button className={s.compact ? 'qcard on' : 'qcard'} onClick={() => set({ compact: !s.compact })}><Icon n="grid" s={18} /><b>{s.compact ? 'On' : 'Off'}</b><small>Compact</small></button>
-            <button className={s.thumbs ? 'qcard on' : 'qcard'} onClick={() => set({ thumbs: !s.thumbs })}><Icon n="film" s={18} /><b>{s.thumbs ? 'On' : 'Off'}</b><small>Thumbnails</small></button>
-            <button className="qcard" onClick={() => setTab('data')}><Icon n="bolt" s={18} /><b>{SAVER[s.saver]?.label ?? 'Data Saver'}</b><small>Data Saver</small></button>
-          </div>
-        )}
 
         {cur === 'look' && (
         <section>
