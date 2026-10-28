@@ -464,27 +464,110 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         {q && <SearchResults q={q} onPick={(t) => { setTab(t); setQ(''); }} />}
 
         {cur === 'look' && (
-        <section>
-          <h4>Look</h4>
-          <Field label="Accent color">
-            <span className="swatches">{Object.entries(ACCENTS).map(([name, c]) => (
-              <button key={name} className={s.accent === name ? 'sw-c on' : 'sw-c'} style={{ background: c }} title={name} aria-label={name} onClick={() => set({ accent: name })} />
-            ))}</span>
-          </Field>
-          <Field label="Theme">
-            <span className="seg" role="group" aria-label="Theme">
-              <button className={s.theme === 'dark' ? 'on' : ''} onClick={() => set({ theme: 'dark' })}>Dark</button>
-              <button className={s.theme === 'light' ? 'on' : ''} onClick={() => set({ theme: 'light' })}>Light</button>
-            </span>
-          </Field>
-          <Field label="Colour style">
-            <span className="swatches">{PRESETS.map((p) => <button key={p.id} className={s.themePreset === p.id ? 'swt on' : 'swt'} style={{ background: p.c }} title={p.name} aria-label={p.name} onClick={() => set({ themePreset: p.id })} />)}</span>
-          </Field>
-          <Field label="Custom accent colour" hint="Overrides the accent colour above">
-            <span className="inline"><input type="color" value={/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : '#8b7bff'} onChange={(e) => set({ accentCustom: e.target.value })} /><button className="btn ghost sm" onClick={() => set({ accentCustom: '' })}>Use the preset</button></span>
-          </Field>
-          <Field label="Compact mode" hint="Tighter spacing, good for small screens"><Toggle on={s.compact} label="Compact" onClick={() => set({ compact: !s.compact })} /></Field>
-          <Field label="Video thumbnails" hint="Made once on the server, then cached"><Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} /></Field>
+        <section className="look-panel">
+          <div className="look-block">
+            <div className="look-block-h">
+              <h4>Theme</h4>
+              <p className="muted small">Overall chrome for the app</p>
+            </div>
+            <div className="look-theme" role="group" aria-label="Theme">
+              <button type="button" className={s.theme === 'dark' ? 'look-theme-card on' : 'look-theme-card'} onClick={() => set({ theme: 'dark' })}>
+                <span className="look-theme-preview dark" aria-hidden="true" />
+                <span className="look-theme-meta"><b>Dark</b><small>Easy on the eyes at night</small></span>
+              </button>
+              <button type="button" className={s.theme === 'light' ? 'look-theme-card on' : 'look-theme-card'} onClick={() => set({ theme: 'light' })}>
+                <span className="look-theme-preview light" aria-hidden="true" />
+                <span className="look-theme-meta"><b>Light</b><small>Bright panels and text</small></span>
+              </button>
+            </div>
+          </div>
+
+          <div className="look-block">
+            <div className="look-block-h">
+              <h4>Accent</h4>
+              <p className="muted small">Highlights, buttons and focus rings</p>
+            </div>
+            <div className="look-accents">
+              {Object.entries(ACCENTS).map(([name, c]) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={s.accent === name && !s.accentCustom ? 'look-accent on' : 'look-accent'}
+                  onClick={() => set({ accent: name, accentCustom: '' })}
+                  title={name}
+                  aria-label={name}
+                >
+                  <i style={{ background: c }} />
+                  <span>{name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="look-custom">
+              <div className="look-custom-left">
+                <b>Custom colour</b>
+                <small className="muted">Overrides the preset above</small>
+              </div>
+              <div className="look-custom-right">
+                <label className="look-color-pick">
+                  <input
+                    type="color"
+                    value={/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542')}
+                    onChange={(e) => set({ accentCustom: e.target.value })}
+                    aria-label="Custom accent colour"
+                  />
+                  <span className="look-color-chip" style={{ background: /^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542') }} />
+                  <span className="look-color-hex">{(/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542')).toUpperCase()}</span>
+                </label>
+                {!!s.accentCustom && (
+                  <button type="button" className="btn ghost sm" onClick={() => set({ accentCustom: '' })}>Use preset</button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="look-block">
+            <div className="look-block-h">
+              <h4>Colour style</h4>
+              <p className="muted small">Tint behind panels and surfaces</p>
+            </div>
+            <div className="look-presets">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={s.themePreset === p.id ? 'look-preset on' : 'look-preset'}
+                  onClick={() => set({ themePreset: p.id })}
+                  aria-label={p.name}
+                >
+                  <i style={{ background: p.c }} />
+                  <span>{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="look-block">
+            <div className="look-block-h">
+              <h4>Display</h4>
+              <p className="muted small">Density and previews</p>
+            </div>
+            <div className="look-toggles">
+              <div className="look-toggle-row">
+                <div>
+                  <b>Compact mode</b>
+                  <small className="muted">Tighter spacing, good for small screens</small>
+                </div>
+                <Toggle on={s.compact} label="Compact" onClick={() => set({ compact: !s.compact })} />
+              </div>
+              <div className="look-toggle-row">
+                <div>
+                  <b>Video thumbnails</b>
+                  <small className="muted">Made once on the server, then cached</small>
+                </div>
+                <Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} />
+              </div>
+            </div>
+          </div>
         </section>
         )}
 
@@ -573,20 +656,38 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         )}
 
         {cur === 'look' && (
-        <section>
-          <h4>Library</h4>
-          <Field label="TMDB key" hint="Free at themoviedb.org. Adds posters, ratings and descriptions">
-            <span className="keybox">
-              <input value={kd.tmdb} onChange={(e) => setKd({ ...kd, tmdb: e.target.value })} placeholder="API key or read token" autoComplete="off" spellCheck={false} />
-              {kline('tmdb', !!srv?.tmdbKey)}
-              <span className="inline">
-                <button className="btn" disabled={kBusy === 'tmdb' || !kd.tmdb.trim()} onClick={() => saveTest('tmdb')}>{kBusy === 'tmdb' ? 'Checking…' : 'Save & test'}</button>
-                <button className="btn ghost" disabled={kBusy === 'tmdb'} onClick={() => clearKeys('tmdb')}>Remove</button>
-              </span>
-            </span>
-          </Field>
-          <Field label="Show posters instead of thumbnails" hint="Needs the TMDB key"><Toggle on={s.posters} label="Posters" onClick={() => set({ posters: !s.posters })} /></Field>
-          <Field label="Watching so far"><span>{hours.toFixed(1)} hours · {finished} finished</span></Field>
+        <section className="look-panel">
+          <div className="look-block">
+            <div className="look-block-h">
+              <h4>Library</h4>
+              <p className="muted small">Posters and watch stats</p>
+            </div>
+            <div className="look-tmdb">
+              <div className="look-tmdb-label">
+                <b>TMDB key</b>
+                <small className="muted">Free at themoviedb.org — posters, ratings and descriptions</small>
+              </div>
+              <div className="look-tmdb-row">
+                <input value={kd.tmdb} onChange={(e) => setKd({ ...kd, tmdb: e.target.value })} placeholder="API key or read token" autoComplete="off" spellCheck={false} />
+                <button type="button" className="btn" disabled={kBusy === 'tmdb' || !kd.tmdb.trim()} onClick={() => saveTest('tmdb')}>{kBusy === 'tmdb' ? 'Checking…' : 'Save & test'}</button>
+                <button type="button" className="btn ghost" disabled={kBusy === 'tmdb'} onClick={() => clearKeys('tmdb')}>Remove</button>
+              </div>
+              <div className="look-tmdb-status">{kline('tmdb', !!srv?.tmdbKey)}</div>
+            </div>
+            <div className="look-toggles">
+              <div className="look-toggle-row">
+                <div>
+                  <b>Show posters instead of thumbnails</b>
+                  <small className="muted">Needs the TMDB key</small>
+                </div>
+                <Toggle on={s.posters} label="Posters" onClick={() => set({ posters: !s.posters })} />
+              </div>
+            </div>
+            <div className="look-stat">
+              <span className="muted">Watching so far</span>
+              <b>{hours.toFixed(1)} hours · {finished} finished</b>
+            </div>
+          </div>
         </section>
         )}
 
