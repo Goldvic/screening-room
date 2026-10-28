@@ -107,7 +107,7 @@ function Art({ root, path, v, name }: { root: number; path: string; v: number; n
   );
 }
 
-function Details({ name, folder, meta, allTags, onMeta, remote, onClose, onPlay, onSave }: { name: string; folder: string; meta: ItemMeta; allTags: string[]; onMeta: (p: Partial<ItemMeta>) => void; remote: boolean; onClose: () => void; onPlay: () => void; onSave: () => void }) {
+function Details({ name, folder, meta, allTags, onMeta, remote, onClose, onPlay, onSave, size, prog }: { size?: number; prog?: Prog; name: string; folder: string; meta: ItemMeta; allTags: string[]; onMeta: (p: Partial<ItemMeta>) => void; remote: boolean; onClose: () => void; onPlay: () => void; onSave: () => void }) {
   const [m, setM] = useState<Meta | null | undefined>(undefined);
   const [err, setErr] = useState('');
   const t = parseTitle(name, folder);
@@ -128,45 +128,60 @@ function Details({ name, folder, meta, allTags, onMeta, remote, onClose, onPlay,
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+  const title = m?.title ?? t.title;
+  const yr = m?.year ?? t.year;
+  const part = !!prog && !prog.watched && prog.pos > 30;
+  const label = part ? 'Resume' : prog?.watched ? 'Watch again' : 'Play';
   return (
-    <div className="scrim" onClick={onClose}>
-      <div className="dialog wide details" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="About this video">
-        <div className="dlg-head"><h3>{m?.title ?? t.title}{(m?.year ?? t.year) ? ` (${m?.year ?? t.year})` : ''}</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
-        <div className="det-body">
-          {m?.poster && <img className="det-poster" alt="" src={`${posterUrl(name, folder)}&r=${pv}`} />}
-          <div>
-            {m === undefined && <p className="muted">Looking it up…</p>}
-            {m?.found && (
-              <>
-                <p className="small muted">{[m.rating ? `★ ${m.rating}` : '', ...(m.genres ?? [])].filter(Boolean).join(' · ')}</p>
-                <p>{m.overview || 'No description available.'}</p>
-              </>
-            )}
-            {m && !m.found && <p className="muted">Nothing found for “{t.title}”.</p>}
-            {err && <p className="muted">{err}</p>}
-            <button className="btn ghost sm" onClick={() => { setFix(!fix); setFq(t.title); setCands([]); }}><Icon n="search" s={14} /> {m?.found ? 'Wrong match?' : 'Find it manually'}</button>
-            {fix && (
-              <div className="fixbox">
-                <span className="inline"><input value={fq} onChange={(e) => setFq(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="Type the real title" /><button className="btn" disabled={fbusy} onClick={search}>Search</button></span>
-                {cands.map((c) => (
-                  <button key={c.kind + c.id} className="cand" onClick={() => choose(c)}>
-                    {c.poster ? <img alt="" src={c.poster} /> : <span className="cand-ph"><Icon n="film" s={18} /></span>}
-                    <span><b>{c.title}{c.year ? ` (${c.year})` : ''}</b><small>{c.kind === 'tv' ? 'Series' : 'Movie'} · {c.overview.slice(0, 90)}{c.overview.length > 90 ? '…' : ''}</small></span>
-                  </button>
-                ))}
+    <div className="scrim dt-scrim" onClick={onClose}>
+      <div className="dt" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="About this video">
+        {m?.poster && <div className="dt-bg" aria-hidden="true" style={{ backgroundImage: `url(${posterUrl(name, folder)}&r=${pv})` }} />}
+        <button className="dt-close" onClick={onClose} aria-label="Close"><Icon n="close" s={18} /></button>
+        <div className="dt-main">
+          <div className="dt-poster">{m?.poster ? <img alt="" src={`${posterUrl(name, folder)}&r=${pv}`} /> : <span className="dt-ph"><Icon n="film" s={38} /></span>}</div>
+          <div className="dt-info">
+            <div className="dt-chips">
+              {yr ? <span>{yr}</span> : null}
+              {m?.rating ? <span className="dt-star">★ {m.rating}</span> : null}
+              {(m?.genres ?? []).slice(0, 3).map((g) => <span key={g}>{g}</span>)}
+              {prog?.watched && <span className="dt-ok"><Icon n="check" s={12} /> Watched</span>}
+            </div>
+            <h2>{title}</h2>
+            {m === undefined && <div className="dt-skel"><i /><i /><i /></div>}
+            {m?.found && <p className="dt-over">{m.overview || 'No description available.'}</p>}
+            {m && !m.found && <p className="muted">Nothing found for “{t.title}”. You can search for it below.</p>}
+            {err && <p className="muted small">{err}</p>}
+            {part && prog && (
+              <div className="dt-prog">
+                <i className="bar"><b style={{ width: `${Math.min(100, (prog.pos / Math.max(1, prog.dur)) * 100)}%` }} /></i>
+                <span className="small muted">{clock(prog.pos)} watched{prog.dur > prog.pos ? ` · ${clock(prog.dur - prog.pos)} left` : ''}</span>
               </div>
             )}
-            <div className="msec">Your rating</div>
-            <Stars value={meta.r ?? 0} onChange={(n) => onMeta({ r: n })} />
-            <div className="msec">Tags</div>
-            <TagsEditor tags={meta.t ?? []} all={allTags} onChange={(t) => onMeta({ t })} />
-            <p className="small muted trunc" title={name}>{name}</p>
+            <div className="dt-actions">
+              <button className="btn big" onClick={onPlay}><Icon n="play" s={16} /> {label}</button>
+              {remote && <button className="btn ghost big" onClick={onSave}><Icon n="save" s={16} /> Save offline</button>}
+            </div>
           </div>
         </div>
-        <div className="dlg-actions">
-          {remote && <button className="btn ghost" onClick={onSave}><Icon n="save" s={15} /> Save for offline</button>}
-          <button className="btn" onClick={onPlay}><Icon n="play" s={15} /> Play</button>
+        <div className="dt-grid">
+          <section><h4>Your rating</h4><Stars value={meta.r ?? 0} onChange={(n) => onMeta({ r: n })} /></section>
+          <section><h4>Tags</h4><TagsEditor tags={meta.t ?? []} all={allTags} onChange={(t) => onMeta({ t })} /></section>
         </div>
+        <div className="dt-foot">
+          <span className="dt-file" title={name}><Icon n="film" s={14} /> <span>{name}</span>{size ? <em>{bytes(size)}</em> : null}</span>
+          <button className="dt-link" onClick={() => { setFix(!fix); setFq(t.title); setCands([]); }}>{m?.found ? 'Wrong match?' : 'Find it manually'}</button>
+        </div>
+        {fix && (
+          <div className="fixbox">
+            <span className="inline"><input autoFocus value={fq} onChange={(e) => setFq(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="Type the real title" /><button className="btn" disabled={fbusy} onClick={search}>Search</button></span>
+            {cands.map((c) => (
+              <button key={c.kind + c.id} className="cand" onClick={() => choose(c)}>
+                {c.poster ? <img alt="" src={c.poster} /> : <span className="cand-ph"><Icon n="film" s={18} /></span>}
+                <span><b>{c.title}{c.year ? ` (${c.year})` : ''}</b><small>{c.kind === 'tv' ? 'Series' : 'Movie'} · {c.overview.slice(0, 90)}{c.overview.length > 90 ? '…' : ''}</small></span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -227,6 +242,7 @@ function Library() {
   const [selecting, setSelecting] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [playlist, setPlaylist] = useState<string[] | null>(null);
+  const [libMenu, setLibMenu] = useState(false);
 
   const rootOf = (id: number | null) => roots.find((r) => r.id === id);
   const cur = rootOf(root);
@@ -536,7 +552,7 @@ function Library() {
     });
     const c = (a: Entry, b: Entry) => sort === 'new' ? b.mtime - a.mtime : sort === 'size' ? b.size - a.size : a.name.localeCompare(b.name, undefined, { numeric: true });
     return [...f.filter((i) => i.dir).sort(c), ...f.filter((i) => !i.dir).sort(c)];
-  }, [items, query, sort, s.filter, prog, favs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items, query, sort, s.filter, tagFilter, prog, favs]); // eslint-disable-line react-hooks/exhaustive-deps
   const folders = shown.filter((i) => i.dir);
   const files = shown.filter((i) => !i.dir);
   const posters = s.view !== 'list' ? files.filter((i) => VIDEO.test(i.name)) : [];
@@ -820,82 +836,96 @@ function Library() {
 
         {view === 'library' && (
           <>
-        <div className="pills">
-          {roots.map((r) => (
-            <button key={r.id} className={r.id === root ? 'pill on' : 'pill'} onClick={() => { setRoot(r.id); setDir(''); }} title={r.total ? `${bytes(r.free)} free of ${bytes(r.total)}` : r.dir}>
-              {r.opened ? <><Icon n="film" s={14} /> Opened files</> : r.offline ? <><Icon n="hdd" s={14} /> On this laptop</> : r.name}
-            </button>
-          ))}
-          <span className="grow" />
-          <span className="muted small">{hasServer ? (rootsErr ? `Cannot reach ${host}` : host ? `Connected to ${host}` : 'Connecting…') : 'No server set up'}</span>
+        <div className="lib-head">
+          <div className="lib-src" role="tablist" aria-label="Storage">
+            {roots.map((r) => (
+              <button key={r.id} role="tab" aria-selected={r.id === root} className={r.id === root ? 'lib-src-b on' : 'lib-src-b'} onClick={() => { setRoot(r.id); setDir(''); }} title={r.total ? `${bytes(r.free)} free of ${bytes(r.total)}` : r.dir}>
+                {r.opened ? <><Icon n="film" s={14} /> Opened files</> : r.offline ? <><Icon n="hdd" s={14} /> On this laptop</> : <><Icon n="server" s={14} /> {r.name}</>}
+              </button>
+            ))}
+            <span className="grow" />
+            <span className={rootsErr ? 'lib-status bad' : hasServer && host ? 'lib-status ok' : 'lib-status'}><i />{hasServer ? (rootsErr ? `Cannot reach ${host}` : host ? host : 'Connecting…') : 'No server set up'}</span>
+          </div>
+          <nav className="lib-crumbs" aria-label="Folder path">
+            {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
+            <button className={dir ? 'lib-crumb' : 'lib-crumb here'} onClick={() => setDir('')}>{opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? '…'}</button>
+            {crumbs.map((c, i) => <span key={i} className="lib-crumb-w"><em>›</em><button className={i === crumbs.length - 1 ? 'lib-crumb here' : 'lib-crumb'} onClick={() => setDir(crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
+          </nav>
         </div>
         {sibs.length > 1 && <div className="season-tabs" role="tablist">{sibs.map((n) => <button key={n} role="tab" aria-selected={n === dir.split('/').pop()} className={n === dir.split('/').pop() ? 'on' : ''} onClick={() => setDir(join(dirOf(dir), n))}>{n}</button>)}</div>}
         {dir && videos.length > 0 && (
           <section className="series-head">
+            <span className="series-bg" aria-hidden="true"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
             <span className="series-art"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
-            <div>
+            <div className="series-info">
               <h1>{crumbs[crumbs.length - 1]}</h1>
               <p className="muted">{videos.length} video{videos.length > 1 ? 's' : ''} · {seen.length} watched{videos.length - seen.length > 0 ? ` · ${videos.length - seen.length} to go` : ''}</p>
               <i className="bar"><b style={{ width: `${(seen.length / videos.length) * 100}%` }} /></i>
               <span className="inline sh-act">
-                {nextUp && <button className="btn" onClick={() => startPlay(nextUp.name)}><Icon n="next" s={15} /> {seen.length ? 'Next episode' : 'Start'}</button>}
-                {!offline && !opened && <button className="btn ghost" onClick={() => setRuleFor(true)} title="Keep new or upcoming episodes saved on this laptop"><Icon n="save" s={15} /> Auto-save…</button>}
+                {nextUp && <button className="btn big" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {seen.length ? 'Next episode' : 'Start'}</button>}
+                {!offline && !opened && <button className="btn ghost big" onClick={() => setRuleFor(true)} title="Keep new or upcoming episodes saved on this laptop"><Icon n="save" s={15} /> Auto-save…</button>}
               </span>
             </div>
           </section>
         )}
-        <header className="top">
-          <div className="crumbs">
-            {dir && <button className="icon" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" /></button>}
-            <button onClick={() => setDir('')}>{opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? '…'}</button>
-            {crumbs.map((c, i) => <span key={i}>/ <button onClick={() => setDir(crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
-          </div>
-          <div className="actions">
-            {nextUp && <button className="btn" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {nextUp.label}</button>}
-            {videos.length > 1 && <button className="btn ghost" onClick={randomPick} title="Pick something for me"><Icon n="random" s={16} /> Surprise me</button>}
-            {!offline && dir && <button className="btn ghost" onClick={() => setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 })}><Icon n="save" s={16} /> Save folder for offline</button>}
-            {seen.length > 0 && (
-              <button className="btn ghost" onClick={() => confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`)}>
-                <Icon n="trash" s={16} /> Delete {seen.length} watched
-              </button>
-            )}
-            {!offline && !bridge && dir && <a className="btn ghost" href={`/api/download?${qs({ root: rid, path: dir })}`}><Icon n="down" s={16} /> Download folder</a>}
-          </div>
-        </header>
 
         {items.length > 0 && (
-          <div className="tools">
-            <label className="search"><Icon n="search" s={16} /><input ref={search} placeholder="Search this folder  (press /)" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-            <select value={s.filter} onChange={(e) => set({ filter: e.target.value as Settings['filter'] })} aria-label="Show">
-              <option value="all">All</option><option value="unwatched">Not watched</option><option value="progress">In progress</option><option value="rated">Rated 4+ ★</option><option value="watched">Watched</option><option value="fav">Favorites</option>
-            </select>
-            {allTags.length > 0 && <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag"><option value="">All tags</option>{allTags.map((t) => <option key={t} value={t}>{t}</option>)}</select>}
-            <select value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
-              <option value="name">Name</option><option value="new">Newest</option><option value="size">Largest</option>
-            </select>
-            <button className="btn ghost" onClick={() => { refreshAll().then(() => flash('Refreshed')); }} title="Refresh (F5)"><Icon n="rotate" s={16} /> Refresh</button>
-            {videos.length > 1 && <button className={selecting ? 'btn' : 'btn ghost'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Pick several videos to play as a playlist"><Icon n="list" s={16} /> {selecting ? 'Done' : 'Select'}</button>}
-            {s.view !== 'list' && <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />}
-            <span className="seg" role="group" aria-label="View">
-              <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
-              <button className={s.view === 'list' ? 'on' : ''} onClick={() => set({ view: 'list' })} title="List view" aria-label="List view"><Icon n="list" s={16} /></button>
-              <button className={s.view === 'wall' ? 'on' : ''} onClick={() => set({ view: 'wall' })} title="Wall view: big posters" aria-label="Wall view"><Icon n="full" s={16} /></button>
-            </span>
+          <div className="lib-bar">
+            <div className="lib-row">
+              <label className="lib-search"><Icon n="search" s={16} /><input ref={search} placeholder="Search this folder" value={query} onChange={(e) => setQuery(e.target.value)} />{query ? <button className="lib-x" onClick={() => setQuery('')} aria-label="Clear search">×</button> : <kbd>/</kbd>}</label>
+              <span className="grow" />
+              <select className="lib-sel" value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
+                <option value="name">Sort: Name</option><option value="new">Sort: Newest</option><option value="size">Sort: Largest</option>
+              </select>
+              {s.view !== 'list' && <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />}
+              <span className="seg" role="group" aria-label="View">
+                <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
+                <button className={s.view === 'list' ? 'on' : ''} onClick={() => set({ view: 'list' })} title="List view" aria-label="List view"><Icon n="list" s={16} /></button>
+                <button className={s.view === 'wall' ? 'on' : ''} onClick={() => set({ view: 'wall' })} title="Wall view: big posters" aria-label="Wall view"><Icon n="full" s={16} /></button>
+              </span>
+              {videos.length > 1 && <button className={selecting ? 'lib-btn on' : 'lib-btn'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Select several videos"><Icon n="check" s={15} /> {selecting ? 'Done' : 'Select'}</button>}
+              {nextUp && !(dir && videos.length > 0) && <button className="btn" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {nextUp.label}</button>}
+              <div className="lib-more">
+                <button className={libMenu ? 'lib-ic on' : 'lib-ic'} onClick={() => setLibMenu((x) => !x)} title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded={libMenu}><Icon n="more" s={18} /></button>
+                {libMenu && (
+                  <>
+                    <div className="tn-back" onClick={() => setLibMenu(false)} />
+                    <div className="lib-menu" role="menu">
+                      <button role="menuitem" onClick={() => { setLibMenu(false); refreshAll().then(() => flash('Refreshed')); }}><Icon n="rotate" s={15} /> Refresh<kbd>F5</kbd></button>
+                      {videos.length > 1 && <button role="menuitem" onClick={() => { setLibMenu(false); randomPick(); }}><Icon n="bolt" s={15} /> Surprise me</button>}
+                      {!offline && dir && <button role="menuitem" onClick={() => { setLibMenu(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={15} /> Save folder for offline</button>}
+                      {!offline && !bridge && dir && <a role="menuitem" href={`/api/download?${qs({ root: rid, path: dir })}`} onClick={() => setLibMenu(false)}><Icon n="down" s={15} /> Download folder</a>}
+                      {seen.length > 0 && <><i className="amenu-sep" /><button role="menuitem" className="del" onClick={() => { setLibMenu(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete {seen.length} watched</button></>}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="lib-row lib-chips">
+              <div className="chips" role="group" aria-label="Show">
+                {([['all', 'All'], ['unwatched', 'Not watched'], ['progress', 'In progress'], ['fav', 'Favorites'], ['rated', 'Rated 4+'], ['watched', 'Watched']] as const).map(([id, label]) => (
+                  <button key={id} className={s.filter === id ? 'chipf on' : 'chipf'} aria-pressed={s.filter === id} onClick={() => set({ filter: id as Settings['filter'] })}>{label}</button>
+                ))}
+              </div>
+              {allTags.length > 0 && <select className="lib-sel" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag"><option value="">All tags</option>{allTags.map((t) => <option key={t} value={t}>{t}</option>)}</select>}
+              <span className="grow" />
+              <span className="lib-count">{shown.length === items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : `${shown.length} of ${items.length}`}</span>
+            </div>
           </div>
         )}
 
         {selecting && (
-          <div className="selbar" role="status">
-            <strong>{sel.length ? `${sel.length} selected` : 'Tap videos to add them to a playlist'}</strong>
-            <span className="inline">
-              <button className="btn ghost" onClick={() => setSel(videos)}>Select all</button>
-              <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play as playlist</button>
-              <button className="btn ghost danger" disabled={!sel.length} onClick={() => { const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete</button>
-              <button className="btn ghost" disabled={!sel.length} onClick={() => setAddTo(videos.filter((n) => sel.includes(n)))}><Icon n="folder" s={15} /> Add to collection</button>
-              <button className="btn ghost" disabled={!sel.length} onClick={savePlaylist}><Icon n="list" s={15} /> Save playlist</button>
-              {!offline && <button className="btn ghost" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Save offline</button>}
-              <button className="btn ghost" onClick={endSelect}>Cancel</button>
-            </span>
+          <div className="seldock" role="status">
+            <strong className="sd-n"><b>{sel.length}</b> selected</strong>
+            <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play</button>
+            <button className="sd-b" onClick={() => setSel(sel.length === videos.length ? [] : videos)}>{sel.length === videos.length ? 'Clear' : 'Select all'}</button>
+            <i className="sd-sep" />
+            <button className="sd-b" disabled={!sel.length} onClick={() => setAddTo(videos.filter((n) => sel.includes(n)))}><Icon n="folder" s={15} /> Collection</button>
+            <button className="sd-b" disabled={!sel.length} onClick={savePlaylist}><Icon n="list" s={15} /> Playlist</button>
+            {!offline && <button className="sd-b" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Offline</button>}
+            <button className="sd-b danger" disabled={!sel.length} onClick={() => { const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete</button>
+            <i className="sd-sep" />
+            <button className="sd-b" onClick={endSelect} aria-label="Cancel selection">Cancel</button>
           </div>
         )}
         {status === 'loading' && root !== null && <div className="skeletons" aria-label="Loading">{Array.from({ length: 10 }, (_, k) => <i key={k} />)}</div>}
@@ -914,7 +944,7 @@ function Library() {
             {folders.map((f) => (
               <div key={f.name} className="tile" style={{ '--h': hue(f.name) } as CSSProperties}>
                 <button className="tile-open" onClick={() => setDir(join(dir, f.name))}>
-                  <Icon n="folder" s={22} />
+                  <span className="tile-ic"><Icon n="folder" s={20} /></span>
                   <strong>{f.name}</strong>
                 </button>
                 <span className="tile-act">
@@ -928,7 +958,7 @@ function Library() {
         )}
 
         {posters.length > 0 && (
-          <ul className={s.posters ? 'posters portrait' : 'posters'}>
+          <ul className={(s.posters ? 'posters portrait' : 'posters') + (s.view === 'wall' ? ' wall' : '')}>
             {posters.map((it) => {
               const p = prog[pkey(it.name)];
               const part = p && !p.watched && p.pos > 30;
@@ -1002,7 +1032,7 @@ function Library() {
           onScheduled={(t) => { setTarget(null); flash(t); setPanel('downloads'); }}
           onQueued={(n) => { setTarget(null); flash(n ? `Added ${n} to Downloads` : 'Already saved or queued'); if (n) setPanel('downloads'); }} />
       )}
-      {detail && <Details name={detail} folder={dir} meta={metaOf(detail)} allTags={allTags} onMeta={(p) => setMetaFor(detail, p)} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
+      {detail && <Details name={detail} folder={dir} size={items.find((i) => i.name === detail)?.size} prog={prog[pkey(detail)]} meta={metaOf(detail)} allTags={allTags} onMeta={(p) => setMetaFor(detail, p)} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
       {addTo && <AddToCollection cols={cols} count={addTo.length} onClose={() => setAddTo(null)} onPick={(id, name) => {
         const rn = cur?.name ?? '';
         const ents = addTo.map((n) => ({ root: rn, path: join(dir, n) }));
