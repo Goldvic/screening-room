@@ -15,7 +15,10 @@ export function Rail({ title, hint, children }: { title: string; hint?: string; 
   const go = (d: -1 | 1) => row.current?.scrollBy({ left: d * Math.max(260, (row.current?.clientWidth ?? 600) * 0.85), behavior: 'smooth' });
   return (
     <section className="rail">
-      <div className="rail-h"><h2><i />{title}</h2>{hint && <span className="muted small">{hint}</span>}</div>
+      <div className="rail-h">
+        <h2>{title}</h2>
+        {hint && <span className="rail-hint">{hint}</span>}
+      </div>
       <div className="rail-wrap">
         <button className="rail-arrow l" onClick={() => go(-1)} aria-label="Scroll left"><Icon n="back" s={18} /></button>
         <div className="rail-row" ref={row}>{children}</div>

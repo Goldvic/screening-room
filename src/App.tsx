@@ -243,6 +243,7 @@ function Library() {
   const [sel, setSel] = useState<string[]>([]);
   const [playlist, setPlaylist] = useState<string[] | null>(null);
   const [libMenu, setLibMenu] = useState(false);
+  const [sortMenu, setSortMenu] = useState(false);
 
   const rootOf = (id: number | null) => roots.find((r) => r.id === id);
   const cur = rootOf(root);
@@ -853,6 +854,74 @@ function Library() {
           </nav>
         </div>
         {sibs.length > 1 && <div className="season-tabs" role="tablist">{sibs.map((n) => <button key={n} role="tab" aria-selected={n === dir.split('/').pop()} className={n === dir.split('/').pop() ? 'on' : ''} onClick={() => setDir(join(dirOf(dir), n))}>{n}</button>)}</div>}
+        {items.length > 0 && (
+          <div className="lib-bar c2">
+            <div className="lib-c2-title">
+              {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
+              <div className="lib-c2-text">
+                <h1 className="lib-c2-h">{dir ? (crumbs[crumbs.length - 1] || 'Library') : (opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? 'Library')}</h1>
+                <p className="lib-c2-sub">
+                  {dir && crumbs.length > 1 ? `${crumbs.slice(0, -1).join(' · ')} · ` : ''}
+                  {shown.length === items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : `${shown.length} of ${items.length}`}
+                </p>
+              </div>
+              <div className="lib-quiet" role="toolbar" aria-label="Library tools">
+                <div className="lib-sort-wrap">
+                  <button type="button" className={sortMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setSortMenu((x) => !x); setLibMenu(false); }} aria-haspopup="menu" aria-expanded={sortMenu}>
+                    Sort · {sort === 'name' ? 'Name' : sort === 'new' ? 'Newest' : 'Largest'} ▾
+                  </button>
+                  {sortMenu && (
+                    <>
+                      <div className="tn-back" onClick={() => setSortMenu(false)} />
+                      <div className="lib-sort-menu" role="menu">
+                        <div className="lib-menu-lab">Sort by</div>
+                        {([['name', 'Name'], ['new', 'Newest'], ['size', 'Largest']] as const).map(([id, label]) => (
+                          <button key={id} role="menuitem" className={sort === id ? 'on' : ''} onClick={() => { setSort(id); setSortMenu(false); }}>{label}{sort === id ? ' ✓' : ''}</button>
+                        ))}
+                        {s.view !== 'list' && (
+                          <>
+                            <div className="lib-menu-lab">Poster size</div>
+                            <div className="lib-dens-row">
+                              <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <button type="button" className={s.view === 'grid' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'grid' })}>Grid</button>
+                <button type="button" className={s.view === 'list' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'list' })}>List</button>
+                <button type="button" className={s.view === 'wall' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'wall' })}>Wall</button>
+                {videos.length > 1 && (
+                  <button type="button" className={selecting ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => (selecting ? endSelect() : setSelecting(true))}>{selecting ? 'Done' : 'Select'}</button>
+                )}
+                {nextUp && !(dir && videos.length > 0) && <button className="btn sm" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={14} /> {nextUp.label}</button>}
+                <div className="lib-more">
+                  <button type="button" className={libMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setLibMenu((x) => !x); setSortMenu(false); }} aria-haspopup="menu" aria-expanded={libMenu} title="More"><Icon n="more" s={16} /></button>
+                  {libMenu && (
+                    <>
+                      <div className="tn-back" onClick={() => setLibMenu(false)} />
+                      <div className="lib-menu" role="menu">
+                        <button role="menuitem" onClick={() => { setLibMenu(false); refreshAll().then(() => flash('Refreshed')); }}><Icon n="rotate" s={15} /> Refresh<kbd>F5</kbd></button>
+                        {videos.length > 1 && <button role="menuitem" onClick={() => { setLibMenu(false); randomPick(); }}><Icon n="bolt" s={15} /> Surprise me</button>}
+                        {!offline && dir && <button role="menuitem" onClick={() => { setLibMenu(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={15} /> Save folder for offline</button>}
+                        {!offline && !bridge && dir && <a role="menuitem" href={`/api/download?${qs({ root: rid, path: dir })}`} onClick={() => setLibMenu(false)}><Icon n="down" s={15} /> Download folder</a>}
+                        {seen.length > 0 && <><i className="amenu-sep" /><button role="menuitem" className="del" onClick={() => { setLibMenu(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete {seen.length} watched</button></>}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <label className="lib-search c2">
+              <Icon n="search" s={16} />
+              <input ref={search} placeholder="Search this folder" value={query} onChange={(e) => setQuery(e.target.value)} />
+              {query ? <button className="lib-x" onClick={() => setQuery('')} aria-label="Clear search">×</button> : <kbd>/</kbd>}
+            </label>
+
+
         {dir && videos.length > 0 && (
           <section className="series-head">
             <span className="series-bg" aria-hidden="true"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
@@ -869,47 +938,18 @@ function Library() {
           </section>
         )}
 
-        {items.length > 0 && (
-          <div className="lib-bar">
-            <div className="lib-row">
-              <label className="lib-search"><Icon n="search" s={16} /><input ref={search} placeholder="Search this folder" value={query} onChange={(e) => setQuery(e.target.value)} />{query ? <button className="lib-x" onClick={() => setQuery('')} aria-label="Clear search">×</button> : <kbd>/</kbd>}</label>
-              <span className="grow" />
-              <select className="lib-sel" value={sort} onChange={(e) => setSort(e.target.value as any)} aria-label="Sort">
-                <option value="name">Sort: Name</option><option value="new">Sort: Newest</option><option value="size">Sort: Largest</option>
-              </select>
-              {s.view !== 'list' && <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />}
-              <span className="seg" role="group" aria-label="View">
-                <button className={s.view === 'grid' ? 'on' : ''} onClick={() => set({ view: 'grid' })} title="Poster view" aria-label="Poster view"><Icon n="grid" s={16} /></button>
-                <button className={s.view === 'list' ? 'on' : ''} onClick={() => set({ view: 'list' })} title="List view" aria-label="List view"><Icon n="list" s={16} /></button>
-                <button className={s.view === 'wall' ? 'on' : ''} onClick={() => set({ view: 'wall' })} title="Wall view: big posters" aria-label="Wall view"><Icon n="full" s={16} /></button>
-              </span>
-              {videos.length > 1 && <button className={selecting ? 'lib-btn on' : 'lib-btn'} onClick={() => (selecting ? endSelect() : setSelecting(true))} title="Select several videos"><Icon n="check" s={15} /> {selecting ? 'Done' : 'Select'}</button>}
-              {nextUp && !(dir && videos.length > 0) && <button className="btn" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {nextUp.label}</button>}
-              <div className="lib-more">
-                <button className={libMenu ? 'lib-ic on' : 'lib-ic'} onClick={() => setLibMenu((x) => !x)} title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded={libMenu}><Icon n="more" s={18} /></button>
-                {libMenu && (
-                  <>
-                    <div className="tn-back" onClick={() => setLibMenu(false)} />
-                    <div className="lib-menu" role="menu">
-                      <button role="menuitem" onClick={() => { setLibMenu(false); refreshAll().then(() => flash('Refreshed')); }}><Icon n="rotate" s={15} /> Refresh<kbd>F5</kbd></button>
-                      {videos.length > 1 && <button role="menuitem" onClick={() => { setLibMenu(false); randomPick(); }}><Icon n="bolt" s={15} /> Surprise me</button>}
-                      {!offline && dir && <button role="menuitem" onClick={() => { setLibMenu(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={15} /> Save folder for offline</button>}
-                      {!offline && !bridge && dir && <a role="menuitem" href={`/api/download?${qs({ root: rid, path: dir })}`} onClick={() => setLibMenu(false)}><Icon n="down" s={15} /> Download folder</a>}
-                      {seen.length > 0 && <><i className="amenu-sep" /><button role="menuitem" className="del" onClick={() => { setLibMenu(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete {seen.length} watched</button></>}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
             <div className="lib-row lib-chips">
               <div className="chips" role="group" aria-label="Show">
                 {([['all', 'All'], ['unwatched', 'Not watched'], ['progress', 'In progress'], ['fav', 'Favorites'], ['rated', 'Rated 4+'], ['watched', 'Watched']] as const).map(([id, label]) => (
                   <button key={id} className={s.filter === id ? 'chipf on' : 'chipf'} aria-pressed={s.filter === id} onClick={() => set({ filter: id as Settings['filter'] })}>{label}</button>
                 ))}
               </div>
-              {allTags.length > 0 && <select className="lib-sel" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag"><option value="">All tags</option>{allTags.map((t) => <option key={t} value={t}>{t}</option>)}</select>}
-              <span className="grow" />
-              <span className="lib-count">{shown.length === items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : `${shown.length} of ${items.length}`}</span>
+              {allTags.length > 0 && (
+                <select className="lib-sel quiet" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag">
+                  <option value="">All tags</option>
+                  {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              )}
             </div>
           </div>
         )}

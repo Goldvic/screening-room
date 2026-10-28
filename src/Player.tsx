@@ -763,13 +763,13 @@ export default function Player(p: Props) {
         {intro && <button className="skipintro" onClick={() => seekTo(intro.end)}><Icon n="skip" s={16} /> Skip intro</button>}
 
         <div className="hud top">
-          <button className="cbtn" onClick={p.onClose} title="Back (Esc)" aria-label="Back to library"><Icon n="back" s={22} /></button>
+          <button className="cbtn back" onClick={p.onClose} title="Back (Esc)" aria-label="Back to library"><Icon n="back" s={20} /></button>
           <div className="ttl">
-            <strong className="full" title={p.name}>{p.name.replace(/\.[^.]+$/, '')}</strong>
+            <strong className="full" title={p.name}>{title.title || p.name.replace(/\.[^.]+$/, '')}</strong>
             <span>
-              {p.dir ? `${p.dir.split('/').join(' › ')} · ` : ''}
-              {info.width ? `${info.width}×${info.height}${info.codec ? ' ' + info.codec.toUpperCase() : ''}` : p.opened ? 'Playing from your computer' : p.offline ? 'Playing from this laptop' : 'Streaming from your server'}
-              {p.offline && info.width ? ' · offline' : ''}{ds > 0 && !p.offline ? ` · Data Saver ${SAVER[ds].label}` : ''}
+              {title.season && title.episode ? `S${String(title.season).padStart(2, '0')}E${String(title.episode).padStart(2, '0')}` : (p.dir ? p.dir.split('/').filter(Boolean).slice(-2).join(' › ') : '')}
+              {info.width ? ` · ${info.width}×${info.height}${info.codec ? ' ' + info.codec.toUpperCase() : ''}` : ''}
+              {p.offline ? ' · Offline' : ds > 0 ? ` · Saver ${SAVER[ds].label}` : ''}
             </span>
           </div>
           {p.playlist && idx >= 0 && <span className="chip" title="Position in your playlist"><Icon n="list" s={15} /><b>{idx + 1} / {p.videos.length}</b></span>}
@@ -860,9 +860,11 @@ export default function Player(p: Props) {
         {toast && <div className="ptoast">{toast}</div>}
 
         {menu && (
-          <div className="menu" onClick={(e) => e.stopPropagation()}>
+          <div className="menu sheet-up de-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="menu-accent" aria-hidden="true" />
             <div className="menu-h">
               <strong>{{ quality: 'Quality and data', speed: 'Speed', aspect: 'Screen shape', subs: 'Subtitles', audio: 'Audio track', sound: 'Sound', picture: 'Picture', chapters: 'Chapters', more: 'More' }[menu]}</strong>
+              <span className="menu-sub">{{ quality: 'How this video streams', speed: 'Playback rate', aspect: 'Fit on screen', subs: 'Captions and timing', audio: 'Track and language', sound: 'Volume, EQ, boost', picture: 'Brightness and color', chapters: 'Jump to a chapter', more: 'Bookmarks, tools, sleep' }[menu]}</span>
               <button className="cbtn sm" onClick={() => setMenu(null)} aria-label="Close menu"><Icon n="close" s={16} /></button>
             </div>
             <div className="menu-tabs" role="tablist">
@@ -870,6 +872,7 @@ export default function Player(p: Props) {
                 <button key={id} role="tab" aria-selected={menu === id} className={menu === id ? 'on' : ''} onClick={() => (id === 'sound' ? (menu !== 'sound' && openSound()) : setMenu(id))}>{l}</button>
               ))}
             </div>
+            <div className="menu-body">
 
             {menu === 'quality' && (
               <>
@@ -1056,6 +1059,7 @@ export default function Player(p: Props) {
                 <p className="mnote keys">Space play · ←/→ 10s · ↑/↓ or wheel volume (to {Math.round(maxVol * 100)}%) · F fullscreen · C subtitles · G sound · A screen shape · &lt; &gt; speed · B loop · D bookmark · E frame · 0–9 jump · N next · I stats</p>
               </>
             )}
+            </div>
           </div>
         )}
 
@@ -1082,27 +1086,32 @@ export default function Player(p: Props) {
             )}
           </div>
           <div className="ctl">
-            <button className="cbtn big" onClick={togglePlay} title="Play / pause (Space)" aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} s={24} /></button>
-            <button className="cbtn" onClick={() => skip(-10)} title="Back 10 seconds" aria-label="Back 10 seconds"><Icon n="back10" s={20} /></button>
-            <button className="cbtn" onClick={() => skip(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds"><Icon n="fwd10" s={20} /></button>
-            {next && <button className="cbtn" onClick={() => p.onNext(next)} title="Next episode (N)" aria-label="Next episode"><Icon n="next" s={20} /></button>}
-            <span className="vol">
-              <button className="cbtn" onClick={() => setMuted((x) => !x)} title="Mute (M)" aria-label="Mute"><Icon n={muted || vol === 0 ? 'mute' : 'volume'} s={20} /></button>
-              <Slider label="Volume" value={Math.round((muted ? 0 : vol) * 100)} min={0} max={Math.round(maxVol * 100)} step={5} onChange={(v) => { setMuted(false); setVol(v / 100); }} />
-              <span className={'volpct' + (vol > 1 ? ' hot' : '')}>{volPct}%</span>
-            </span>
-            <span className="time">{clock(shown)} <i>/</i> {total ? clock(total) : '–:––'}</span>
+            <div className="ctl-zone transport">
+              <button className="cbtn big" onClick={togglePlay} title="Play / pause (Space)" aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} s={24} /></button>
+              <button className="cbtn" onClick={() => skip(-10)} title="Back 10 seconds" aria-label="Back 10 seconds"><Icon n="back10" s={20} /></button>
+              <button className="cbtn" onClick={() => skip(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds"><Icon n="fwd10" s={20} /></button>
+              {next && <button className="cbtn" onClick={() => p.onNext(next)} title="Next episode (N)" aria-label="Next episode"><Icon n="next" s={20} /></button>}
+            </div>
+            <div className="ctl-zone status">
+              <span className="vol">
+                <button className="cbtn" onClick={() => setMuted((x) => !x)} title="Mute (M)" aria-label="Mute"><Icon n={muted || vol === 0 ? 'mute' : 'volume'} s={20} /></button>
+                <Slider label="Volume" value={Math.round((muted ? 0 : vol) * 100)} min={0} max={Math.round(maxVol * 100)} step={5} onChange={(v) => { setMuted(false); setVol(v / 100); }} />
+                <span className={'volpct' + (vol > 1 ? ' hot' : '')}>{volPct}%</span>
+              </span>
+              <span className="time">{clock(shown)} <i>/</i> {total ? clock(total) : '–:––'}</span>
+            </div>
             <span className="grow" />
-            <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
-            {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
-            {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track and language')}
-            <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
-            {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
-            {bridge && <button className="cbtn" onClick={popout} title="Pop out into its own window (for a second screen)" aria-label="Pop out"><Icon n="grid" s={20} /></button>}
-            <button className="cbtn" onClick={() => setCastOpen((x) => !x)} title="Cast to a TV (Chromecast or smart TV)" aria-label="Cast to a TV"><Icon n="cast" s={20} /></button>
-            {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
-            {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
-            <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
+            <div className="ctl-zone tools">
+              <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
+              {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
+              <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
+              {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
+              {bridge && <button className="cbtn" onClick={popout} title="Pop out into its own window (for a second screen)" aria-label="Pop out"><Icon n="grid" s={20} /></button>}
+              <button className="cbtn" onClick={() => setCastOpen((x) => !x)} title="Cast to a TV (Chromecast or smart TV)" aria-label="Cast to a TV"><Icon n="cast" s={20} /></button>
+              {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
+              {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
+              <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
+            </div>
           </div>
         </div>
       </div>

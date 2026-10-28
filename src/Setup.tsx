@@ -73,14 +73,23 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
   };
 
   const inner = (
-    <div className={firstRun ? 'setup-card' : 'dialog wide'} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Servers">
+    <div className={firstRun ? 'setup-card' : 'dialog wide de-settings'} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Servers">
       {firstRun ? (
         <div className="welcome">
           <h2>Sign in to your server</h2>
-          <p className="muted small">Enter where your movies live. Your key or password is stored encrypted on this computer.</p>
+          <p className="muted small">Enter where your movies live. Your key or password stays encrypted on this computer.</p>
         </div>
       ) : (
-        <div className="dlg-head"><h3>Servers</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
+        <>
+          <div className="set-accent" aria-hidden="true" />
+          <div className="dlg-head">
+            <div>
+              <h3>Servers</h3>
+              <span className="dlg-sub">Where your library lives</span>
+            </div>
+            <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+          </div>
+        </>
       )}
 
       {!form && (

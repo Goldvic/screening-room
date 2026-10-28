@@ -227,8 +227,15 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
 
   return (
     <div className="scrim side" onClick={onClose}>
-      <aside className="drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Downloads">
-        <div className="dlg-head"><h3>Downloads</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
+      <aside className="drawer de-drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Downloads">
+        <div className="drawer-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Downloads</h3>
+            <span className="dlg-sub">Queue, scheduled and finished</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
         <RulesBlock />
         {sched.length > 0 && (
           <div className="sched">
@@ -307,8 +314,15 @@ export function StoragePanel({ onClose, onPlay, onChanged }: { onClose: () => vo
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Storage">
-        <div className="dlg-head"><h3>Storage</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
+      <div className="dialog wide de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Storage">
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Storage</h3>
+            <span className="dlg-sub">Saved copies on this laptop</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
         {err && <p className="err-t">{err}</p>}
         {d && (
           <>

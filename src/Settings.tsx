@@ -417,8 +417,15 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
-        <div className="dlg-head"><h3>Settings</h3><button className="icon" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button></div>
+      <div className="dialog wide settings de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Settings</h3>
+            <span className="dlg-sub">Look, playback, data and offline</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button>
+        </div>
         <div className="set-layout">
         <nav className="set-nav" aria-label="Settings sections">
           <input className="set-search" type="search" placeholder="Search settings" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />

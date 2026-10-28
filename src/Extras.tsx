@@ -72,8 +72,15 @@ export function AddToCollection({ cols, count, onPick, onClose }: { cols: Collec
   const [name, setName] = useState('');
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add to collection">
-        <h3>Add {count} video{count > 1 ? 's' : ''} to a collection</h3>
+      <div className="dialog de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add to collection">
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Add to collection</h3>
+            <span className="dlg-sub">{count} video{count > 1 ? 's' : ''} selected</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
         <div className="pickl">{cols.map((c) => <button key={c.id} className="opt" onClick={() => onPick(c.id)}><span><b>{c.name}</b><small>{c.items.length} videos</small></span></button>)}</div>
         <div className="msec">Or make a new one</div>
         <span className="inline"><input autoFocus value={name} placeholder="Collection name" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onPick('new', name.trim())} />
@@ -90,9 +97,15 @@ export function HomeCustomize({ rows, onChange, onClose }: { rows: HomeRow[]; on
   const move = (i: number, d: -1 | 1) => { const r = [...rows]; [r[i], r[i + d]] = [r[i + d], r[i]]; onChange(r); };
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Customise Home">
-        <h3>Customise Home</h3>
-        <p className="muted small">Choose which rows show and in what order.</p>
+      <div className="dialog de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Customise Home">
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Customise Home</h3>
+            <span className="dlg-sub">Which rows show, and in what order</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
         <ol className="rowlist">
           {rows.map((r, i) => (
             <li key={r.id}>
@@ -123,12 +136,16 @@ export function Tour({ onDone }: { onDone: () => void }) {
   const st = STEPS[n];
   return (
     <div className="scrim">
-      <div className="dialog tour" role="dialog" aria-label="Welcome tour">
-        <span className="tour-ic"><Icon n={st.i} s={30} /></span>
-        <h3>{st.t}</h3><p className="muted">{st.d}</p>
+      <div className="dialog tour de-tour" role="dialog" aria-label="Welcome tour">
+        <div className="set-accent" aria-hidden="true" />
+        <span className="tour-ic"><Icon n={st.i} s={28} /></span>
+        <h3>{st.t}</h3>
+        <p className="muted">{st.d}</p>
         <div className="tour-dots">{STEPS.map((_, i) => <i key={i} className={i === n ? 'on' : ''} />)}</div>
-        <div className="dlg-actions"><button className="btn ghost" onClick={onDone}>Skip</button>
-          <button className="btn" onClick={() => (n === STEPS.length - 1 ? onDone() : setN(n + 1))}>{n === STEPS.length - 1 ? 'Start' : 'Next'}</button></div>
+        <div className="dlg-actions">
+          <button className="btn ghost" onClick={onDone}>Skip</button>
+          <button className="btn" onClick={() => (n === STEPS.length - 1 ? onDone() : setN(n + 1))}>{n === STEPS.length - 1 ? 'Start' : 'Next'}</button>
+        </div>
       </div>
     </div>
   );
@@ -166,8 +183,15 @@ export function Tidy({ onClose, onChanged }: { onClose: () => void; onChanged: (
   };
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Tidy saved videos">
-        <div className="dlg-head"><h3>Tidy saved videos</h3><button className="icon" onClick={onClose} aria-label="Close"><Icon n="close" /></button></div>
+      <div className="dialog wide de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Tidy saved videos">
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Tidy saved videos</h3>
+            <span className="dlg-sub">Duplicates and health checks</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
         {!items ? <p className="muted">Looking…</p> : (
           <>
             <div className="msec">Possible duplicates</div>
@@ -218,8 +242,15 @@ export function RuleDialog({ root, dir, label, onClose, onDone }: { root: number
   };
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Auto-save">
-        <h3>Auto-save “{label}”</h3>
+      <div className="dialog de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Auto-save">
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>Auto-save</h3>
+            <span className="dlg-sub">{label}</span>
+          </div>
+          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
         <button className={mode === 'next3' ? 'opt on' : 'opt'} onClick={() => setMode('next3')}><span><b>Keep the next 3 unwatched episodes</b><small>As you watch, the following episodes are saved to this laptop</small></span></button>
         <button className={mode === 'new' ? 'opt on' : 'opt'} onClick={() => setMode('new')}><span><b>Save new episodes</b><small>Anything added to this folder from now on</small></span></button>
         <div className="msec">Quality</div>
@@ -331,8 +362,14 @@ export function CastDialog({ title, stream, getPos, onStart, onClose }: { title:
   const ctl = (action: string, value?: number) => post('cast/control', { action, value }).catch((e) => setErr(e.message));
   const fmt = (x: number) => { x = Math.max(0, Math.floor(x)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
   return (
-    <div className="castbox" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Cast to a TV">
-      <div className="castbox-h"><b><Icon n="cast" s={16} /> Cast to a TV</b><button className="cbtn sm" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button></div>
+    <div className="castbox de-cast" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Cast to a TV">
+      <div className="castbox-h">
+        <div>
+          <b><Icon n="cast" s={16} /> Cast to a TV</b>
+          <span className="dlg-sub">Same Wi‑Fi as this laptop</span>
+        </div>
+        <button className="cbtn sm" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
+      </div>
       {st ? (
         <div className="castctl">
           <span className="muted small">Playing on</span><b>{st.device}</b>
