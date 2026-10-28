@@ -73,7 +73,7 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
   };
 
   const inner = (
-    <div className={firstRun ? 'setup-card' : 'dialog wide de-settings'} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Servers">
+    <div className={firstRun ? 'setup-card' : 'dialog srv-dialog'} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Servers">
       {firstRun ? (
         <div className="welcome">
           <h2>Sign in to your server</h2>
@@ -93,24 +93,34 @@ export default function Setup({ firstRun, onClose, onChanged, onOffline }: {
       )}
 
       {!form && (
-        <>
-          {list.servers.map((s) => (
-            <div key={s.id} className={s.id === list.active ? 'srv on' : 'srv'}>
-              <Icon n="server" s={22} />
-              <div className="srv-t"><strong>{s.name}</strong><span className="muted small">{s.user}@{s.host}{s.port !== 22 ? `:${s.port}` : ''}</span></div>
-              {s.id === list.active ? <span className="tag">In use</span> : <button className="btn ghost" onClick={() => use(s.id)}>Use</button>}
-              <button className="btn ghost" onClick={() => { setForm(toForm(s)); setTest(null); }}>Edit</button>
-              <button className="icon danger" onClick={() => remove(s)} aria-label={`Remove ${s.name}`}><Icon n="trash" s={16} /></button>
-            </div>
-          ))}
-          <div className="dlg-actions spread">
-            <button className="btn" onClick={() => { setForm(blank); setTest(null); }}><Icon n="plus" s={15} /> Add a server</button>
+        <div className="srv-panel">
+          <div className="srv-list">
+            {list.servers.map((s) => (
+              <div key={s.id} className={s.id === list.active ? 'srv-card on' : 'srv-card'}>
+                <span className="srv-card-ico"><Icon n="server" s={18} /></span>
+                <div className="srv-card-text">
+                  <strong>{s.name}</strong>
+                  <span className="muted">{s.user}@{s.host}{s.port !== 22 ? `:${s.port}` : ''}</span>
+                </div>
+                <div className="srv-card-acts">
+                  {s.id === list.active
+                    ? <span className="srv-inuse">In use</span>
+                    : <button type="button" className="btn ghost sm" onClick={() => use(s.id)}>Use</button>}
+                  <button type="button" className="btn ghost sm" onClick={() => { setForm(toForm(s)); setTest(null); }}>Edit</button>
+                  <button type="button" className="icon danger" onClick={() => remove(s)} aria-label={`Remove ${s.name}`}><Icon n="trash" s={16} /></button>
+                </div>
+              </div>
+            ))}
+            {!list.servers.length && <p className="st-empty">No servers yet. Add one to stream your library.</p>}
           </div>
-        </>
+          <div className="srv-foot">
+            <button type="button" className="btn" onClick={() => { setForm(blank); setTest(null); }}><Icon n="plus" s={15} /> Add a server</button>
+          </div>
+        </div>
       )}
 
       {form && (
-        <div className="sform">
+        <div className="sform srv-form">
           <F label="Name" hint="Anything you like"><input value={form.name} onChange={(e) => up({ name: e.target.value })} placeholder="My VPS" /></F>
           <F label="Address" hint="IP address or domain of the server"><input value={form.host} onChange={(e) => up({ host: e.target.value })} placeholder="203.0.113.10" autoFocus /></F>
           <div className="two">

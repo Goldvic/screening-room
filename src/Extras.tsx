@@ -247,37 +247,63 @@ export function Tidy({ onClose, onChanged }: { onClose: () => void; onChanged: (
   const row = (f: SavedItem) => {
     const c = checks[f.rel];
     return (
-      <li key={f.rel}>
-        <span className="pl-n" title={f.rel}>{f.name}</span><span className="muted small">{bytes(f.size)}</span>
-        <span className="inline">
-          {c && c !== 'busy' && <span className={'kstat ' + (c.ok ? 'ok' : 'bad')} title={c.note}>{c.ok ? '✓ OK' : '✕ Problem'}</span>}
-          <button className="btn ghost sm" disabled={c === 'busy'} onClick={() => check(f)}>{c === 'busy' ? '…' : 'Check'}</button>
-          <button className="btn ghost sm danger" onClick={() => del(f)}>Delete</button>
-        </span>
-      </li>
+      <div key={f.rel} className="tidy-row">
+        <div className="tidy-row-main">
+          <strong title={f.rel}>{f.name}</strong>
+          <span className="muted">{bytes(f.size)}</span>
+        </div>
+        <div className="tidy-row-acts">
+          {c && c !== 'busy' && <span className={'tidy-badge ' + (c.ok ? 'ok' : 'bad')} title={c.note}>{c.ok ? 'OK' : 'Issue'}</span>}
+          <button type="button" className="btn ghost sm" disabled={c === 'busy'} onClick={() => check(f)}>{c === 'busy' ? '…' : 'Check'}</button>
+          <button type="button" className="btn ghost sm danger" onClick={() => del(f)}>Delete</button>
+        </div>
+      </div>
     );
   };
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Tidy saved videos">
-        <div className="set-accent" aria-hidden="true" />
-        <div className="dlg-head">
+      <div className="dialog tidy-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Tidy saved videos">
+        <div className="st-accent" aria-hidden="true" />
+        <header className="st-head">
           <div>
             <h3>Tidy saved videos</h3>
-            <span className="dlg-sub">Duplicates and health checks</span>
+            <p>Duplicates and health checks</p>
           </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+          <button type="button" className="st-x" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
+        </header>
+        <div className="tidy-body">
+          {!items ? (
+            <p className="muted">Looking…</p>
+          ) : (
+            <>
+              <section className="look-block">
+                <div className="look-block-h">
+                  <h4>Possible duplicates</h4>
+                  <p className="muted small">Same title saved more than once</p>
+                </div>
+                {dups.length ? dups.map((g, i) => (
+                  <div key={i} className="tidy-group">{g.sort((a, b) => b.size - a.size).map(row)}</div>
+                )) : (
+                  <p className="st-empty">No video is saved twice.</p>
+                )}
+              </section>
+              <section className="look-block">
+                <div className="look-block-h tidy-health-h">
+                  <div>
+                    <h4>Health check</h4>
+                    <p className="muted small">Matches server size and plays to the end</p>
+                  </div>
+                  {!!items.length && <button type="button" className="btn" onClick={checkAll}>Check all</button>}
+                </div>
+                {!items.length ? (
+                  <p className="st-empty">Nothing is saved on this laptop yet.</p>
+                ) : (
+                  <div className="tidy-list">{items.map(row)}</div>
+                )}
+              </section>
+            </>
+          )}
         </div>
-        {!items ? <p className="muted">Looking…</p> : (
-          <>
-            <div className="msec">Possible duplicates</div>
-            {dups.length ? dups.map((g, i) => <ul key={i} className="dupg">{g.sort((a, b) => b.size - a.size).map(row)}</ul>) : <p className="muted small">No video is saved twice.</p>}
-            <div className="msec">Health check <button className="btn ghost sm" onClick={checkAll}>Check all</button></div>
-            <p className="muted small">Checks that each saved copy matches the server’s size and plays to the end.</p>
-            <ul className="dupg">{items.map(row)}</ul>
-            {!items.length && <p className="muted small">Nothing is saved on this laptop yet.</p>}
-          </>
-        )}
       </div>
     </div>
   );

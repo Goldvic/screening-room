@@ -76,10 +76,13 @@ const PRESETS = [
   { id: 'warm', name: 'Warm', c: '#2a1d14' }, { id: 'forest', name: 'Forest', c: '#0f2219' }, { id: 'paper', name: 'Paper (light)', c: '#f1f1f5' },
 ];
 type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app';
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'look', label: 'Appearance', icon: 'eye' }, { id: 'play', label: 'Playback & sound', icon: 'play' },
-  { id: 'subs', label: 'Subtitles', icon: 'cc' }, { id: 'data', label: 'Data & speed', icon: 'bolt' },
-  { id: 'offline', label: 'Offline & downloads', icon: 'save' }, { id: 'app', label: 'App & servers', icon: 'server' },
+const TABS: { id: Tab; label: string; icon: string; hint: string }[] = [
+  { id: 'look', label: 'Appearance', icon: 'eye', hint: 'Accent, theme, compact mode, thumbnails' },
+  { id: 'play', label: 'Playback & sound', icon: 'play', hint: 'Quality, volume, skip keys, autoplay' },
+  { id: 'subs', label: 'Subtitles', icon: 'cc', hint: 'Size, colour, background' },
+  { id: 'data', label: 'Data & speed', icon: 'bolt', hint: 'Budget, Data Saver, network test' },
+  { id: 'offline', label: 'Offline & downloads', icon: 'save', hint: 'Profiles, auto-save, folder' },
+  { id: 'app', label: 'App & servers', icon: 'server', hint: 'Servers, TMDB, profiles, about' },
 ];
 const LIMITS = [0, 250, 500, 1000, 2000, 5000, 10000];
 
@@ -347,12 +350,12 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
   onClose: () => void; mode: string; prog: Record<string, Prog>; onStorage: () => void; onServers: () => void; onSaved: () => void; onTidy: () => void;
 }) {
   const { s, set } = useContext(SettingsCtx);
-  const [tab, setTab] = useState<Tab>('look');
+  const [tab, setTab] = useState<Tab | null>(null);
   const [moveMsg, setMoveMsg] = useState('');
   const [q, setQ] = useState('');
   const [login, setLogin] = useState(false);
   useEffect(() => { bridge?.loginItemGet?.().then(setLogin).catch(() => {}); }, []);
-  const cur = q ? '' : tab;
+  const cur = q ? '' : (tab ?? '');
   const [kd, setKd] = useState({ tmdb: '', os: '', user: '' });
   const [kMsg, setKMsg] = useState<Record<string, { ok: boolean; text: string } | undefined>>({});
   const [kBusy, setKBusy] = useState('');
@@ -422,16 +425,42 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         <div className="dlg-head">
           <div>
             <h3>Settings</h3>
-            <span className="dlg-sub">Look, playback, data and offline</span>
+            <span className="dlg-sub">{tab ? (TABS.find((x) => x.id === tab)?.hint ?? 'Preferences') : 'Choose a section or search'}</span>
           </div>
           <button className="icon set-close" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button>
         </div>
-        <div className="set-layout">
-        <nav className="set-nav" aria-label="Settings sections">
-          <input className="set-search" type="search" placeholder="Search settings" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
-          {TABS.map((x) => <button key={x.id} className={tab === x.id ? 'on' : ''} onClick={() => setTab(x.id)}><Icon n={x.icon} s={16} /> {x.label}</button>)}
-        </nav>
-        <div className="set-body">
+        <div className="set-search-bar">
+          <input className="set-search" type="search" placeholder="Search settings…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
+        </div>
+
+        {!q && tab === null && (
+          <div className="set-hub">
+            <p className="set-hub-lead muted">Choose a section</p>
+            <div className="set-hub-grid">
+              {TABS.map((x) => (
+                <button key={x.id} type="button" className="set-hub-card" onClick={() => setTab(x.id)}>
+                  <span className="set-hub-ico"><Icon n={x.icon} s={18} /></span>
+                  <span className="set-hub-text">
+                    <b>{x.label}</b>
+                    <small>{x.hint}</small>
+                  </span>
+                  <span className="set-hub-chev" aria-hidden="true">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(q || tab !== null) && (
+        <div className="set-body set-body-card">
+        {!q && tab !== null && (
+          <div className="set-section-bar">
+            <button type="button" className="set-back" onClick={() => setTab(null)} aria-label="Back to all settings">
+              <Icon n="back" s={16} /> All settings
+            </button>
+            <strong>{TABS.find((x) => x.id === tab)?.label}</strong>
+          </div>
+        )}
         {q && <SearchResults q={q} onPick={(t) => { setTab(t); setQ(''); }} />}
 
         {cur === 'look' && (
@@ -676,7 +705,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
 
         {cur === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
         </div>
-        </div>
+        )}
       </div>
     </div>
   );
