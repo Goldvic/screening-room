@@ -572,86 +572,510 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         )}
 
         {cur === 'data' && (
-        <section>
-          <h4>Data Saver</h4>
-          <p className="muted small">Lowers how much data streaming uses. It caps the quality that Auto may choose and squeezes the bitrate. It does not change Original playback or downloads.</p>
-          <div className="seg-m" role="group" aria-label="Data Saver level">
-            {SAVER.map((o) => <button key={o.id} className={s.saver === o.id ? 'on' : ''} onClick={() => set({ saver: o.id })}>{o.label}</button>)}
+        <section className="data-panel">
+
+          {/* Data Saver */}
+          <div className="data-block">
+            <div className="data-block-h">
+              <h4>Data Saver</h4>
+              <p className="muted small">Caps the quality Auto may pick and squeezes bitrate. Does not change Original playback or downloads.</p>
+            </div>
+
+            <div className="data-saver-grid" role="group" aria-label="Data Saver level">
+              {SAVER.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  className={'data-saver-card' + (s.saver === o.id ? ' on' : '')}
+                  onClick={() => set({ saver: o.id })}
+                >
+                  <b>{o.label}</b>
+                  <small>{o.hint}</small>
+                </button>
+              ))}
+            </div>
           </div>
-          <p className="mnote">{SAVER[s.saver].hint}</p>
-          <Field label="Monthly data budget" hint="0 means no limit. Counts streaming and downloads">
-            <span className="inline"><input type="number" min={0} className="num" value={srv?.budgetGB ?? 0} onChange={(e) => local({ budgetGB: +e.target.value })} onBlur={() => patch({ budgetGB: srv?.budgetGB ?? 0 })} /> GB</span>
-          </Field>
-          <Field label="Switch to Low at 80% of the budget" hint="Automatically, until the month ends"><Toggle on={s.saverAuto} label="Auto Data Saver" onClick={() => set({ saverAuto: !s.saverAuto })} /></Field>
+
+          {/* Budget */}
+          <div className="data-block">
+            <div className="data-block-h">
+              <h4>Monthly budget</h4>
+              <p className="muted small">Counts streaming and downloads. 0 = no limit</p>
+            </div>
+
+            <div className="data-budget">
+              <div className="data-budget-input">
+                <input
+                  type="number"
+                  min={0}
+                  value={srv?.budgetGB ?? 0}
+                  onChange={(e) => local({ budgetGB: +e.target.value })}
+                  onBlur={() => patch({ budgetGB: srv?.budgetGB ?? 0 })}
+                />
+                <span>GB</span>
+              </div>
+              <div className="data-budget-presets">
+                {[0, 5, 10, 25, 50, 100].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'data-chip' + ((srv?.budgetGB ?? 0) === n ? ' on' : '')}
+                    onClick={() => { local({ budgetGB: n }); patch({ budgetGB: n }); }}
+                  >
+                    {n === 0 ? 'No limit' : `${n} GB`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="data-toggles" style={{ marginTop: 12 }}>
+              <div className="data-toggle-row">
+                <div>
+                  <b>Switch to Low at 80% of budget</b>
+                  <small className="muted">Automatically, until the month ends</small>
+                </div>
+                <Toggle on={s.saverAuto} label="Auto Data Saver" onClick={() => set({ saverAuto: !s.saverAuto })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Speed test */}
+          <div className="data-block">
+            <div className="data-block-h">
+              <h4>Speed test</h4>
+              <p className="muted small">
+                How fast your server can send data to this laptop. Real limit for streaming and downloads.
+                {mode === 'local' ? ' Path: direct (fastest).' : mode && mode !== 'none' ? ' Path: through SSH.' : ''}
+              </p>
+            </div>
+
+            <div className="data-test">
+              <button className="btn" disabled={t.running} onClick={run}>
+                <Icon n="bolt" s={15} /> {t.running ? 'Testing…' : 'Run speed test'}
+              </button>
+              {t.running && (
+                <button className="btn ghost" onClick={() => ctl.current?.abort()}>Stop</button>
+              )}
+              {t.running && (
+                <strong className="data-live">{rate(t.live)} <small>{mbps(t.live)}</small></strong>
+              )}
+            </div>
+
+            {t.res && (
+              <div className="data-result">
+                <div className="data-result-row">
+                  <span>Average</span>
+                  <b>{rate(t.res.avg)} <small>({mbps(t.res.avg)})</small></b>
+                </div>
+                <div className="data-result-row">
+                  <span>Peak</span>
+                  <b>{mbps(t.res.peak)}</b>
+                </div>
+                <div className="data-result-row">
+                  <span>Transferred</span>
+                  <b>{bytes(t.res.bytes)}</b>
+                </div>
+              </div>
+            )}
+            {t.err && <p className="err-t">{t.err}</p>}
+          </div>
+
         </section>
         )}
 
         {cur === 'play' && (
-        <section>
-          <h4>Playback</h4>
-          <Field label="Default quality">
-            <select value={s.quality} onChange={(e) => set({ quality: e.target.value })}>{QUALITIES.filter((q) => q.id !== 'audio').map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}</select>
-          </Field>
-          <Field label="Default screen shape">
-            <select value={s.aspect} onChange={(e) => set({ aspect: e.target.value })}>{ASPECTS.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}</select>
-          </Field>
-          <Field label="Power saving" hint="Lowers the video quality cap and turns off blur and animations to save battery">
-            <select value={s.eco} onChange={(e) => set({ eco: e.target.value as 'off' | 'on' | 'battery' })}>
-              <option value="off">Off</option><option value="battery">Only on battery</option><option value="on">Always on</option>
-            </select>
-          </Field>
-          <Field label="Detect intros automatically" hint="Finds the opening music by comparing episodes. Reads about 7 minutes of 3 videos once per episode, so it uses some data on a server"><Toggle on={s.autoIntro} label="Detect intros" onClick={() => set({ autoIntro: !s.autoIntro })} /></Field>
-          <Field label="Show “Skip intro" hint="Only on episodes whose file has an intro or recap chapter"><Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} /></Field>
-          <Field label="Play next episode automatically"><Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} /></Field>
-          <Field label="Download the next episode while I watch" hint="Saves it for offline in the background"><Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} /></Field>
-        </section>
-        )}
+        <section className="play-panel">
 
-        {cur === 'play' && (
-        <section>
-          <h4>Sound</h4>
-          <Field label="Maximum volume" hint="How far the volume slider can go. Above 100% a limiter keeps it clean">
-            <select value={s.maxVol} onChange={(e) => set({ maxVol: +e.target.value })}>{MAX_VOLS.map((v) => <option key={v} value={v}>{v}%</option>)}</select>
-          </Field>
-          <Field label="Remember boost above 100%" hint="Off: every time the app starts, volume goes back to 100% or lower to protect your ears">
-            <Toggle on={s.rememberBoost} label="Remember boost" onClick={() => set({ rememberBoost: !s.rememberBoost })} />
-          </Field>
-          <Field label="Default equalizer">
-            <select value={s.eqPreset} onChange={(e) => set({ eqPreset: e.target.value })}>{Object.keys(EQ_PRESETS).map((n) => <option key={n} value={n}>{n}</option>)}</select>
-          </Field>
+          {/* Playback defaults */}
+          <div className="play-block">
+            <div className="play-block-h">
+              <h4>Playback</h4>
+              <p className="muted small">Defaults for every new video</p>
+            </div>
+
+            <div className="play-field">
+              <div className="play-field-label">
+                <b>Default quality</b>
+                <small className="muted">Auto respects Data Saver</small>
+              </div>
+              <div className="play-chips" role="group" aria-label="Default quality">
+                {QUALITIES.filter((q) => q.id !== 'audio').map((q) => (
+                  <button
+                    key={q.id}
+                    type="button"
+                    className={'play-chip' + (s.quality === q.id ? ' on' : '')}
+                    onClick={() => set({ quality: q.id })}
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="play-field">
+              <div className="play-field-label">
+                <b>Default screen shape</b>
+              </div>
+              <div className="play-aspects" role="group" aria-label="Default screen shape">
+                {ASPECTS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className={'play-aspect' + (s.aspect === a.id ? ' on' : '')}
+                    onClick={() => set({ aspect: a.id })}
+                  >
+                    <span className={'play-aspect-preview a-' + a.id.replace(':', '')} />
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="play-field">
+              <div className="play-field-label">
+                <b>Power saving</b>
+                <small className="muted">Lowers quality cap and turns off blur / animations</small>
+              </div>
+              <div className="play-seg" role="group" aria-label="Power saving">
+                {([
+                  { id: 'off' as const, label: 'Off' },
+                  { id: 'battery' as const, label: 'Battery' },
+                  { id: 'on' as const, label: 'Always' },
+                ]).map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className={s.eco === o.id ? 'on' : ''}
+                    onClick={() => set({ eco: o.id })}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Smart features */}
+          <div className="play-block">
+            <div className="play-block-h">
+              <h4>Smart features</h4>
+              <p className="muted small">Intros, autoplay and background save</p>
+            </div>
+
+            <div className="play-toggles">
+              <div className="play-toggle-row">
+                <div>
+                  <b>Detect intros automatically</b>
+                  <small className="muted">Compares ~7 min of 3 episodes once. Uses a little server data.</small>
+                </div>
+                <Toggle on={s.autoIntro} label="Detect intros" onClick={() => set({ autoIntro: !s.autoIntro })} />
+              </div>
+
+              <div className="play-toggle-row">
+                <div>
+                  <b>Show “Skip intro”</b>
+                  <small className="muted">Only on files that already have an intro / recap chapter</small>
+                </div>
+                <Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} />
+              </div>
+
+              <div className="play-toggle-row">
+                <div>
+                  <b>Play next episode automatically</b>
+                </div>
+                <Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} />
+              </div>
+
+              <div className="play-toggle-row">
+                <div>
+                  <b>Download next episode while I watch</b>
+                  <small className="muted">Saves a full-quality copy in the background for offline</small>
+                </div>
+                <Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Sound */}
+          <div className="play-block">
+            <div className="play-block-h">
+              <h4>Sound</h4>
+              <p className="muted small">Volume, boost and equalizer</p>
+            </div>
+
+            <div className="play-field">
+              <div className="play-field-label">
+                <b>Maximum volume</b>
+                <small className="muted">Above 100% a limiter keeps it clean</small>
+              </div>
+              <div className="play-chips" role="group" aria-label="Maximum volume">
+                {MAX_VOLS.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={'play-chip' + (s.maxVol === v ? ' on' : '')}
+                    onClick={() => set({ maxVol: v })}
+                  >
+                    {v}%
+                  </button>
+                ))}
+              </div>
+              <div className="play-vol-preview" aria-hidden="true">
+                <div className="play-vol-bar">
+                  <i style={{ width: `${Math.min(100, (s.maxVol / 500) * 100)}%` }} />
+                  <span className="play-vol-boost" />
+                </div>
+                <span className="play-vol-label">{s.maxVol}%</span>
+              </div>
+            </div>
+
+            <div className="play-toggles" style={{ marginTop: 4 }}>
+              <div className="play-toggle-row">
+                <div>
+                  <b>Remember boost above 100%</b>
+                  <small className="muted">Off: volume resets to ≤100% every time the app starts</small>
+                </div>
+                <Toggle on={s.rememberBoost} label="Remember boost" onClick={() => set({ rememberBoost: !s.rememberBoost })} />
+              </div>
+            </div>
+
+            <div className="play-field" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+              <div className="play-field-label">
+                <b>Default equalizer</b>
+              </div>
+              <div className="play-eq" role="group" aria-label="Default equalizer">
+                {Object.keys(EQ_PRESETS).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'play-eq-chip' + (s.eqPreset === n ? ' on' : '')}
+                    onClick={() => set({ eqPreset: n })}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Other players (desktop only) */}
+          {bridge && (
+            <div className="play-block">
+              <div className="play-block-h">
+                <h4>Other players</h4>
+                <p className="muted small">Desktop only</p>
+              </div>
+              <div className="play-field" style={{ borderBottom: 'none', paddingTop: 0 }}>
+                <div className="play-field-label">
+                  <b>Open in another player</b>
+                  <small className="muted">e.g. VLC. Leave empty for system default</small>
+                </div>
+                <span className="inline">
+                  <input
+                    value={s.externalPlayer}
+                    onChange={(e) => set({ externalPlayer: e.target.value })}
+                    placeholder="C:\Program Files\VideoLAN\VLC\vlc.exe"
+                  />
+                  <button className="btn ghost" onClick={() => browse('player')}>Browse…</button>
+                </span>
+              </div>
+            </div>
+          )}
+
         </section>
         )}
 
         {cur === 'subs' && (
-        <section>
-          <h4>Subtitles</h4>
-          <Field label="Turn on subtitles automatically" hint="Picks a track in your language, inside the video or next to it">
-            <Toggle on={s.autoSub} label="Auto subtitles" onClick={() => set({ autoSub: !s.autoSub })} />
-          </Field>
-          <Field label="Your language">
-            <select value={s.subLang} onChange={(e) => set({ subLang: e.target.value })}>{LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select>
-          </Field>
-          <Field label="Subtitle size"><input type="range" min={16} max={60} value={s.subSize} onChange={(e) => set({ subSize: +e.target.value })} /></Field>
-          <Field label="Subtitle colour"><input type="color" value={s.subColor} onChange={(e) => set({ subColor: e.target.value })} /></Field>
-          <Field label="Subtitle background" hint="How dark the box behind the words is"><input type="range" min={0} max={100} value={s.subBg} onChange={(e) => set({ subBg: +e.target.value })} /></Field>
-          <Field label="Subtitle outline"><Toggle on={s.subOutline} label="Outline" onClick={() => set({ subOutline: !s.subOutline })} /></Field>
-          <Field label="Subtitle position" hint="Distance from the bottom of the picture"><input type="range" min={2} max={30} value={s.subPos} onChange={(e) => set({ subPos: +e.target.value })} /></Field>
-          <div className="subprev"><span style={{ fontSize: Math.min(s.subSize, 40), color: s.subColor, background: `rgba(0,0,0,${s.subBg / 100})`, textShadow: s.subOutline ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000' : undefined }}>This is how your subtitles will look.</span></div>
-          <Field label="Skip if the audio is already in that language"><Toggle on={s.subSmart} label="Skip when audio matches" onClick={() => set({ subSmart: !s.subSmart })} /></Field>
-          <Field label="OpenSubtitles" hint="Free key at opensubtitles.com. The account is only needed to download. Stored encrypted on this computer">
-            <span className="keybox">
-              <input value={kd.os} onChange={(e) => setKd({ ...kd, os: e.target.value })} placeholder="API key" autoComplete="off" spellCheck={false} />
-              <span className="inline">
-                <input value={kd.user} onChange={(e) => setKd({ ...kd, user: e.target.value })} placeholder="Username" autoComplete="off" />
-                <input type="password" value={osPass} onChange={(e) => setOsPass(e.target.value)} placeholder={srv?.hasOsPass ? 'Password saved (type to change)' : 'Password'} autoComplete="new-password" />
+        <section className="subs-panel">
+
+          {/* Behaviour */}
+          <div className="subs-block">
+            <div className="subs-block-h">
+              <h4>Behaviour</h4>
+              <p className="muted small">When and which subtitles appear</p>
+            </div>
+
+            <div className="subs-toggles">
+              <div className="subs-toggle-row">
+                <div>
+                  <b>Turn on subtitles automatically</b>
+                  <small className="muted">Picks a track in your language, inside the video or next to it</small>
+                </div>
+                <Toggle on={s.autoSub} label="Auto subtitles" onClick={() => set({ autoSub: !s.autoSub })} />
+              </div>
+
+              <div className="subs-toggle-row">
+                <div>
+                  <b>Skip if audio is already in that language</b>
+                  <small className="muted">Don’t show subtitles when the spoken language matches</small>
+                </div>
+                <Toggle on={s.subSmart} label="Skip when audio matches" onClick={() => set({ subSmart: !s.subSmart })} />
+              </div>
+            </div>
+
+            <div className="subs-field" style={{ borderBottom: 'none', paddingTop: 12 }}>
+              <div className="subs-field-label">
+                <b>Your language</b>
+              </div>
+              <div className="subs-langs" role="group" aria-label="Subtitle language">
+                {LANGS.map((l) => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    className={'subs-lang' + (s.subLang === l.code ? ' on' : '')}
+                    onClick={() => set({ subLang: l.code })}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Appearance */}
+          <div className="subs-block">
+            <div className="subs-block-h">
+              <h4>Appearance</h4>
+              <p className="muted small">How the text looks on screen</p>
+            </div>
+
+            <div className="subs-slider">
+              <div className="subs-slider-top">
+                <b>Size</b>
+                <span className="subs-slider-val">{s.subSize}</span>
+              </div>
+              <input
+                type="range"
+                min={16}
+                max={60}
+                value={s.subSize}
+                onChange={(e) => set({ subSize: +e.target.value })}
+              />
+            </div>
+
+            <div className="subs-color-row">
+              <b>Colour</b>
+              <div className="subs-swatches">
+                {['#ffffff', '#fbbf24', '#60a5fa', '#4ade80', '#f472b6', '#a78bfa'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={'subs-swatch' + (s.subColor.toLowerCase() === c ? ' on' : '')}
+                    style={{ background: c }}
+                    onClick={() => set({ subColor: c })}
+                    aria-label={c}
+                  />
+                ))}
+                <label className="subs-custom-color" title="Custom colour">
+                  <input
+                    type="color"
+                    value={s.subColor}
+                    onChange={(e) => set({ subColor: e.target.value })}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="subs-slider">
+              <div className="subs-slider-top">
+                <b>Background darkness</b>
+                <span className="subs-slider-val">{s.subBg}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={s.subBg}
+                onChange={(e) => set({ subBg: +e.target.value })}
+              />
+            </div>
+
+            <div className="subs-toggles">
+              <div className="subs-toggle-row">
+                <div>
+                  <b>Outline</b>
+                  <small className="muted">Black stroke around the letters for better contrast</small>
+                </div>
+                <Toggle on={s.subOutline} label="Outline" onClick={() => set({ subOutline: !s.subOutline })} />
+              </div>
+            </div>
+
+            <div className="subs-slider">
+              <div className="subs-slider-top">
+                <b>Position from bottom</b>
+                <span className="subs-slider-val">{s.subPos}%</span>
+              </div>
+              <input
+                type="range"
+                min={2}
+                max={30}
+                value={s.subPos}
+                onChange={(e) => set({ subPos: +e.target.value })}
+              />
+            </div>
+
+            <div className="subs-preview">
+              <span
+                style={{
+                  fontSize: Math.min(s.subSize, 40),
+                  color: s.subColor,
+                  background: `rgba(0,0,0,${s.subBg / 100})`,
+                  textShadow: s.subOutline
+                    ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000'
+                    : undefined,
+                }}
+              >
+                This is how your subtitles will look.
               </span>
-              {kline('os', !!(srv?.osKey || srv?.hasOsPass))}
-              <span className="inline">
-                <button className="btn" disabled={kBusy === 'os' || !kd.os.trim()} onClick={() => saveTest('os')}>{kBusy === 'os' ? 'Checking…' : 'Save & test'}</button>
-                <button className="btn ghost" disabled={kBusy === 'os'} onClick={() => clearKeys('os')}>Remove</button>
-              </span>
-            </span>
-          </Field>
+            </div>
+          </div>
+
+          {/* OpenSubtitles */}
+          <div className="subs-block">
+            <div className="subs-block-h">
+              <h4>OpenSubtitles</h4>
+              <p className="muted small">Free key at opensubtitles.com · stored encrypted on this computer</p>
+            </div>
+
+            <div className="subs-keybox">
+              <input
+                value={kd.os}
+                onChange={(e) => setKd({ ...kd, os: e.target.value })}
+                placeholder="API key"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <div className="subs-key-row">
+                <input
+                  value={kd.user}
+                  onChange={(e) => setKd({ ...kd, user: e.target.value })}
+                  placeholder="Username"
+                  autoComplete="off"
+                />
+                <input
+                  type="password"
+                  value={osPass}
+                  onChange={(e) => setOsPass(e.target.value)}
+                  placeholder={srv?.hasOsPass ? 'Password saved (type to change)' : 'Password'}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="subs-key-status">{kline('os', !!(srv?.osKey || srv?.hasOsPass))}</div>
+              <div className="subs-key-actions">
+                <button
+                  className="btn"
+                  disabled={kBusy === 'os' || !kd.os.trim()}
+                  onClick={() => saveTest('os')}
+                >
+                  {kBusy === 'os' ? 'Checking…' : 'Save & test'}
+                </button>
+                <button className="btn ghost" disabled={kBusy === 'os'} onClick={() => clearKeys('os')}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+
         </section>
         )}
 
@@ -692,84 +1116,260 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         )}
 
         {cur === 'offline' && (
-        <section>
-          <h4>Downloads and offline</h4>
-          <Field label="Save downloads to" hint={moveMsg || `${srv?.downloadDir ?? ''}. Pick a folder on another drive to keep videos off your system drive; saved videos move with it.`}>
-            <span className="inline">{bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change…</button>}
-              <button className="btn ghost" onClick={async () => { setMoveMsg('Moving…'); const e = await moveDownloads('vault', setMoveMsg); setMoveMsg(e ?? 'Done. Saved videos now live in a hidden folder inside the app’s own data, not in your Videos or Downloads.'); patch({}); }} title="Hidden, app-private folder">Private storage</button><button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button></span>
-          </Field>
-          <Field label="Save while I watch" hint="Keeps a full-quality copy on this laptop in the background, so next time it plays offline and uses no data">
-            <Toggle on={s.autoCache} label="Save while watching" onClick={() => set({ autoCache: !s.autoCache })} />
-          </Field>
-          <Field label="Files at the same time">
-            <select value={srv?.maxParallel ?? 2} onChange={(e) => patch({ maxParallel: +e.target.value })}>{[1, 2, 3, 4, 6].map((n) => <option key={n} value={n}>{n}</option>)}</select>
-          </Field>
-          <Field label="Speed limit" hint="Keeps some bandwidth for other things">
-            <select value={srv?.limitKBps ?? 0} onChange={(e) => patch({ limitKBps: +e.target.value })}>
-              {LIMITS.map((n) => <option key={n} value={n}>{n ? rate(n * 1024) : 'No limit'}</option>)}
-            </select>
-          </Field>
-          <Field label="Only download at night" hint="Downloads wait until the time window opens">
-            <Toggle on={!!srv?.schedule.on} label="Schedule" onClick={() => patch({ schedule: { ...srv!.schedule, on: !srv?.schedule.on } })} />
-          </Field>
-          {srv?.schedule.on && (
-            <Field label="Between">
-              <span className="inline">
+        <section className="off-panel">
+
+          {/* Storage location */}
+          <div className="off-block">
+            <div className="off-block-h">
+              <h4>Storage</h4>
+              <p className="muted small">{moveMsg || (srv?.downloadDir ? srv.downloadDir : 'Choose where downloads are saved')}</p>
+            </div>
+            <div className="off-actions">
+              {bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change folder…</button>}
+              <button className="btn ghost" onClick={async () => { setMoveMsg('Moving…'); const e = await moveDownloads('vault', setMoveMsg); setMoveMsg(e ?? 'Done. Saved videos now live in a hidden folder inside the app’s own data.'); patch({}); }} title="Hidden, app-private folder">Private storage</button>
+              <button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button>
+              <button className="btn ghost" onClick={onTidy}>Tidy saved videos</button>
+            </div>
+          </div>
+
+          {/* While watching */}
+          <div className="off-block">
+            <div className="off-block-h">
+              <h4>While watching</h4>
+              <p className="muted small">Background saving for offline</p>
+            </div>
+            <div className="off-toggles">
+              <div className="off-toggle-row">
+                <div>
+                  <b>Save while I watch</b>
+                  <small className="muted">Keeps a full-quality copy so next time it plays offline</small>
+                </div>
+                <Toggle on={s.autoCache} label="Save while watching" onClick={() => set({ autoCache: !s.autoCache })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Download behaviour */}
+          <div className="off-block">
+            <div className="off-block-h">
+              <h4>Download behaviour</h4>
+              <p className="muted small">Speed, parallel files and schedule</p>
+            </div>
+
+            <div className="off-field">
+              <div className="off-field-label">
+                <b>Files at the same time</b>
+              </div>
+              <div className="off-chips" role="group">
+                {[1, 2, 3, 4, 6].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'off-chip' + ((srv?.maxParallel ?? 2) === n ? ' on' : '')}
+                    onClick={() => patch({ maxParallel: n })}
+                  >{n}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="off-field">
+              <div className="off-field-label">
+                <b>Speed limit</b>
+                <small className="muted">Keeps some bandwidth for other things</small>
+              </div>
+              <div className="off-chips" role="group">
+                {LIMITS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'off-chip' + ((srv?.limitKBps ?? 0) === n ? ' on' : '')}
+                    onClick={() => patch({ limitKBps: n })}
+                  >{n ? rate(n * 1024) : 'No limit'}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="off-toggles">
+              <div className="off-toggle-row">
+                <div>
+                  <b>Only download at night</b>
+                  <small className="muted">Downloads wait until the time window opens</small>
+                </div>
+                <Toggle on={!!srv?.schedule.on} label="Schedule" onClick={() => patch({ schedule: { ...srv!.schedule, on: !srv?.schedule.on } })} />
+              </div>
+            </div>
+            {srv?.schedule.on && (
+              <div className="off-time-row">
+                <span className="muted">Between</span>
                 <input type="time" value={srv.schedule.from} onChange={(e) => patch({ schedule: { ...srv.schedule, from: e.target.value } })} />
-                and <input type="time" value={srv.schedule.to} onChange={(e) => patch({ schedule: { ...srv.schedule, to: e.target.value } })} />
-              </span>
-            </Field>
-          )}
-          <Field label="Tidy saved videos" hint="Find duplicates and check that saved copies are not broken"><button className="btn" onClick={onTidy}>Open</button></Field>
-          <Field label="Pause on battery" hint="Downloads wait until the laptop is plugged in"><Toggle on={!!srv?.pauseOnBattery} label="Pause on battery" onClick={() => patch({ pauseOnBattery: !srv?.pauseOnBattery })} /></Field>
-          <Field label="Pause on a metered connection" hint="If Windows marks your Wi-Fi or mobile hotspot as metered, downloads wait"><Toggle on={!!srv?.pauseOnMetered} label="Pause on metered" onClick={() => patch({ pauseOnMetered: !srv?.pauseOnMetered })} /></Field>
-          <Field label="Slow down at certain hours" hint="Limit the download speed between two times, for example while you work">
-            <span className="inline">
-              <Toggle on={!!srv?.limitWin?.on} label="Slow down" onClick={() => patch({ limitWin: { ...(srv?.limitWin ?? { from: '18:00', to: '23:00', kbps: 2000 }), on: !srv?.limitWin?.on } })} />
-              <input type="time" value={srv?.limitWin?.from ?? '18:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, to: '23:00', kbps: 2000 }), from: e.target.value } })} />
-              <input type="time" value={srv?.limitWin?.to ?? '23:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', kbps: 2000 }), to: e.target.value } })} />
-              <input type="number" min={0} step={100} style={{ width: 90 }} value={srv?.limitWin?.kbps ?? 2000} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', to: '23:00' }), kbps: +e.target.value } })} /> KB/s
-            </span>
-          </Field>
-          <Field label="Compress on" hint="A laptop with an NVIDIA, Intel or AMD graphics chip compresses many times faster than a server. Auto picks the quickest">
-            <select value={srv?.encodeWhere ?? 'auto'} onChange={(e) => patch({ encodeWhere: e.target.value as 'auto' | 'laptop' | 'server' })}>
-              <option value="auto">Auto (recommended)</option><option value="laptop">This laptop</option><option value="server">The server</option>
-            </select>
-          </Field>
-          <Field label="Compression speed" hint="Fastest makes slightly bigger files. Smallest takes longer">
-            <select value={srv?.encodeSpeed ?? 'fast'} onChange={(e) => patch({ encodeSpeed: e.target.value as 'fast' | 'balanced' | 'small' })}>
-              <option value="fast">Fastest</option><option value="balanced">Balanced</option><option value="small">Smallest files</option>
-            </select>
-          </Field>
-          <Field label="Space limit for saved videos" hint="When it is full, watched videos are removed first, then the oldest. Your copies on the server stay">
-            <select value={srv?.quotaGB ?? 0} onChange={(e) => patch({ quotaGB: +e.target.value })}>
-              <option value={0}>No limit</option>{[2, 5, 10, 20, 50].map((n) => <option key={n} value={n}>{n} GB</option>)}
-            </select>
-          </Field>
-          <Field label="Delete watched downloads after" hint="Frees space automatically. Your copy on the server stays">
-            <select value={srv?.autoDeleteDays ?? 0} onChange={(e) => patch({ autoDeleteDays: +e.target.value })}>
-              <option value={0}>Never</option>{[1, 3, 7, 14, 30].map((n) => <option key={n} value={n}>{n} day{n > 1 ? 's' : ''}</option>)}
-            </select>
-          </Field>
+                <span className="muted">and</span>
+                <input type="time" value={srv.schedule.to} onChange={(e) => patch({ schedule: { ...srv.schedule, to: e.target.value } })} />
+              </div>
+            )}
+
+            <div className="off-toggles">
+              <div className="off-toggle-row">
+                <div>
+                  <b>Pause on battery</b>
+                  <small className="muted">Downloads wait until the laptop is plugged in</small>
+                </div>
+                <Toggle on={!!srv?.pauseOnBattery} label="Pause on battery" onClick={() => patch({ pauseOnBattery: !srv?.pauseOnBattery })} />
+              </div>
+              <div className="off-toggle-row">
+                <div>
+                  <b>Pause on metered connection</b>
+                  <small className="muted">If Windows marks Wi-Fi as metered</small>
+                </div>
+                <Toggle on={!!srv?.pauseOnMetered} label="Pause on metered" onClick={() => patch({ pauseOnMetered: !srv?.pauseOnMetered })} />
+              </div>
+              <div className="off-toggle-row">
+                <div>
+                  <b>Slow down at certain hours</b>
+                  <small className="muted">Limit speed between two times</small>
+                </div>
+                <Toggle on={!!srv?.limitWin?.on} label="Slow down" onClick={() => patch({ limitWin: { ...(srv?.limitWin ?? { from: '18:00', to: '23:00', kbps: 2000 }), on: !srv?.limitWin?.on } })} />
+              </div>
+            </div>
+            {srv?.limitWin?.on && (
+              <div className="off-time-row">
+                <input type="time" value={srv?.limitWin?.from ?? '18:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, to: '23:00', kbps: 2000 }), from: e.target.value } })} />
+                <span className="muted">–</span>
+                <input type="time" value={srv?.limitWin?.to ?? '23:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', kbps: 2000 }), to: e.target.value } })} />
+                <input type="number" min={0} step={100} style={{ width: 80 }} value={srv?.limitWin?.kbps ?? 2000} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', to: '23:00' }), kbps: +e.target.value } })} />
+                <span className="muted">KB/s</span>
+              </div>
+            )}
+          </div>
+
+          {/* Compression */}
+          <div className="off-block">
+            <div className="off-block-h">
+              <h4>Compression</h4>
+              <p className="muted small">Where and how files are made smaller</p>
+            </div>
+
+            <div className="off-field">
+              <div className="off-field-label">
+                <b>Compress on</b>
+                <small className="muted">Laptop GPU is usually much faster. Auto picks the quickest</small>
+              </div>
+              <div className="off-seg" role="group">
+                {([
+                  { id: 'auto', label: 'Auto' },
+                  { id: 'laptop', label: 'This laptop' },
+                  { id: 'server', label: 'Server' },
+                ] as const).map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className={(srv?.encodeWhere ?? 'auto') === o.id ? 'on' : ''}
+                    onClick={() => patch({ encodeWhere: o.id })}
+                  >{o.label}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="off-field">
+              <div className="off-field-label">
+                <b>Compression speed</b>
+                <small className="muted">Fastest = bigger files. Smallest = takes longer</small>
+              </div>
+              <div className="off-seg" role="group">
+                {([
+                  { id: 'fast', label: 'Fastest' },
+                  { id: 'balanced', label: 'Balanced' },
+                  { id: 'small', label: 'Smallest' },
+                ] as const).map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className={(srv?.encodeSpeed ?? 'fast') === o.id ? 'on' : ''}
+                    onClick={() => patch({ encodeSpeed: o.id })}
+                  >{o.label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Space management */}
+          <div className="off-block">
+            <div className="off-block-h">
+              <h4>Space management</h4>
+              <p className="muted small">Your copies on the server are never deleted</p>
+            </div>
+
+            <div className="off-field">
+              <div className="off-field-label">
+                <b>Space limit for saved videos</b>
+                <small className="muted">When full, watched videos are removed first, then oldest</small>
+              </div>
+              <div className="off-chips" role="group">
+                {[0, 2, 5, 10, 20, 50].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'off-chip' + ((srv?.quotaGB ?? 0) === n ? ' on' : '')}
+                    onClick={() => patch({ quotaGB: n })}
+                  >{n === 0 ? 'No limit' : `${n} GB`}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="off-field">
+              <div className="off-field-label">
+                <b>Delete watched downloads after</b>
+                <small className="muted">Frees space automatically</small>
+              </div>
+              <div className="off-chips" role="group">
+                {[0, 1, 3, 7, 14, 30].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'off-chip' + ((srv?.autoDeleteDays ?? 0) === n ? ' on' : '')}
+                    onClick={() => patch({ autoDeleteDays: n })}
+                  >{n === 0 ? 'Never' : `${n} day${n > 1 ? 's' : ''}`}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Browser turbo (web only) */}
           {!bridge && (
-            <>
-              <Field label="Turbo browser download" hint={turboOk() ? 'Splits big files across several connections' : 'Needs Chrome, Edge or Opera over HTTPS (or localhost)'}>
-                <Toggle on={s.turbo} label="Turbo download" onClick={() => set({ turbo: !s.turbo })} />
-              </Field>
-              <Field label="Connections per file"><select value={s.conns} onChange={(e) => set({ conns: +e.target.value })}>{[2, 4, 8, 12, 16].map((n) => <option key={n} value={n}>{n}</option>)}</select></Field>
-            </>
+            <div className="off-block">
+              <div className="off-block-h">
+                <h4>Browser download</h4>
+                <p className="muted small">{turboOk() ? 'Splits big files across several connections' : 'Needs Chrome, Edge or Opera over HTTPS (or localhost)'}</p>
+              </div>
+              <div className="off-toggles">
+                <div className="off-toggle-row">
+                  <div>
+                    <b>Turbo download</b>
+                  </div>
+                  <Toggle on={s.turbo} label="Turbo download" onClick={() => set({ turbo: !s.turbo })} />
+                </div>
+              </div>
+              <div className="off-field">
+                <div className="off-field-label">
+                  <b>Connections per file</b>
+                </div>
+                <div className="off-chips" role="group">
+                  {[2, 4, 8, 12, 16].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={'off-chip' + (s.conns === n ? ' on' : '')}
+                      onClick={() => set({ conns: n })}
+                    >{n}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
+
         </section>
         )}
 
-        {bridge && cur === 'play' && (
-          <section>
-            <h4>Other players</h4>
-            <Field label="Open in another player" hint="For example VLC. Leave empty to use your computer’s default player">
-              <span className="inline"><input value={s.externalPlayer} onChange={(e) => set({ externalPlayer: e.target.value })} placeholder="C:\Program Files\VideoLAN\VLC\vlc.exe" /><button className="btn ghost" onClick={() => browse('player')}>Browse…</button></span>
-            </Field>
-          </section>
-        )}
+        
 
         {cur === 'app' && (
           <section>
@@ -790,19 +1390,7 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        {cur === 'data' && (
-        <section>
-          <h4>Speed test</h4>
-          <p className="muted small">Measures how fast your server can send data to this laptop. That number is the real limit for streaming and downloads. Server disk path: {mode === 'local' ? 'direct (fastest)' : mode && mode !== 'none' ? 'through SSH' : 'unknown'}.</p>
-          <div className="test">
-            <button className="btn" disabled={t.running} onClick={run}><Icon n="bolt" s={15} /> {t.running ? 'Testing…' : 'Run speed test'}</button>
-            {t.running && <button className="btn ghost" onClick={() => ctl.current?.abort()}>Stop</button>}
-            {t.running && <strong className="live-n">{rate(t.live)} <small>{mbps(t.live)}</small></strong>}
-          </div>
-          {t.res && <p>Average <b>{rate(t.res.avg)}</b> ({mbps(t.res.avg)}), peak <b>{mbps(t.res.peak)}</b>, {bytes(t.res.bytes)} transferred.</p>}
-          {t.err && <p className="err-t">{t.err}</p>}
-        </section>
-        )}
+        
 
         {cur === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
         </div>
