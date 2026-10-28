@@ -3,7 +3,7 @@ import Player from './Player';
 import Setup from './Setup';
 import SettingsDialog, { Toggle } from './Settings';
 import { AddToCollection, CollectionsPage, Collection, HomeCustomize, HomeRow, RuleDialog, Stars, TagsEditor, Tidy, Tour, ItemMeta } from './Extras';
-import { Hero, Playlists, Rail, SavedFile, Tile, Today, Welcome, progPct, savedSub } from './Home';
+import { Hero, MagSide, Playlists, Rail, SavedFile, Tile, Today, Welcome, progPct, savedSub } from './Home';
 import { DownloadDialog, DownloadsPanel, StoragePanel } from './Downloads';
 import {
   ACCENTS, APP_NAME, Caps, SavedList, dayKey, DEFAULTS, Entry, Icon, Net, OFFLINE_ID, OPENED_ID, Prefs, PrefsCtx, Prog, Root, SAVER, SettingsCtx, VIDEO, VIDEO_EXTS,
@@ -751,26 +751,41 @@ function Library() {
               </Rail>
             ) : null,
           };
+          const sides = resumable.filter((x) => !hero || x.k !== hero.k).slice(0, 4);
           return (
-            <div className="home">
+            <div className="home mag-home">
+              <div className="home-head">
+                <span className="home-greet">{hello}</span>
+                <button className="btn ghost sm" onClick={() => setCustomize(true)}><Icon n="sliders" s={14} /> Customise</button>
+              </div>
+
               {hero && t ? (
-                <Hero key={hero.k} eyebrow="Continue watching" greeting={hello} onCustomize={() => setCustomize(true)}
-                  title={t.title + (t.season ? `  ·  S${String(t.season).padStart(2, '0')}E${String(t.episode).padStart(2, '0')}` : '')}
-                  line={hero.p ? `${clock(hero.p.pos)} watched of ${clock(hero.p.dur)}` : ''} left={hero.p && hero.p.dur > hero.p.pos ? `${clock(hero.p.dur - hero.p.pos)} left` : ''}
-                  progress={progPct(hero.p)} label="Resume" art={cardArt(hero)}
-                  pool={pool.map((x) => ({ k: x.k, title: parseTitle(x.name, x.dir).title, art: cardArt(x) }))} activeKey={hero.k} onPick={(k) => setHeroI(Math.max(0, pool.findIndex((x) => x.k === k)))}
-                  onPlay={() => startPlay(hero.name, hero.rid, hero.dir)} onMore={() => { setRoot(hero.rid); setDir(hero.dir); setDetail(hero.name); }} />
+                <div className="mag">
+                  <Hero key={hero.k} eyebrow="Continue watching"
+                    title={t.title + (t.season ? ` · S${String(t.season).padStart(2, '0')}E${String(t.episode).padStart(2, '0')}` : '')}
+                    line={hero.p ? `${clock(hero.p.pos)} watched of ${clock(hero.p.dur)}` : ''} left={hero.p && hero.p.dur > hero.p.pos ? `${clock(hero.p.dur - hero.p.pos)} left` : ''}
+                    progress={progPct(hero.p)} label="Resume" art={cardArt(hero)}
+                    onPlay={() => startPlay(hero.name, hero.rid, hero.dir)} onMore={() => { setRoot(hero.rid); setDir(hero.dir); setDetail(hero.name); }} />
+                  {sides.map((x) => {
+                    const pt = parseTitle(x.name, x.dir);
+                    const sub = x.p ? `${pt.season ? `S${String(pt.season).padStart(2, '0')}E${String(pt.episode).padStart(2, '0')} · ` : ''}${clock(Math.max(0, (x.p.dur || 0) - (x.p.pos || 0)))} left` : pt.season ? `S${String(pt.season).padStart(2, '0')}E${String(pt.episode).padStart(2, '0')}` : undefined;
+                    return (
+                      <MagSide key={x.k} title={pt.title} sub={sub} progress={progPct(x.p)} art={cardArt(x)}
+                        onClick={() => startPlay(x.name, x.rid, x.dir)} />
+                    );
+                  })}
+                </div>
               ) : first && t ? (
-                <Hero eyebrow="Saved on this laptop" greeting={hello} onCustomize={() => setCustomize(true)} title={t.title} line={savedSub(first)} label="Play"
-                  art={<Art root={OFFLINE_ID} path={first.rel} v={first.mtime} name={first.name} />} onPlay={() => playOffline(first.rel)} />
+                <div className="mag mag-solo">
+                  <Hero eyebrow="Saved on this laptop" title={t.title} line={savedSub(first)} label="Play"
+                    art={<Art root={OFFLINE_ID} path={first.rel} v={first.mtime} name={first.name} />} onPlay={() => playOffline(first.rel)} />
+                </div>
               ) : (
-                <>
-                  <div className="greet-top"><h1 className="page-h">{hello}</h1><button className="btn ghost sm" onClick={() => setCustomize(true)}><Icon n="sliders" s={14} /> Customise</button></div>
-                  <Welcome onLibrary={() => setView('library')} onOpen={bridge ? pickFile : undefined} />
-                </>
+                <Welcome onLibrary={() => setView('library')} onOpen={bridge ? pickFile : undefined} />
               )}
+
               <Today minutes={todayMin} goal={goal}
-                onGoal={() => setNameAsk({ title: 'Daily goal (minutes)', value: String(goal), label: 'Save', go: (v) => setPref('goal', Math.max(5, Math.min(600, parseInt(v, 10) || 30))) })}
+                onGoal={() => setNameAsk({ title: 'Daily goal (minutes)', value: String(goal), label: 'Save', go: (v) => setPref('goal', Math.max(5, parseInt(v, 10) || 30)) })}
                 facts={[
                   ...(streak > 0 ? [{ label: 'day streak', value: streak }] : []),
                   ...(resumable.length > 0 ? [{ label: 'in progress', value: resumable.length }] : []),
@@ -797,28 +812,148 @@ function Library() {
 
         {view === 'insights' && (() => {
           const all = Object.entries(prog);
-          const watchedSec = all.reduce((a, [, p]) => a + (p.watched ? p.dur : Math.min(p.pos, p.dur)), 0);
-          const week = all.filter(([, p]) => p.updated > Date.now() / 1000 - 7 * 86400 || p.updated > Date.now() - 7 * 86400_000);
-          const weekSec = week.reduce((a, [, p]) => a + (p.watched ? p.dur : Math.min(p.pos, p.dur)), 0);
-          const savedBytes = savedFiles.reduce((a, f) => a + f.size, 0);
-          const byFolder = new Map<string, number>();
-          for (const [k, p] of all) { const parts = k.split(':').slice(1).join(':').split('/'); const f = parts.length > 1 ? parts[parts.length - 2] : parts[0]; byFolder.set(f, (byFolder.get(f) ?? 0) + (p.watched ? p.dur : Math.min(p.pos, p.dur))); }
-          const top = [...byFolder.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
-          const max = Math.max(1, ...top.map((x) => x[1]));
-          const hrs = (x: number) => `${Math.floor(x / 3600)} h ${Math.floor((x % 3600) / 60)} min`;
+          const watchedSecs = (p: Prog) => {
+            const dur = Number(p?.dur) || 0;
+            const pos = Number(p?.pos) || 0;
+            if (p?.watched) return Math.max(0, dur);
+            return Math.max(0, Math.min(pos, dur || pos));
+          };
+          const finished = all.filter(([, p]) => p.watched);
+          const inProg = all.filter(([, p]) => !p.watched && (Number(p.pos) || 0) > 0);
+          const watchedSec = all.reduce((a, [, p]) => a + watchedSecs(p), 0);
+          const weekCut = Date.now() / 1000 - 7 * 86400;
+          const week = all.filter(([, p]) => {
+            const u = Number(p.updated) || 0;
+            return u > weekCut || u > weekCut * 1000;
+          });
+          const weekSec = week.reduce((a, [, p]) => a + watchedSecs(p), 0);
+          const savedBytes = savedFiles.reduce((a, f) => a + (Number(f.size) || 0), 0);
+          // Rank by show/movie title — not season folder names like "Season 01"
+          const byTitle = new Map<string, number>();
+          for (const [k, p] of all) {
+            try {
+              const path = k.includes(':') ? k.slice(k.indexOf(':') + 1) : k;
+              const segs = path.split('/').filter(Boolean);
+              const fileName = segs[segs.length - 1] || path;
+              const folder = segs.slice(0, -1).join('/');
+              const { title } = parseTitle(fileName, folder);
+              const label = (title || fileName.replace(/\.[^.]+$/, '')).trim() || 'Unknown';
+              byTitle.set(label, (byTitle.get(label) ?? 0) + watchedSecs(p));
+            } catch {
+              byTitle.set('Unknown', (byTitle.get('Unknown') ?? 0) + watchedSecs(p));
+            }
+          }
+          const top = [...byTitle.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+          const max = Math.max(1, ...top.map((x) => x[1]), 1);
+          const hrs = (x: number) => {
+            const sec = Math.max(0, Math.floor(Number(x) || 0));
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            if (h <= 0) return `${m} min`;
+            return m > 0 ? `${h} h ${m} min` : `${h} h`;
+          };
+          const log = prefs.daylog ?? {};
+          const todayMin = Math.floor((Number(log[dayKey()]) || 0) / 60);
+          const goal = Math.max(5, Number(prefs.goal) || 30);
+          const goalPct = Math.min(100, Math.round((todayMin / goal) * 100));
+          const ringC = 2 * Math.PI * 30;
+          let streak = 0;
+          for (let i = (Number(log[dayKey()]) || 0) >= 600 ? 0 : 1; i < 120; i++) {
+            if ((Number(log[dayKey(new Date(Date.now() - i * 86400_000))]) || 0) >= 600) streak++;
+            else break;
+          }
+          const started = finished.length + inProg.length;
+          const finishRate = started ? Math.round((finished.length / started) * 100) : 0;
           return (
-            <div className="home">
-              <h1 className="page-h">Insights</h1>
-              <div className="stat-grid">
-                <div className="stat"><small>Watched in total</small><b>{hrs(watchedSec)}</b><span className="muted small">{all.filter(([, p]) => p.watched).length} finished videos</span></div>
-                <div className="stat"><small>Last 7 days</small><b>{hrs(weekSec)}</b><span className="muted small">{week.length} videos touched</span></div>
-                <div className="stat"><small>Saved on this laptop</small><b>{bytes(savedBytes)}</b><span className="muted small">{savedFiles.length} videos, plays offline</span></div>
-                <div className="stat"><small>Data used this month</small><b>{bytes(net.month)}</b><span className="muted small">{bytes(net.today)} today</span></div>
+            <div className="home insights-page">
+              <header className="ins-head">
+                <div>
+                  <h1 className="page-h">Insights</h1>
+                  <p className="ins-sub muted">Your watching habits and offline library</p>
+                </div>
+              </header>
+
+              <div className="ins-hero">
+                <div className="ins-hero-main">
+                  <small>Watched in total</small>
+                  <b>{hrs(watchedSec)}</b>
+                  <span className="muted">{finished.length} finished · {inProg.length} in progress · {all.length} tracked</span>
+                </div>
+                <div className="ins-hero-side">
+                  <div className="ins-pill">
+                    <span className="ins-pill-val">{hrs(weekSec)}</span>
+                    <span className="ins-pill-lbl">Last 7 days</span>
+                    <span className="muted small">{week.length} videos touched</span>
+                  </div>
+                  <div className="ins-pill">
+                    <span className="ins-pill-val">{streak}</span>
+                    <span className="ins-pill-lbl">Day streak</span>
+                    <span className="muted small">{streak > 0 ? 'Keep it going' : 'Watch 10+ min today'}</span>
+                  </div>
+                  <div className="ins-pill">
+                    <span className="ins-pill-val">{finishRate}%</span>
+                    <span className="ins-pill-lbl">Finish rate</span>
+                    <span className="muted small">{finished.length} of {started} started</span>
+                  </div>
+                </div>
               </div>
-              <section className="rail">
-                <div className="rail-h"><h2>Most watched</h2></div>
-                {top.length ? <div className="bars">{top.map(([n, v]) => <div key={n} className="barrow"><span title={n}>{n.replace(/\.[^.]+$/, '')}</span><i><b style={{ width: `${(v / max) * 100}%` }} /></i><em>{hrs(v)}</em></div>)}</div> : <p className="muted">Watch something and it shows up here.</p>}
-              </section>
+
+              <div className="ins-grid">
+                <section className="ins-card ins-card-wide">
+                  <div className="ins-card-h">
+                    <h2>Most watched</h2>
+                    <span className="muted small">By title</span>
+                  </div>
+                  {top.length ? (
+                    <div className="ins-bars">
+                      {top.map(([n, v], i) => (
+                        <div key={n} className="ins-barrow">
+                          <span className="ins-rank">{i + 1}</span>
+                          <span className="ins-bar-name" title={n}>{n}</span>
+                          <i className="ins-bar-track"><b style={{ width: `${Math.min(100, (v / max) * 100)}%` }} /></i>
+                          <em className="ins-bar-time">{hrs(v)}</em>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="ins-empty muted">Watch something and titles will rank here by time spent.</p>
+                  )}
+                </section>
+
+                <div className="ins-side">
+                <section className="ins-card">
+                  <div className="ins-card-h">
+                    <h2>Today</h2>
+                    <span className="muted small">Daily goal</span>
+                  </div>
+                  <div className="ins-goal">
+                    <div className="ins-goal-ring">
+                      <svg viewBox="0 0 72 72" width="72" height="72">
+                        <circle cx="36" cy="36" r="30" className="ins-ring-bg" />
+                        <circle cx="36" cy="36" r="30" className="ins-ring-fg" strokeDasharray={ringC} strokeDashoffset={ringC * (1 - goalPct / 100)} transform="rotate(-90 36 36)" />
+                      </svg>
+                      <span className="ins-goal-pct">{goalPct}%</span>
+                    </div>
+                    <div className="ins-goal-meta">
+                      <b>{todayMin} <span className="muted">/ {goal} min</span></b>
+                      <span className="muted small">{todayMin >= goal ? 'Goal reached' : `${Math.max(0, goal - todayMin)} min to go`}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="ins-card">
+                  <div className="ins-card-h">
+                    <h2>On this laptop</h2>
+                    <span className="muted small">Offline</span>
+                  </div>
+                  <div className="ins-metric">
+                    <b>{bytes(savedBytes)}</b>
+                    <span className="muted">{savedFiles.length} video{savedFiles.length === 1 ? '' : 's'} saved</span>
+                  </div>
+                  <p className="ins-note muted small">Plays with no internet. Manage copies from Downloads.</p>
+                </section>
+                </div>
+              </div>
             </div>
           );
         })()}
@@ -1145,13 +1280,35 @@ function Confirm({ ask, onClose, onError }: { ask: Ask; onClose: () => void; onE
 
 function NameDialog({ ask, onClose }: { ask: { title: string; value: string; label: string; go: (v: string) => void }; onClose: () => void }) {
   const [v, setV] = useState(ask.value);
-  const done = () => { ask.go(v); onClose(); };
+  const isGoal = /goal/i.test(ask.title);
+  const done = () => { ask.go(v.trim()); onClose(); };
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={ask.title}>
-        <h3>{ask.title}</h3>
-        <input autoFocus value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') done(); if (e.key === 'Escape') onClose(); }} />
-        <div className="dlg-actions"><button className="btn ghost" onClick={onClose}>Cancel</button><button className="btn" onClick={done}>{ask.label}</button></div>
+      <div className="dialog de-settings name-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={ask.title}>
+        <div className="set-accent" aria-hidden="true" />
+        <div className="dlg-head">
+          <div>
+            <h3>{ask.title}</h3>
+            {isGoal && <span className="dlg-sub">How many minutes you aim to watch each day</span>}
+          </div>
+          <button type="button" className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
+        <div className="name-dialog-body">
+          <input
+            autoFocus
+            type={isGoal ? 'number' : 'text'}
+            min={isGoal ? 5 : undefined}
+            step={isGoal ? 5 : undefined}
+            value={v}
+            onChange={(e) => setV(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') done(); if (e.key === 'Escape') onClose(); }}
+          />
+          {isGoal && <p className="muted small name-dialog-hint">Minimum 5 minutes. No upper limit.</p>}
+        </div>
+        <div className="dlg-actions">
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn" onClick={done} disabled={isGoal ? !(parseInt(v, 10) >= 5) : !v.trim()}>{ask.label}</button>
+        </div>
       </div>
     </div>
   );
@@ -1211,48 +1368,72 @@ function DataPanel({ budget, saver, queued, onBudget, onClose, onDownloads, onSe
   const left = budget > 0 ? Math.max(0, budget * 1e9 - net.month) : 0;
   const now = new Date();
   const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1;
+  const budgetLabel = budget > 0 ? `${budget} GB` : 'No limit';
+  const budgetHint = budget > 0
+    ? `${bytes(left)} left · ${daysLeft} day${daysLeft > 1 ? 's' : ''} to go`
+    : 'Set a cap to keep streaming from eating your plan';
   return (
     <>
       <div className="tn-back" onClick={onClose} />
-      <section className="dpanel" role="dialog" aria-label="Data usage">
-        <div className="dp-live">
-          <div>
-            <small>{net.active ? 'Transferring now' : 'Idle'}</small>
-            <b>{net.ok ? rate(net.speed) : 'Offline'}</b>
+      <section className="dpanel dp-budget-first" role="dialog" aria-label="Data usage">
+        <div className="dp-accent" aria-hidden="true" />
+
+        {/* Budget is the hero */}
+        <div className="dp-hero">
+          <div className="dp-hero-top">
+            <small>Monthly budget</small>
+            <span className="muted small">{bytes(net.month)} used this month</span>
           </div>
-          <span className={net.active ? 'dp-tag on' : 'dp-tag'}>{net.ok ? (net.mode || 'connected') : 'no connection'}</span>
-        </div>
-        <svg className="dp-spark" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">
-          <path d={`${line} L300,60 L0,60 Z`} className="dp-fill" />
-          <path d={line} className="dp-line" />
-        </svg>
-
-        <div className="dp-stats">
-          <div><small>Today</small><b>{bytes(net.today)}</b></div>
-          <div><small>This month</small><b>{bytes(net.month)}</b></div>
-          <div><small>All time</small><b>{bytes(net.lifetime)}</b></div>
-        </div>
-
-        <div className="dp-block">
-          <div className="dp-h"><strong>Monthly budget</strong><span className="muted small">{budget > 0 ? `${bytes(left)} left · ${daysLeft} day${daysLeft > 1 ? 's' : ''} to go` : 'No limit set'}</span></div>
+          <h2>{budgetLabel}</h2>
+          <p className="dp-hero-hint">{budgetHint}</p>
           {budget > 0 && <div className={used >= 80 ? 'dp-bar warn' : 'dp-bar'}><i style={{ width: `${used}%` }} /></div>}
-          <div className="dp-chips">
-            {[0, 5, 10, 20, 50, 100].map((g) => <button key={g} className={budget === g ? 'on' : ''} onClick={() => onBudget(g)}>{g === 0 ? 'No limit' : `${g} GB`}</button>)}
+          <div className="dp-pick">
+            {([0, 5, 10, 20, 50, 100] as const).map((g) => (
+              <button key={g} type="button" className={budget === g ? 'on' : ''} onClick={() => onBudget(g)}>
+                {g === 0 ? 'No limit' : `${g} GB`}
+                <span>{g === 0 ? 'unlimited' : g === 5 ? 'light use' : g === 10 ? 'typical' : ''}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="dp-block">
-          <div className="dp-h"><strong>Data Saver</strong><span className="muted small">{saver > s.saver ? 'Raised automatically by your budget' : SAVER[saver]?.hint}</span></div>
+        {/* Speed + usage secondary */}
+        <div className="dp-secondary">
+          <div className="dp-sec">
+            <small>{net.active ? 'Transferring' : 'Live speed'}</small>
+            <b>{net.ok ? rate(net.speed) : 'Offline'}</b>
+            <div className="dp-sec-sub">{net.ok ? (net.active ? (net.mode || 'connected') : `Idle · ${net.mode || 'connected'}`) : 'no connection'}</div>
+            <svg className="dp-spark-sm" viewBox="0 0 160 28" preserveAspectRatio="none" aria-hidden="true">
+              <path d={`${hist.map((v, i) => `${(i / Math.max(1, hist.length - 1)) * 160},${26 - (v / peak) * 22}`).join(' L').replace(/^/, 'M')} L160,28 L0,28 Z`} className="dp-fill" />
+              <path d={`M${hist.map((v, i) => `${(i / Math.max(1, hist.length - 1)) * 160},${26 - (v / peak) * 22}`).join(' L')}`} className="dp-line" />
+            </svg>
+          </div>
+          <div className="dp-sec">
+            <small>Usage</small>
+            <div className="dp-usage-list">
+              <div><span>Today</span><b>{bytes(net.today)}</b></div>
+              <div><span>This month</span><b>{bytes(net.month)}</b></div>
+              <div><span>All time</span><b>{bytes(net.lifetime)}</b></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Data Saver */}
+        <div className="dp-saver">
+          <div className="dp-h">
+            <strong>Data Saver</strong>
+            <span className="muted small">{saver > s.saver ? 'Raised automatically by your budget' : SAVER[saver]?.hint}</span>
+          </div>
           <div className="dp-seg" role="group" aria-label="Data Saver">
-            {SAVER.map((o) => <button key={o.id} className={saver === o.id ? 'on' : ''} onClick={() => set({ saver: o.id })}>{o.label}</button>)}
+            {SAVER.map((o) => <button key={o.id} type="button" className={saver === o.id ? 'on' : ''} onClick={() => set({ saver: o.id })}>{o.label}</button>)}
           </div>
           <label className="dp-row"><span>Switch to Low at 80% of the budget</span><Toggle on={s.saverAuto} label="Auto Data Saver" onClick={() => set({ saverAuto: !s.saverAuto })} /></label>
         </div>
 
         <div className="dp-foot">
-          <button onClick={onDownloads}><Icon n="down" s={15} /> {queued > 0 ? `${queued} downloading` : 'Downloads'}</button>
-          <button onClick={onInsights}><Icon n="gauge" s={15} /> Insights</button>
-          <button onClick={onSettings}><Icon n="sliders" s={15} /> All data settings</button>
+          <button type="button" onClick={onDownloads}><Icon n="down" s={15} /> {queued > 0 ? `${queued} downloading` : 'Downloads'}</button>
+          <button type="button" onClick={onInsights}><Icon n="gauge" s={15} /> Insights</button>
+          <button type="button" onClick={onSettings}><Icon n="sliders" s={15} /> All data settings</button>
         </div>
       </section>
     </>

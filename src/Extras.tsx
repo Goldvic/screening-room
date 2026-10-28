@@ -70,22 +70,51 @@ export function CollectionsPage({ cols, art, onPlay, onRename, onDelete, onRemov
 
 export function AddToCollection({ cols, count, onPick, onClose }: { cols: Collection[]; count: number; onPick: (id: string | 'new', name?: string) => void; onClose: () => void }) {
   const [name, setName] = useState('');
+  const create = () => { if (name.trim()) onPick('new', name.trim()); };
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add to collection">
-        <div className="set-accent" aria-hidden="true" />
-        <div className="dlg-head">
+      <div className={`dialog atc-dialog${cols.length ? ' has-cols' : ' is-empty'}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add to collection">
+        <div className="atc-accent" aria-hidden="true" />
+        <header className="atc-head">
           <div>
             <h3>Add to collection</h3>
-            <span className="dlg-sub">{count} video{count > 1 ? 's' : ''} selected</span>
+            <p>{count} video{count > 1 ? 's' : ''} selected</p>
           </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+          <button type="button" className="atc-x" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
+        </header>
+
+        {cols.length > 0 && (
+          <div className="atc-list" role="list">
+            {cols.map((c) => (
+              <button key={c.id} type="button" className="atc-item" role="listitem" onClick={() => onPick(c.id)}>
+                <span className="atc-item-icon"><Icon n="folder" s={16} /></span>
+                <span className="atc-item-text">
+                  <b>{c.name}</b>
+                  <small>{c.items.length} video{c.items.length === 1 ? '' : 's'}</small>
+                </span>
+                <span className="atc-item-go">Add</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="atc-create">
+          <span className="atc-label">{cols.length > 0 ? 'Or create a new collection' : 'Name your first collection'}</span>
+          <div className="atc-row">
+            <input
+              autoFocus
+              value={name}
+              placeholder="e.g. Weekend movies"
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && create()}
+            />
+            <button type="button" className="btn" disabled={!name.trim()} onClick={create}>Create</button>
+          </div>
         </div>
-        <div className="pickl">{cols.map((c) => <button key={c.id} className="opt" onClick={() => onPick(c.id)}><span><b>{c.name}</b><small>{c.items.length} videos</small></span></button>)}</div>
-        <div className="msec">Or make a new one</div>
-        <span className="inline"><input autoFocus value={name} placeholder="Collection name" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onPick('new', name.trim())} />
-          <button className="btn" disabled={!name.trim()} onClick={() => onPick('new', name.trim())}>Create</button></span>
-        <div className="dlg-actions"><button className="btn ghost" onClick={onClose}>Cancel</button></div>
+
+        <footer className="atc-foot">
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+        </footer>
       </div>
     </div>
   );
@@ -94,29 +123,76 @@ export function AddToCollection({ cols, count, onPick, onClose }: { cols: Collec
 /* ---------------- home layout ---------------- */
 export type HomeRow = { id: string; label: string; on: boolean };
 export function HomeCustomize({ rows, onChange, onClose }: { rows: HomeRow[]; onChange: (r: HomeRow[]) => void; onClose: () => void }) {
-  const move = (i: number, d: -1 | 1) => { const r = [...rows]; [r[i], r[i + d]] = [r[i + d], r[i]]; onChange(r); };
+  const visible = rows.filter((r) => r.on);
+  const hidden  = rows.filter((r) => !r.on);
+
+  const toggle = (id: string) => {
+    onChange(rows.map((x) => (x.id === id ? { ...x, on: !x.on } : x)));
+  };
+
+  // Reorder only within the visible set (preserves relative order of hidden items)
+  const moveVisible = (id: string, dir: -1 | 1) => {
+    const vis = rows.filter((r) => r.on);
+    const i = vis.findIndex((r) => r.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= vis.length) return;
+    const a = vis[i].id;
+    const b = vis[j].id;
+    const next = [...rows];
+    const ia = next.findIndex((r) => r.id === a);
+    const ib = next.findIndex((r) => r.id === b);
+    [next[ia], next[ib]] = [next[ib], next[ia]];
+    onChange(next);
+  };
+
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Customise Home">
+      <div className="dialog de-settings hc-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Customise Home">
         <div className="set-accent" aria-hidden="true" />
         <div className="dlg-head">
           <div>
             <h3>Customise Home</h3>
-            <span className="dlg-sub">Which rows show, and in what order</span>
+            <span className="dlg-sub">Move rows between columns</span>
           </div>
           <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
         </div>
-        <ol className="rowlist">
-          {rows.map((r, i) => (
-            <li key={r.id}>
-              <label><input type="checkbox" checked={r.on} onChange={() => onChange(rows.map((x) => (x.id === r.id ? { ...x, on: !x.on } : x)))} /> {r.label}</label>
-              <span className="inline">
-                <button className="icon sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up"><Icon n="back" s={14} /></button>
-                <button className="icon sm flipv" disabled={i === rows.length - 1} onClick={() => move(i, 1)} aria-label="Move down"><Icon n="back" s={14} /></button>
-              </span>
-            </li>
-          ))}
-        </ol>
+
+        <div className="hc-cols">
+          <div className="hc-col">
+            <div className="hc-col-h">Visible</div>
+            <ul className="hc-list">
+              {visible.map((r, i) => (
+                <li key={r.id}>
+                  <label>
+                    <input type="checkbox" checked onChange={() => toggle(r.id)} />
+                    <span>{r.label}</span>
+                  </label>
+                  <span className="hc-order">
+                    <button className="icon sm" disabled={i === 0} onClick={() => moveVisible(r.id, -1)} aria-label="Move up"><Icon n="back" s={13} /></button>
+                    <button className="icon sm flipv" disabled={i === visible.length - 1} onClick={() => moveVisible(r.id, 1)} aria-label="Move down"><Icon n="back" s={13} /></button>
+                  </span>
+                </li>
+              ))}
+              {!visible.length && <li className="hc-empty">Nothing on Home yet</li>}
+            </ul>
+          </div>
+
+          <div className="hc-col">
+            <div className="hc-col-h">Hidden</div>
+            <ul className="hc-list">
+              {hidden.map((r) => (
+                <li key={r.id}>
+                  <label>
+                    <input type="checkbox" checked={false} onChange={() => toggle(r.id)} />
+                    <span>{r.label}</span>
+                  </label>
+                </li>
+              ))}
+              {!hidden.length && <li className="hc-empty">Nothing hidden</li>}
+            </ul>
+          </div>
+        </div>
+
         <div className="dlg-actions"><button className="btn" onClick={onClose}>Done</button></div>
       </div>
     </div>

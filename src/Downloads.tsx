@@ -208,64 +208,80 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
   };
   const pct = (i: Item) => (i.state === 'encoding' ? i.encPct : i.size ? (i.done / i.size) * 100 : 0);
   const Row = ({ i }: { i: Item }) => (
-    <div className={'dl-row ' + i.state}>
-      <div className="dl-main">
+    <div className={'dl-dock-row ' + i.state}>
+      <div className="dl-dock-main">
         <strong title={i.dest}>{i.dest.split('/').pop()}</strong>
-        <span className={'small ' + (i.state === 'error' ? 'err-t' : 'muted')}>{status(i)}</span>
-        {['encoding', 'downloading', 'finalizing', 'paused', 'queued'].includes(i.state) && <i className="bar"><i style={{ width: `${pct(i)}%` }} className={i.state === 'encoding' ? 'enc' : ''} /></i>}
+        <span className={i.state === 'error' ? 'err-t' : 'muted'}>{status(i)}</span>
+        {['encoding', 'downloading', 'finalizing', 'paused', 'queued'].includes(i.state) && (
+          <i className="dl-dock-bar"><b style={{ width: `${pct(i)}%` }} className={i.state === 'encoding' ? 'enc' : ''} /></i>
+        )}
       </div>
-      <div className="dl-act">
-        {i.state === 'done' && <button className="btn" onClick={() => onPlay(i.dest)}><Icon n="play" s={14} /> Play</button>}
-        {['encoding', 'downloading'].includes(i.state) && <button className="icon" onClick={() => act('pause', i.id)} aria-label="Pause"><Icon n="pause2" s={18} /></button>}
-        {['paused', 'error', 'cancelled'].includes(i.state) && <button className="icon" onClick={() => act('resume', i.id)} aria-label={i.state === 'error' ? 'Retry' : 'Resume'}><Icon n="play" s={18} /></button>}
-        {i.state === 'queued' && i.reason && <button className="btn ghost" onClick={() => act('start', i.id)}>Start now</button>}
-        {['queued', 'encoding', 'downloading', 'paused'].includes(i.state) && <button className="icon" onClick={() => act('cancel', i.id)} aria-label="Cancel"><Icon n="close" s={18} /></button>}
-        {['done', 'cancelled', 'error'].includes(i.state) && <button className="icon" onClick={() => act('remove', i.id)} aria-label="Remove from list"><Icon n="trash" s={16} /></button>}
+      <div className="dl-dock-act">
+        {i.state === 'done' && <button type="button" className="btn" onClick={() => onPlay(i.dest)}><Icon n="play" s={14} /> Play</button>}
+        {['encoding', 'downloading'].includes(i.state) && <button type="button" className="icon" onClick={() => act('pause', i.id)} aria-label="Pause"><Icon n="pause2" s={18} /></button>}
+        {['paused', 'error', 'cancelled'].includes(i.state) && <button type="button" className="icon" onClick={() => act('resume', i.id)} aria-label={i.state === 'error' ? 'Retry' : 'Resume'}><Icon n="play" s={18} /></button>}
+        {i.state === 'queued' && i.reason && <button type="button" className="btn ghost" onClick={() => act('start', i.id)}>Start now</button>}
+        {['queued', 'encoding', 'downloading', 'paused'].includes(i.state) && <button type="button" className="icon" onClick={() => act('cancel', i.id)} aria-label="Cancel"><Icon n="close" s={18} /></button>}
+        {['done', 'cancelled', 'error'].includes(i.state) && <button type="button" className="icon" onClick={() => act('remove', i.id)} aria-label="Remove from list"><Icon n="trash" s={16} /></button>}
       </div>
     </div>
   );
 
+  const savedN = fin.filter((i) => i.state === 'done').length;
+  const idle = live.length === 0;
+
   return (
-    <div className="scrim side" onClick={onClose}>
-      <aside className="drawer de-drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Downloads">
-        <div className="drawer-accent" aria-hidden="true" />
-        <div className="dlg-head">
-          <div>
-            <h3>Downloads</h3>
-            <span className="dlg-sub">Queue, scheduled and finished</span>
-          </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
-        </div>
-        <RulesBlock />
-        {sched.length > 0 && (
-          <div className="sched">
-            <div className="msec">Scheduled</div>
-            {sched.map((x) => (
-              <div key={x.id} className="sched-row">
-                <span><b>{x.label || `${x.count} videos`}</b><small>{new Date(x.at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></span>
-                <button className="btn ghost" onClick={async () => { await api('dl/schedule', { id: x.id }, 'DELETE').catch(() => {}); loadSched(); }}>Cancel</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="dl-top">
-          <span><b>{rate(q?.speed ?? 0)}</b> <small className="muted">{live.length} active · {q?.waiting ?? 0} waiting</small></span>
-          <span className="inline">
-            <button className="btn ghost" onClick={() => all('pause')}>Pause all</button>
-            <button className="btn ghost" onClick={() => all('resume')}>Resume all</button>
-            <button className="btn ghost" onClick={() => all('clear')}>Clear finished</button>
+    <div className="dl-dock-scrim" onClick={onClose}>
+      <div className="dl-dock" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Downloads">
+        <div className="dl-dock-top">
+          <span className="dl-dock-title">Downloads</span>
+          <span className="dl-dock-rate">{rate(q?.speed ?? 0)}</span>
+          <span className="dl-dock-meta">
+            {idle ? `${savedN} saved · idle` : `${live.length} active · ${q?.waiting ?? 0} waiting`}
           </span>
+          <div className="dl-dock-acts">
+            <button type="button" onClick={() => all('pause')}>Pause</button>
+            <button type="button" onClick={() => all('resume')}>Resume</button>
+            <button type="button" onClick={() => all('clear')}>Clear</button>
+            <button type="button" onClick={onStorage}>Storage</button>
+          </div>
+          <button type="button" className="dl-dock-x" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
         </div>
-        {q && q.budgetGB > 0 && (
-          <div className="budget"><span className="small">Data this month: {bytes(q.month)} of {q.budgetGB} GB</span>
-            <i className="bar"><i style={{ width: `${Math.min(100, (q.month / (q.budgetGB * 1e9)) * 100)}%` }} className={q.month > q.budgetGB * 0.8e9 ? 'enc' : ''} /></i></div>
+
+        {(sched.length > 0 || (q && q.budgetGB > 0)) && (
+          <div className="dl-dock-extra">
+            {sched.length > 0 && (
+              <div className="dl-dock-sched">
+                {sched.map((x) => (
+                  <div key={x.id} className="dl-dock-sched-row">
+                    <span>
+                      <b>{x.label || `${x.count} videos`}</b>
+                      <small>{new Date(x.at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small>
+                    </span>
+                    <button type="button" className="btn ghost" onClick={async () => { await api('dl/schedule', { id: x.id }, 'DELETE').catch(() => {}); loadSched(); }}>Cancel</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {q && q.budgetGB > 0 && (
+              <div className="dl-dock-budget">
+                <span>Data this month: {bytes(q.month)} of {q.budgetGB} GB</span>
+                <i className="dl-dock-bar"><b style={{ width: `${Math.min(100, (q.month / (q.budgetGB * 1e9)) * 100)}%` }} className={q.month > q.budgetGB * 0.8e9 ? 'enc' : ''} /></i>
+              </div>
+            )}
+          </div>
         )}
-        {!items.length && <p className="muted pad">Nothing here yet. Use “Save for offline” on a movie or folder.</p>}
-        {live.map((i) => <Row key={i.id} i={i} />)}
-        {wait.map((i) => <Row key={i.id} i={i} />)}
-        {fin.map((i) => <Row key={i.id} i={i} />)}
-        <div className="dlg-actions"><button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button></div>
-      </aside>
+
+        <div className="dl-dock-body">
+          <RulesBlock />
+          {!items.length && !sched.length && (
+            <p className="dl-dock-empty">Nothing here yet. Use “Save for offline” on a movie or folder.</p>
+          )}
+          {live.map((i) => <Row key={i.id} i={i} />)}
+          {wait.map((i) => <Row key={i.id} i={i} />)}
+          {fin.map((i) => <Row key={i.id} i={i} />)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -312,51 +328,97 @@ export function StoragePanel({ onClose, onPlay, onChanged }: { onClose: () => vo
   const watched = d?.items.filter((i) => i.watched) ?? [];
   const cache = d ? d.caches.thumbs + d.caches.sprites + d.caches.posters : 0;
 
+  const usedPct = d && d.total ? Math.min(100, (d.used / d.total) * 100) : 0;
+  const watchedBytes = watched.reduce((s, i) => s + i.size, 0);
+
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Storage">
-        <div className="set-accent" aria-hidden="true" />
-        <div className="dlg-head">
+      <div className="dialog st-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Storage">
+        <div className="st-accent" aria-hidden="true" />
+        <header className="st-head">
           <div>
             <h3>Storage</h3>
-            <span className="dlg-sub">Saved copies on this laptop</span>
+            <p>Offline copies on this laptop</p>
           </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
-        </div>
-        {err && <p className="err-t">{err}</p>}
+          <button type="button" className="st-x" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
+        </header>
+
+        {err && <p className="st-err">{err}</p>}
+        {msg && <p className="st-msg">{msg}</p>}
+
         {d && (
-          <>
-            <p className="small muted trunc" title={d.dir}>{d.dir}</p>
-            <i className="bar big"><i style={{ width: `${d.total ? Math.min(100, (d.used / d.total) * 100) : 0}%` }} /></i>
-            <p className="small"><b>{bytes(d.used)}</b> used by downloads · {bytes(d.free)} free of {bytes(d.total)}</p>
-            <div className="dlg-actions spread">
-              <span className="inline">
-                {bridge && <button className="btn ghost" onClick={() => bridge?.openFolder(d.dir)}>Open folder</button>}
-                {bridge && <button className="btn ghost" onClick={move}>Change folder…</button>}
-              </span>
-              <button className="btn ghost" disabled={!watched.length} onClick={() => window.confirm(`Delete ${watched.length} watched video(s) from this laptop?`) && clear('watched')}>
-                Delete all watched ({bytes(watched.reduce((s, i) => s + i.size, 0))})
-              </button>
-            </div>
-            {msg && <p className="note good">{msg}</p>}
-            <div className="msec">Downloads, largest first</div>
-            <div className="st-list">
-              {!d.items.length && <p className="muted pad">No downloads yet.</p>}
-              {d.items.map((i) => (
-                <div key={i.rel} className="st-row">
-                  <div className="dl-main"><strong title={i.rel}>{i.name}</strong>
-                    <span className="small muted">{bytes(i.size)}{i.watched ? ' · watched' : i.pos > 30 && i.dur ? ` · ${Math.round((i.pos / i.dur) * 100)}% watched` : ''}</span></div>
-                  <button className="icon" onClick={() => onPlay(i.rel)} aria-label={`Play ${i.name}`}><Icon n="play" s={16} /></button>
-                  <button className="icon danger" onClick={() => del(i.rel)} aria-label={`Delete ${i.name}`}><Icon n="trash" s={16} /></button>
+          <div className="st-body">
+            <section className="st-usage">
+              <div className="st-usage-nums">
+                <div>
+                  <small>Used by downloads</small>
+                  <b>{bytes(d.used)}</b>
                 </div>
-              ))}
-            </div>
-            <div className="msec">Temporary data</div>
-            <div className="dlg-actions spread">
-              <span className="small muted">Thumbnails, previews and posters: {bytes(cache)}. They are rebuilt when needed.</span>
-              <button className="btn ghost" disabled={!cache} onClick={() => clear('all')}>Clear</button>
-            </div>
-          </>
+                <div>
+                  <small>Free space</small>
+                  <b>{bytes(d.free)}</b>
+                </div>
+                <div>
+                  <small>Disk total</small>
+                  <b>{bytes(d.total)}</b>
+                </div>
+              </div>
+              <div className="st-usage-bar" title={`${usedPct.toFixed(1)}% of disk`}>
+                <i style={{ width: `${usedPct}%` }} />
+              </div>
+              <div className="st-path" title={d.dir}>
+                <span className="st-path-text">{d.dir}</span>
+                <span className="st-path-acts">
+                  {bridge && <button type="button" onClick={() => bridge?.openFolder(d.dir)}>Open</button>}
+                  {bridge && <button type="button" onClick={move}>Move…</button>}
+                </span>
+              </div>
+            </section>
+
+            <section className="st-section">
+              <div className="st-section-h">
+                <h4>Downloads</h4>
+                <span>{d.items.length} file{d.items.length === 1 ? '' : 's'}</span>
+              </div>
+              {!d.items.length ? (
+                <p className="st-empty">No offline copies yet. Save something from the library to free up streaming data later.</p>
+              ) : (
+                <div className="st-list">
+                  {d.items.map((i) => (
+                    <div key={i.rel} className="st-row">
+                      <div className="st-row-main">
+                        <strong title={i.rel}>{i.name}</strong>
+                        <span>
+                          {bytes(i.size)}
+                          {i.watched ? ' · watched' : i.pos > 30 && i.dur ? ` · ${Math.round((i.pos / i.dur) * 100)}% watched` : ''}
+                        </span>
+                      </div>
+                      <button type="button" className="icon" onClick={() => onPlay(i.rel)} aria-label={`Play ${i.name}`}><Icon n="play" s={16} /></button>
+                      <button type="button" className="icon danger" onClick={() => del(i.rel)} aria-label={`Delete ${i.name}`}><Icon n="trash" s={16} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {watched.length > 0 && (
+                <button
+                  type="button"
+                  className="st-watched-btn"
+                  onClick={() => window.confirm(`Delete ${watched.length} watched video(s) from this laptop?`) && clear('watched')}
+                >
+                  Delete {watched.length} watched ({bytes(watchedBytes)})
+                </button>
+              )}
+            </section>
+
+            <section className="st-section st-cache">
+              <div className="st-section-h">
+                <h4>Temporary data</h4>
+                <span>{bytes(cache)}</span>
+              </div>
+              <p className="st-cache-note">Thumbnails, previews and posters. Safe to clear — they rebuild when needed.</p>
+              <button type="button" className="btn ghost" disabled={!cache} onClick={() => clear('all')}>Clear cache</button>
+            </section>
+          </div>
         )}
       </div>
     </div>

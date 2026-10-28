@@ -44,57 +44,63 @@ export function Tile({ name, sub, progress, onClick, art, badge }: {
 export type PoolItem = { k: string; title: string; art: React.ReactNode };
 
 // Full-width cinematic header: what to watch right now, with the other unfinished videos as a quick switcher.
-export function Hero({ title, line, eyebrow, art, onPlay, onMore, label, greeting, progress, left, pool, activeKey, onPick, onCustomize }: {
+/** Magazine feature cell — large Continue Watching card */
+export function Hero({ title, line, eyebrow, art, onPlay, onMore, label, progress, left }: {
   title: string; line: string; eyebrow: string; art: React.ReactNode; onPlay: () => void; onMore?: () => void; label: string;
   greeting?: string; progress?: number; left?: string; pool?: PoolItem[]; activeKey?: string; onPick?: (k: string) => void; onCustomize?: () => void;
 }) {
   return (
-    <section className="hero v2">
-      <div className="hero-art">{art}</div>
-      <div className="hero-shade" />
-      {(greeting || onCustomize) && (
-        <div className="hero-top">
-          <span className="hello">{greeting}</span>
-          {onCustomize && <button className="btn ghost sm" onClick={onCustomize}><Icon n="sliders" s={14} /> Customise</button>}
-        </div>
-      )}
-      <div className="hero-body">
-        <span className="eyebrow">{eyebrow}</span>
+    <div className="mag-feature">
+      <div className="mag-feature-art">{art}</div>
+      <div className="mag-feature-shade" />
+      <div className="mag-feature-body">
+        <span className="mag-tag">{eyebrow}</span>
         <h1>{title}</h1>
         {line && <p>{line}{left ? ` · ${left}` : ''}</p>}
-        {progress ? <i className="hero-prog"><b style={{ width: `${progress}%` }} /></i> : null}
-        <div className="inline">
+        {progress ? <i className="mag-prog"><b style={{ width: `${progress}%` }} /></i> : null}
+        <div className="mag-actions">
           <button className="btn big" onClick={onPlay}><Icon n="play" s={18} /> {label}</button>
           {onMore && <button className="btn ghost big" onClick={onMore}><Icon n="info" s={16} /> Details</button>}
         </div>
       </div>
-      {pool && pool.length > 1 && (
-        <div className="hero-pool" role="tablist" aria-label="In progress">
-          {pool.map((p) => (
-            <button key={p.k} role="tab" aria-selected={p.k === activeKey} className={p.k === activeKey ? 'on' : ''} onClick={() => onPick?.(p.k)} title={p.title}>
-              <span className="hp-art">{p.art}</span><span className="hp-t">{p.title}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }
 
-// One calm strip: daily goal ring on the left, quick facts as links on the right.
-export function Today({ minutes, goal, onGoal, facts }: { minutes: number; goal: number; onGoal: () => void; facts: { label: string; value: number | string; onClick?: () => void }[] }) {
-  const f = Math.min(1, minutes / Math.max(1, goal)), C = 2 * Math.PI * 20;
+/** Side cell in the magazine grid — other in-progress titles */
+export function MagSide({ title, sub, progress, art, onClick }: {
+  title: string; sub?: string; progress?: number; art: React.ReactNode; onClick: () => void;
+}) {
   return (
-    <section className="today">
-      <button className="ring" onClick={onGoal} title="Change your daily goal">
-        <svg viewBox="0 0 48 48" width="52" height="52"><circle cx="24" cy="24" r="20" className="ring-bg" /><circle cx="24" cy="24" r="20" className="ring-fg" strokeDasharray={`${C * f} ${C}`} transform="rotate(-90 24 24)" /></svg>
-        <span><b>{minutes}</b><small>of {goal} min today</small></span>
+    <button type="button" className="mag-side" onClick={onClick}>
+      <span className="mag-side-art">{art}</span>
+      <span className="mag-side-shade" />
+      <span className="mag-side-tag">In progress</span>
+      <span className="mag-side-body">
+        <span className="mag-side-title">{title}</span>
+        {sub && <span className="mag-side-sub">{sub}</span>}
+        {progress != null && progress > 0 && <i className="mag-side-bar"><b style={{ width: `${progress}%` }} /></i>}
+      </span>
+    </button>
+  );
+}
+
+/** Quiet pill strip under the magazine grid */
+export function Today({ minutes, goal, onGoal, facts }: { minutes: number; goal: number; onGoal: () => void; facts: { label: string; value: number | string; onClick?: () => void }[] }) {
+  const f = Math.min(1, minutes / Math.max(1, goal));
+  const C = 2 * Math.PI * 9;
+  return (
+    <section className="today pills">
+      <button className="stat-pill ring-pill" onClick={onGoal} title="Change your daily goal">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <circle cx="12" cy="12" r="9" className="ring-bg" />
+          <circle cx="12" cy="12" r="9" className="ring-fg" strokeDasharray={`${C * f} ${C}`} transform="rotate(-90 12 12)" />
+        </svg>
+        <span><b>{minutes}</b> <em>of {goal} min today</em></span>
       </button>
-      <div className="today-facts">
-        {facts.map((x) => (x.onClick
-          ? <button key={x.label} onClick={x.onClick}><b>{x.value}</b><small>{x.label}</small></button>
-          : <span key={x.label}><b>{x.value}</b><small>{x.label}</small></span>))}
-      </div>
+      {facts.map((x) => (x.onClick
+        ? <button key={x.label} className="stat-pill" onClick={x.onClick}><b>{x.value}</b> <em>{x.label}</em></button>
+        : <span key={x.label} className="stat-pill"><b>{x.value}</b> <em>{x.label}</em></span>))}
     </section>
   );
 }
