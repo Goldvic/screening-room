@@ -37,11 +37,11 @@ export interface DlCtx {
 }
 
 // ---------- compression profiles ----------
-const RES = [360, 480, 720, 1080];
+const RES = [360, 480, 720, 1080, 1440, 2160];
 const CRF: Record<string, Record<number, number>> = {
-  h264: { 360: 28, 480: 27, 720: 26, 1080: 24 },
-  hevc: { 360: 31, 480: 30, 720: 28, 1080: 26 },
-  av1: { 360: 40, 480: 38, 720: 36, 1080: 34 },
+  h264: { 360: 28, 480: 27, 720: 26, 1080: 24, 1440: 23, 2160: 22 },
+  hevc: { 360: 31, 480: 30, 720: 28, 1080: 26, 1440: 25, 2160: 24 },
+  av1: { 360: 40, 480: 38, 720: 36, 1080: 34, 1440: 32, 2160: 30 },
 };
 export function parseProfile(p: string): { kind: 'orig' | 'fix' | 'enc'; codec?: string; h?: number } {
   if (p === 'orig') return { kind: 'orig' };

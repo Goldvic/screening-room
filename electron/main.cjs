@@ -14,6 +14,8 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('enable-features', 'HardwareMediaKeyHandling,MediaSessionService,PlatformHEVCDecoderSupport');
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+// Windows groups and names notifications by this id. Without it they show up under "electron.app.Cinema".
+if (process.platform === 'win32') app.setAppUserModelId('com.cinema.desktop');
 
 let rendererReady = false, pendingOpen = null;
 let hadWindow = false;
@@ -143,6 +145,25 @@ function showWin() {
 
 // Download progress on the taskbar icon and in the tray tooltip, plus a notice when everything is done.
 let lastBusy = false;
+const dlSeen = new Map();                          // download id -> the state we saw last time
+let dlBatch = { ok: [], bad: [] };                 // what finished since the last time the queue went quiet
+let lastNote = null;                               // keep a reference so the click handler is not garbage collected
+function notify(title, body) {
+  if (!Notification.isSupported()) return;
+  const n = new Notification({ title, body, icon: ICON });
+  n.on('click', () => showWin());
+  lastNote = n;
+  n.show();
+}
+function reportBatch() {
+  const { ok, bad } = dlBatch;
+  dlBatch = { ok: [], bad: [] };
+  if (!ok.length && !bad.length) return;                       // paused or cancelled: nothing to announce
+  const nm = (x) => String(x.name || '').replace(/\.[^.]+$/, '');
+  if (ok.length && !bad.length) notify(ok.length === 1 ? 'Saved for offline' : `${ok.length} videos saved`, ok.length === 1 ? `“${nm(ok[0])}” is ready to watch offline.` : 'They are ready to watch offline.');
+  else if (bad.length && !ok.length) notify(bad.length === 1 ? 'Download failed' : `${bad.length} downloads failed`, bad.length === 1 ? `“${nm(bad[0])}”: ${bad[0].error || 'something went wrong'}` : 'Open Downloads to see why and retry.');
+  else notify(`${ok.length} saved, ${bad.length} failed`, 'Open Downloads to see what went wrong and retry.');
+}
 let meteredNow = false, lastMeteredCheck = 0;
 function checkMetered() {
   if (process.platform !== 'win32') return;
@@ -155,6 +176,14 @@ function trackDownloads() {
     try {
       const r = await fetch(`http://127.0.0.1:${port}/api/dl?tk=${token}`);
       const j = await r.json();
+      for (const i of j.items || []) {              // count real outcomes: finished fine, or failed
+        const was = dlSeen.get(i.id);
+        if (was && was !== i.state) {
+          if (i.state === 'done' && ['queued', 'encoding', 'downloading', 'finalizing'].includes(was)) dlBatch.ok.push(i);
+          else if (i.state === 'error') dlBatch.bad.push(i);
+        }
+        dlSeen.set(i.id, i.state);
+      }
       const items = (j.items || []).filter((i) => ['encoding', 'downloading', 'finalizing', 'queued'].includes(i.state));
       const live = items.filter((i) => i.state !== 'queued');
       const busy = items.length > 0;
@@ -167,7 +196,7 @@ function trackDownloads() {
       } else {
         win?.setProgressBar?.(-1);
         tray?.setToolTip?.('Cinema');
-        if (lastBusy && Notification.isSupported()) new Notification({ title: 'Cinema', body: 'Your downloads are finished.' }).show();
+        reportBatch();
       }
       const sched = await pendingSchedules();
       if (!busy && sched.length) {

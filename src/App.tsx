@@ -200,6 +200,10 @@ function Library() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [err, setErr] = useState('');
   const [play, setPlay] = useState<string | null>(null);
+  // Where the playing video lives. Browsing to other folders must not move, restart or stop it.
+  const [playLoc, setPlayLoc] = useState<{ root: number; dir: string } | null>(null);
+  const [playVideos, setPlayVideos] = useState<string[] | null>(null);
+  const beginPlay = (name: string, r: number, d: string) => { setPlayLoc({ root: r, dir: d }); setPlayVideos(null); setPlay(name); };
   const [ask, setAsk] = useState<Ask | null>(null);
   const [toast, setToast] = useState('');
   const [prog, setProg] = useState<Record<string, Prog>>({});
@@ -301,7 +305,7 @@ function Library() {
       for (const f of list) { const r = await post<{ name: string }>('opened', { path: f }); if (!first) first = r.name; }
       // Start playing right away; the storage list refreshes in the background (it can be slow when the server is far away).
       setRoots((rs) => (rs.some((x) => x.id === OPENED_ID) ? rs : [...rs, { id: OPENED_ID, name: 'Opened', dir: '', free: 0, total: 0, offline: true, opened: true } as Root]));
-      setPanel(null); setQuery(''); setRoot(OPENED_ID); setDir(''); setPlay(first);
+      setPanel(null); setQuery(''); setRoot(OPENED_ID); setDir(''); beginPlay(first, OPENED_ID, '');
       loadRoots();
     } catch (e: any) { flash(e.message); }
   };
@@ -395,7 +399,7 @@ function Library() {
   const playOffline = (destRel: string) => {
     setFloating(false);
     const parts = destRel.split('/');
-    setPanel(null); setRoot(OFFLINE_ID); setDir(parts.slice(0, -1).join('/')); setPlay(parts[parts.length - 1]);
+    setPanel(null); setRoot(OFFLINE_ID); setDir(parts.slice(0, -1).join('/')); beginPlay(parts[parts.length - 1], OFFLINE_ID, parts.slice(0, -1).join('/'));
   };
 
   // Play a video. If a full copy is already saved on this laptop, play that one (works with no internet and uses no data).
@@ -503,14 +507,14 @@ function Library() {
         if (j.state === 'done' && j.dest) { flash('Playing the saved copy from this laptop'); playOffline(j.dest); return; }
       } catch { /* server unreachable: fall through */ }
     }
-    setRoot(r); setDir(d); setPlay(name);
+    setRoot(r); setDir(d); beginPlay(name, r, d);
   };
   const toggleSel = (name: string) => setSel((x) => (x.includes(name) ? x.filter((n) => n !== name) : [...x, name]));
   const endSelect = () => { setSelecting(false); setSel([]); };
   const playSelected = () => {
     const list = videos.filter((n) => sel.includes(n));
     if (!list.length) return;
-    endSelect(); setPlaylist(list); setPlay(list[0]);
+    endSelect(); setPlaylist(list); beginPlay(list[0], rid, dir);
   };
   const saveSelected = () => {
     const list = videos.filter((n) => sel.includes(n));
@@ -538,9 +542,14 @@ function Library() {
       document.body.appendChild(a); a.click(); a.remove();
     }
   };
-  const saveOffline = (names: string[], sizes: number) => setTarget({ root: rid, paths: names.map((n) => join(dir, n)), names, sizes });
+  const saveOffline = (names: string[], sizes: number, r: number = rid, d: string = dir) => setTarget({ root: r, paths: names.map((n) => join(d, n)), names, sizes });
 
   const videos = useMemo(() => items.filter((i) => !i.dir && VIDEO.test(i.name)).map((i) => i.name), [items]);
+  // The player follows the video, not the folder you are looking at.
+  const pRoot = playLoc?.root ?? rid, pDir = playLoc?.dir ?? dir;
+  const pCur = rootOf(pRoot);
+  const sameLoc = pRoot === rid && pDir === dir;
+  useEffect(() => { if (play && sameLoc && status === 'ready') setPlayVideos(videos); }, [videos, sameLoc, play, status]); // eslint-disable-line react-hooks/exhaustive-deps
   const seen = videos.filter((n) => prog[pkey(n)]?.watched);
   const favs = prefs.favs ?? [];
   const shown = useMemo(() => {
@@ -595,11 +604,12 @@ function Library() {
   const saver = Math.max(s.saver, floor);
 
   const onStarted = (name: string) => {
-    if (!s.predownload || offline) return;
-    const nx = videos[videos.indexOf(name) + 1];
-    if (!nx || pre.current.has(pkey(nx))) return;
-    pre.current.add(pkey(nx));
-    post('dl/add', { root: rid, paths: [join(dir, nx)], profile: s.dlProfile, opts: { loud: s.dlLoud, dialogue: s.dlDialogue } })
+    if (!s.predownload || pCur?.offline) return;
+    const list = playlist ?? playVideos ?? videos;
+    const nx = list[list.indexOf(name) + 1];
+    if (!nx || pre.current.has(pkey(nx, pDir, pRoot))) return;
+    pre.current.add(pkey(nx, pDir, pRoot));
+    post('dl/add', { root: pRoot, paths: [join(pDir, nx)], profile: s.dlProfile, opts: { loud: s.dlLoud, dialogue: s.dlDialogue } })
       .then((r: any) => r.queued && flash(`Saving “${nx.replace(/\.[^.]+$/, '')}” for offline`)).catch(() => {});
   };
 
@@ -1190,12 +1200,16 @@ function Library() {
 
       {play && root !== null && (
         <Player
-          key={`${root}:${join(dir, play)}`} root={root} dir={dir} name={play} videos={playlist ?? videos} playlist={!!playlist} floating={floating} onFloat={setFloating}
-          pkey={pkey(play)} saved={prog[pkey(play)]} offline={offline} opened={opened} saver={eco ? Math.max(saver, 1) : saver} caps={caps}
-          onClose={() => { if (isPop) { window.close(); return; } setPlay(null); setPlaylist(null); setFloating(false); setTimeout(loadProg, 500); }}
+          key={`${pRoot}:${join(pDir, play)}`} root={pRoot} dir={pDir} name={play} videos={playlist ?? playVideos ?? videos} playlist={!!playlist} floating={floating} onFloat={setFloating}
+          pkey={pkey(play, pDir, pRoot)} saved={prog[pkey(play, pDir, pRoot)]} offline={!!pCur?.offline} opened={!!pCur?.opened} saver={eco ? Math.max(saver, 1) : saver} caps={caps}
+          onClose={() => { if (isPop) { window.close(); return; } setPlay(null); setPlayLoc(null); setPlayVideos(null); setPlaylist(null); setFloating(false); setTimeout(loadProg, 500); }}
           onNext={setPlay} onStarted={onStarted} onTick={addWatch}
-          onDownload={(n) => saveOffline([n], items.find((i) => i.name === n)?.size ?? 0)}
-          onDelete={(n) => { setPlay(null); confirmDelete([n], `“${n}”`); }}
+          onDownload={(n) => saveOffline([n], (sameLoc ? items.find((i) => i.name === n)?.size : 0) ?? 0, pRoot, pDir)}
+          onDelete={(n) => {
+            setPlay(null); setPlayLoc(null); setPlayVideos(null); setFloating(false);
+            if (!sameLoc) { setRoot(pRoot); setDir(pDir); flash('Opened its folder. Delete it from the list.'); return; }
+            confirmDelete([n], `“${n}”`);
+          }}
         />
       )}
       {panel === 'settings' && <SettingsDialog mode={net.mode} prog={prog} onClose={() => setPanel(null)} onStorage={() => setPanel('storage')} onServers={() => setPanel('servers')} onTidy={() => setPanel('tidy')} onSaved={loadSrv} />}

@@ -7,9 +7,9 @@ import { Caps, Icon, Info, SettingsCtx, api, bridge, bytes, canDecode, clock, mo
 // ------------------------------------------------------------------------------------------
 type Codec = 'auto' | 'h264' | 'hevc' | 'av1';
 const KBPS: Record<string, Record<number, number>> = {
-  h264: { 360: 450, 480: 800, 720: 1500, 1080: 3000 },
-  hevc: { 360: 270, 480: 480, 720: 900, 1080: 1800 },
-  av1: { 360: 225, 480: 400, 720: 750, 1080: 1500 },
+  h264: { 360: 450, 480: 800, 720: 1500, 1080: 3000, 1440: 6000, 2160: 12000 },
+  hevc: { 360: 270, 480: 480, 720: 900, 1080: 1800, 1440: 3600, 2160: 7200 },
+  av1: { 360: 225, 480: 400, 720: 750, 1080: 1500, 1440: 3000, 2160: 6000 },
 };
 const estimate = (profile: string, dur: number, size: number) => {
   if (profile === 'orig' || profile === 'fix') return size || 0;
@@ -20,7 +20,7 @@ const estimate = (profile: string, dur: number, size: number) => {
 };
 
 // A folder has no single duration, so its estimate is a share of the original size, by size and codec.
-const SHARE: Record<number, number> = { 1080: 0.55, 720: 0.3, 480: 0.16, 360: 0.1 };
+const SHARE: Record<number, number> = { 2160: 0.9, 1440: 0.75, 1080: 0.55, 720: 0.3, 480: 0.16, 360: 0.1 };
 const CODEC_SHARE: Record<string, number> = { h264: 1, hevc: 0.65, av1: 0.55 };
 const estimateTotal = (profile: string, total: number) => {
   if (profile === 'orig') return total;
@@ -76,11 +76,18 @@ export function DownloadDialog(p: {
     ];
     if (canEnc) {
       r.push({ id: 'fix', label: 'Original, fixed audio', hint: 'Same picture, audio converted to AAC so it always has sound. Fast.' });
-      const levels: [number, string, string][] = [[1080, 'Full HD, smaller file', 'Same sharpness, much smaller'], [720, 'Balanced (720p)', 'Great on a laptop screen'], [480, 'Small (480p)', 'Good for travel and small screens'], [360, 'Tiny (360p)', 'Smallest possible']];
-      for (const [h, label, hint] of levels) if (!src || h <= src * 1.1) r.push({ id: `${use}-${h}`, label, hint });
+      const levels: [number, string, string][] = [[2160, '4K, smaller file', 'Same sharpness, smaller file'], [1440, '1440p (2K), smaller file', 'Very sharp, smaller file'], [1080, 'Full HD, smaller file', 'Same sharpness, much smaller'], [720, 'Balanced (720p)', 'Great on a laptop screen'], [480, 'Small (480p)', 'Good for travel and small screens'], [360, 'Tiny (360p)', 'Smallest possible']];
+      for (const [h, label, hint] of levels) {
+        if (src && h > src * 1.1) continue; // never bigger than the video itself
+        const id = `${use}-${h}`;
+        // A single file that is already small: a "smaller" copy that is not really smaller is just a slow download. Hide it.
+        if (single && size && dur && estimate(id, dur, size) >= size * 0.92 && id !== profile) continue;
+        r.push({ id, label, hint });
+      }
     }
     return r;
-  }, [canEnc, src, use]);
+  }, [canEnc, src, use, single, size, dur, profile]);
+  const hiddenBig = src > 0 ? [2160, 1440, 1080, 720].filter((h) => h > src * 1.1).length : 0;
 
   // keep the chosen row valid when the codec changes
   useEffect(() => {
@@ -114,6 +121,7 @@ export function DownloadDialog(p: {
         <p className="muted small trunc">{p.names.length === 1 ? p.names[0] : files > p.names.length ? `${p.names.length} folder${p.names.length > 1 ? 's' : ''}, ${files} videos` : `${p.names.length} items`}{size ? ` · ${bytes(size)} original` : !single && !tot ? ' · counting…' : ''}{dur ? ` · ${clock(dur)}` : ''}{src ? ` · ${src}p` : ''}</p>
         {!canEnc && <p className="note">Neither the server nor this laptop has ffmpeg, so only the original file can be saved.</p>}
         {canEnc && profile !== 'orig' && <p className="muted small">Compressing on {engine}.</p>}
+        {canEnc && src > 0 && hiddenBig > 0 && <p className="muted small">This video is {src}p, so bigger sizes are not offered (they would only make the file larger). Sizes that would not make it smaller are hidden too.</p>}
         <div className="plist" role="radiogroup" aria-label="Quality">
           {rows.map((o) => {
             const e = estFor(o.id);
@@ -143,7 +151,7 @@ export function DownloadDialog(p: {
             </div>
             <p className="mnote">
               {use === 'hevc' ? 'HEVC makes files about 40% smaller than H.264.' : use === 'av1' ? 'AV1 makes the smallest files but takes the server longest.' : 'H.264 plays everywhere.'}
-              {' '}Compressing happens once on your server, then only the small file is downloaded. A full movie can take from several minutes to an hour depending on the server.
+              {' '}{lap || p.caps?.local.ffmpeg ? 'Compressing happens on this laptop or on your server (whichever is faster), then' : 'Compressing happens once on your server, then'} only the small file is kept. A full movie can take from several minutes to an hour depending on the server.
             </p>
           </>
         )}
@@ -170,7 +178,7 @@ export function DownloadDialog(p: {
 type Item = {
   id: string; name: string; dest: string; size: number; done: number; speed: number; eta: number;
   state: 'queued' | 'encoding' | 'downloading' | 'finalizing' | 'paused' | 'done' | 'error' | 'cancelled';
-  error?: string; reason?: string; profile: string; encPct: number;
+  error?: string; reason?: string; profile: string; encPct: number; where?: 'laptop' | 'server';
 };
 type Queue = { items: Item[]; speed: number; active: number; waiting: number; month: number; budgetGB: number };
 const eta = (s: number) => (!s || !isFinite(s) ? '' : s > 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min left` : s > 60 ? `${Math.round(s / 60)} min left` : `${Math.ceil(s)} s left`);
@@ -194,21 +202,24 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
 
   const items = q?.items ?? [];
   const live = items.filter((i) => ['encoding', 'downloading', 'finalizing'].includes(i.state));
-  const wait = items.filter((i) => ['queued', 'paused', 'error'].includes(i.state));
+  const wait = items.filter((i) => ['queued', 'paused'].includes(i.state));
+  const failed = items.filter((i) => i.state === 'error').reverse();
   const fin = items.filter((i) => ['done', 'cancelled'].includes(i.state)).reverse();
   const status = (i: Item) => {
-    if (i.state === 'encoding') return `Compressing on the server… ${Math.round(i.encPct)}%`;
+    if (i.state === 'encoding') return `Compressing on ${i.where === 'laptop' ? 'this laptop' : i.where === 'server' ? 'the server' : 'the laptop or server'}… ${Math.round(i.encPct)}%`;
     if (i.state === 'downloading') return `${bytes(i.done)} of ${bytes(i.size)} · ${rate(i.speed)} · ${eta(i.eta)}`;
     if (i.state === 'finalizing') return 'Saving thumbnails and subtitles…';
     if (i.state === 'queued') return i.reason ?? 'Waiting for a free slot';
     if (i.state === 'paused') return `Paused at ${bytes(i.done)}`;
-    if (i.state === 'error') return i.error ?? 'Failed';
+    if (i.state === 'error') return `Failed: ${i.error ?? 'something went wrong'}`;
     if (i.state === 'cancelled') return 'Cancelled';
     return `${i.reason ?? 'Saved'} · ${bytes(i.size)}`;
   };
   const pct = (i: Item) => (i.state === 'encoding' ? i.encPct : i.size ? (i.done / i.size) * 100 : 0);
   const Row = ({ i }: { i: Item }) => (
     <div className={'dl-dock-row ' + i.state}>
+      {i.state === 'done' && <span className="dl-st ok" title="Saved"><Icon n="check" s={16} /></span>}
+      {i.state === 'error' && <span className="dl-st bad" title="Failed"><Icon n="info" s={16} /></span>}
       <div className="dl-dock-main">
         <strong title={i.dest}>{i.dest.split('/').pop()}</strong>
         <span className={i.state === 'error' ? 'err-t' : 'muted'}>{status(i)}</span>
@@ -228,6 +239,7 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
   );
 
   const savedN = fin.filter((i) => i.state === 'done').length;
+  const failedN = failed.length;
   const idle = live.length === 0;
 
   return (
@@ -237,7 +249,7 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
           <span className="dl-dock-title">Downloads</span>
           <span className="dl-dock-rate">{rate(q?.speed ?? 0)}</span>
           <span className="dl-dock-meta">
-            {idle ? `${savedN} saved · idle` : `${live.length} active · ${q?.waiting ?? 0} waiting`}
+            {idle ? `${savedN} saved${failedN ? ` · ${failedN} failed` : ''} · idle` : `${live.length} active · ${q?.waiting ?? 0} waiting${failedN ? ` · ${failedN} failed` : ''}`}
           </span>
           <div className="dl-dock-acts">
             <button type="button" onClick={() => all('pause')}>Pause</button>
@@ -279,6 +291,9 @@ export function DownloadsPanel({ onClose, onPlay, onStorage }: { onClose: () => 
           )}
           {live.map((i) => <Row key={i.id} i={i} />)}
           {wait.map((i) => <Row key={i.id} i={i} />)}
+          {failed.length > 0 && <div className="dl-sec bad">Failed ({failed.length}). Press play to retry</div>}
+          {failed.map((i) => <Row key={i.id} i={i} />)}
+          {fin.length > 0 && <div className="dl-sec">Finished</div>}
           {fin.map((i) => <Row key={i.id} i={i} />)}
         </div>
       </div>

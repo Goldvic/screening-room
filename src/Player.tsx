@@ -113,6 +113,30 @@ export default function Player(p: Props) {
   const [scrub, setScrub] = useState<number | null>(null);
   const [fs, setFs] = useState(false);
   const [mini, setMini] = useState(false);
+  // Shrink the whole interface with the window: buttons, titles, menus and subtitles follow its size (mini player, small windows).
+  const [uiScale, setUiScale] = useState(1);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth || 1000;
+      const next = Math.round(Math.min(1, Math.max(0.4, w / 1000)) * 100) / 100;
+      setUiScale((x) => (x === next ? x : next));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const [pipOn, setPipOn] = useState(false); // picture-in-picture is open: hide the big player so you can browse, keep playing
+  useEffect(() => {
+    const on = () => setPipOn(true), off = () => setPipOn(false);
+    document.addEventListener('enterpictureinpicture', on, true);
+    document.addEventListener('leavepictureinpicture', off, true);
+    return () => {
+      document.removeEventListener('enterpictureinpicture', on, true);
+      document.removeEventListener('leavepictureinpicture', off, true);
+      if ((document as any).pictureInPictureElement) (document as any).exitPictureInPicture?.().catch(() => {});
+    };
+  }, []);
   const [toast, setToast] = useState('');
   const [hlsH, setHlsH] = useState(0);
   const [est, setEst] = useState(0);
@@ -565,7 +589,7 @@ export default function Player(p: Props) {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (p.floating) return;
+      if (p.floating || pipOn) return;
       const v = vref.current;
       if (!v) return;
       wake();
@@ -716,7 +740,7 @@ export default function Player(p: Props) {
   const volPct = Math.round((muted ? 0 : vol) * 100);
 
   return (
-    <div className={'theatre' + (show ? ' ui' : '') + (mini ? ' mini' : '') + (p.floating ? ' float' : '')} ref={box} onMouseMove={wake} onTouchStart={wake}
+    <div className={'theatre' + (show ? ' ui' : '') + (mini ? ' mini' : '') + (p.floating ? ' float' : '') + (pipOn ? ' pipped' : '')} ref={box} style={{ '--ui': uiScale } as CSSProperties} onMouseMove={wake} onTouchStart={wake}
       onWheel={(e) => { if (menu) return; setMuted(false); setVol((x) => Math.min(maxVol, Math.max(0, +(x + (e.deltaY < 0 ? 0.05 : -0.05)).toFixed(2)))); }}>
       <div className="stage" ref={stage}>
         <div className="vwrap">
@@ -747,7 +771,7 @@ export default function Player(p: Props) {
         )}
 
         {active.length > 0 && (
-          <div className={'cues' + (show ? ' lift' : '')} style={{ fontSize: s.subSize, color: s.subColor, bottom: show ? undefined : `${s.subPos}%`, textShadow: s.subOutline ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000' : undefined }}>
+          <div className={'cues' + (show ? ' lift' : '')} style={{ fontSize: Math.max(9, s.subSize * uiScale), color: s.subColor, bottom: show ? undefined : `${s.subPos}%`, textShadow: s.subOutline ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000' : undefined }}>
             {active.map((c, i) => <span key={i} style={{ background: `rgba(0,0,0,${s.subBg / 100})` }} dangerouslySetInnerHTML={{ __html: c.html }} />)}
           </div>
         )}

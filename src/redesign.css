@@ -5866,3 +5866,19 @@ button.stat-pill:hover {
 .off-seg button.on { background: var(--lamp); color: #111; font-weight: 600; }
 .off-time-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 2px 12px; }
 .off-time-row input[type="time"], .off-time-row input[type="number"] { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--text); font: 500 13px var(--sans); }
+
+/* download list: clear success / failure marks */
+.dl-st { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; }
+.dl-st.ok { background: rgba(63,214,160,.16); color: #3fd6a0; }
+.dl-st.bad { background: rgba(255,106,106,.16); color: #ff6a6a; }
+.dl-sec { padding: 10px 16px 4px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+.dl-sec.bad { color: #ff6a6a; }
+.dl-dock-row.error { background: rgba(255,106,106,.05); }
+/* the player keeps playing in picture-in-picture while you browse the app */
+.theatre.pipped { inset: auto 0 0 auto; width: 2px; height: 2px; opacity: 0; pointer-events: none; overflow: hidden; z-index: -1; }
+
+/* interface scales down with the window (mini player over other apps) */
+.theatre:not(.float) .hud, .theatre:not(.float) .menu, .theatre:not(.float) .nextcard, .theatre:not(.float) .skipintro, .theatre:not(.float) .ptoast { zoom: var(--ui, 1); }
+.theatre:not(.float) .spin { transform: scale(var(--ui, 1)); }
+.theatre.mini .cues span { padding: 1px 6px; }
+.theatre.mini .cues.lift { bottom: 28%; }
