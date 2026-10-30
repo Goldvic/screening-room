@@ -16,13 +16,13 @@ class SetupForm : Form
 {
     enum Stage { Welcome, Working, Done, Failed }
 
-    static readonly Color BG = Color.FromArgb(13, 13, 18);
+    static readonly Color BG = Color.FromArgb(29, 31, 42);
     static readonly Color ACCENT = Color.FromArgb(139, 123, 255);
     static readonly Color TEAL = Color.FromArgb(45, 212, 191);
-    static readonly Color TEXT = Color.FromArgb(233, 235, 240);
-    static readonly Color MUTE = Color.FromArgb(138, 146, 163);
-    static readonly Color LINE = Color.FromArgb(44, 44, 56);
-    static readonly Color RAISE = Color.FromArgb(24, 24, 31);
+    static readonly Color TEXT = Color.FromArgb(242, 243, 247);
+    static readonly Color MUTE = Color.FromArgb(172, 179, 194);
+    static readonly Color LINE = Color.FromArgb(58, 61, 76);
+    static readonly Color RAISE = Color.FromArgb(38, 41, 54);
 
     [DllImport("gdi32.dll")] static extern IntPtr CreateRoundRectRgn(int l, int t, int r, int b, int w, int h);
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
@@ -304,7 +304,7 @@ class SetupForm : Form
 
         // left panel
         Rectangle left = new Rectangle(0, 0, S(300), h);
-        using (LinearGradientBrush lb = new LinearGradientBrush(left, Color.FromArgb(17, 16, 30), Color.FromArgb(11, 14, 20), 90f)) g.FillRectangle(lb, left);
+        using (LinearGradientBrush lb = new LinearGradientBrush(left, Color.FromArgb(34, 33, 54), Color.FromArgb(26, 30, 40), 90f)) g.FillRectangle(lb, left);
         Glow(g, S(90), S(120), S(210), Color.FromArgb(110, ACCENT));
         Glow(g, S(260), h - S(30), S(190), Color.FromArgb(70, TEAL));
         using (SolidBrush pb = new SolidBrush(Color.FromArgb(22, 255, 255, 255)))
@@ -353,7 +353,7 @@ class SetupForm : Form
 
                 // live log: every step, every file written or replaced, and where
                 Rectangle lg = new Rectangle(x, S(190), cw, ClientSize.Height - S(190) - S(96));
-                using (SolidBrush r = new SolidBrush(Color.FromArgb(10, 10, 14))) FillRound(g, r, lg, S(8));
+                using (SolidBrush r = new SolidBrush(Color.FromArgb(24, 26, 36))) FillRound(g, r, lg, S(8));
                 using (Pen p = new Pen(LINE)) DrawRound(g, p, lg, S(8));
                 List<string[]> snap;
                 lock (logLock) { snap = new List<string[]>(logLines); }
