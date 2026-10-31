@@ -2,7 +2,7 @@ import { fingerprint, matchIntro, pcm } from './intro';
 import { detectEncoders, EncInfo } from './encoders';
 import { Remote } from './remote';
 import { castControl, castPlay, castStatus, castStop, CastDevice, discover, lanIpFor, mimeOf } from './cast';
-import { spawn as spawnProc } from 'node:child_process';
+import { spawn as spawnProc, execFile } from 'node:child_process';
 let boundPort = 0;
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
@@ -1372,6 +1372,15 @@ export async function start(opts: StartOpts = {}) {
   const remoteStatus = () => ({ ...rcfg(), running: remote.on, urls: remote.on ? remote.urls() : [], error: remoteErr });
   setTimeout(applyRemote, 2500).unref();
   app.get('/api/remote/info', (_req, res) => res.json(remoteStatus()));
+  // Windows Firewall blocks other devices from reaching this laptop until a rule allows the port. This asks Windows (one administrator prompt) to add it.
+  app.post('/api/remote/firewall', h(async (_req, res) => {
+    if (process.platform !== 'win32') throw new HttpError(400, 'Only needed on Windows');
+    const port = rcfg().port;
+    const inner = `Remove-NetFirewallRule -DisplayName ''Cinema remote'' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName ''Cinema remote'' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${port} -Profile Any`;
+    const ps = `Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-Command','${inner}'`;
+    await new Promise<void>((ok, no) => execFile('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true, timeout: 60000 }, (e) => (e ? no(new HttpError(500, 'Windows did not allow the change. Press Yes on the administrator prompt.')) : ok())));
+    res.json({ ok: true });
+  }));
   app.post('/api/remote/config', h(async (req, res) => {
     const c = rcfg(); const b = req.body ?? {};
     const next: RCfg = { on: typeof b.on === 'boolean' ? b.on : c.on, port: Number(b.port) > 1023 && Number(b.port) < 65536 ? Number(b.port) : c.port, pin: b.newPin || !c.pin ? String(Math.floor(100000 + Math.random() * 900000)) : c.pin };

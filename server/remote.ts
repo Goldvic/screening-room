@@ -65,10 +65,19 @@ export class Remote {
   constructor(private mainPort: () => number, private token: string) {}
   get on() { return !!this.srv; }
 
+  /** Addresses a phone can use, best first. Virtual adapters (WSL, Hyper-V, VirtualBox, VMware, Docker) are left out: a phone can never reach them. */
   urls() {
-    const out: string[] = [];
-    for (const list of Object.values(os.networkInterfaces())) for (const a of list ?? []) if (a.family === 'IPv4' && !a.internal) out.push(`http://${a.address}:${this.port}`);
-    return out;
+    const found: { ip: string; rank: number }[] = [];
+    for (const [name, list] of Object.entries(os.networkInterfaces())) {
+      if (/vethernet|wsl|hyper-v|virtualbox|vmware|vbox|docker|loopback|bluetooth|tailscale|zerotier|npcap/i.test(name)) continue;
+      for (const a of list ?? []) {
+        if (a.family !== 'IPv4' || a.internal || a.address.startsWith('169.254.')) continue;
+        const rank = a.address.startsWith('192.168.') ? 0 : a.address.startsWith('10.') ? 1 : /^172\.(1[6-9]|2\d|3[01])\./.test(a.address) ? 2 : 3;
+        found.push({ ip: a.address, rank });
+      }
+    }
+    if (!found.length) for (const list of Object.values(os.networkInterfaces())) for (const a of list ?? []) if (a.family === 'IPv4' && !a.internal) found.push({ ip: a.address, rank: 3 });
+    return found.sort((a, b) => a.rank - b.rank).map((f) => `http://${f.ip}:${this.port}`);
   }
 
   stop() { this.srv?.close(); this.srv = null; this.state = null; this.cmds = []; }

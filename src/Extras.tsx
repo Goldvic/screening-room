@@ -373,7 +373,14 @@ export function RemoteBlock() {
   const [r, setR] = useState<RemoteInfo | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { api<RemoteInfo>('remote/info').then(setR).catch(() => {}); }, []);
+  const [fw, setFw] = useState('');
   const cfg = async (b: object) => { setBusy(true); try { setR(await post<RemoteInfo>('remote/config', b)); } catch { /* shown by state */ } setBusy(false); };
+  const allow = async () => {
+    setBusy(true); setFw('Windows will ask for permission. Press Yes.');
+    try { await post('remote/firewall', {}); setFw('Done. Windows now lets your phone reach Cinema. Try the link again.'); }
+    catch (e: any) { setFw(e?.message || 'Could not change the firewall.'); }
+    setBusy(false);
+  };
   if (!r) return null;
   return (
     <div className="keybox">
@@ -382,9 +389,14 @@ export function RemoteBlock() {
       {r.error && <span className="kstat bad">✕ {r.error}</span>}
       {r.running && (
         <>
-          <span className="kstat ok">✓ On. Open one of these on your phone, on the same Wi-Fi:</span>
-          {r.urls.map((u) => <code key={u}>{u}</code>)}
-          <span className="muted small">PIN: <code>{r.pin}</code>. Anyone on your network who knows the PIN can control playback and watch the current video. It is not encrypted, so use it only on a network you trust.</span>
+          <span className="kstat ok">✓ On. On your phone, connected to the same Wi-Fi as this laptop, open:</span>
+          {r.urls.map((u, i) => <code key={u}>{u}/?pin={r.pin}{i === 0 && r.urls.length > 1 ? '   (try this first)' : ''}</code>)}
+          {!r.urls.length && <span className="kstat bad">✕ No Wi-Fi or network address was found. Connect this laptop to your home network.</span>}
+          <span className="muted small">PIN: <code>{r.pin}</code>. The link already includes it. Type it exactly, starting with http:// (not https://).</span>
+          <span className="inline"><button className="btn ghost" disabled={busy} onClick={allow}>Allow in Windows Firewall</button></span>
+          {fw && <span className="kstat idle">{fw}</span>}
+          <span className="muted small">If the page does not open: press the firewall button once (this is the usual cause). Also check that the phone is on the same Wi-Fi, not mobile data, a guest network or a VPN, and that this laptop's network is set to Private in Windows.</span>
+          <span className="muted small">Anyone on your network who knows the PIN can control playback and watch the current video. It is not encrypted, so use it only on a network you trust.</span>
         </>
       )}
     </div>
