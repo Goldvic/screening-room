@@ -70,6 +70,7 @@ const getMeta = (name: string, folder = ''): Promise<Meta | null> => {
   return p;
 };
 const posterUrl = (name: string, folder = '') => { const t = parseTitle(name, folder); return `/api/poster?${qs({ q: t.title, year: t.year })}`; };
+const folderPosterUrl = (root: number, folder: string) => `/api/folder-poster?${qs({ root, path: folder })}`;
 
 function Thumb({ root, path, v, icon }: { root: number; path: string; v: number; icon: string }) {
   const { s } = useContext(SettingsCtx);
@@ -1129,7 +1130,18 @@ function Library() {
             {folders.map((f) => (
               <div key={f.name} className="tile" style={{ '--h': hue(f.name) } as CSSProperties}>
                 <button className="tile-open" onClick={() => setDir(join(dir, f.name))}>
-                  <span className="tile-ic"><Icon n="folder" s={20} /></span>
+                  <span className="tile-ic">
+                    {s.posters && (
+                      <img
+                        className="tile-poster"
+                        alt=""
+                        loading="lazy"
+                        src={folderPosterUrl(rid, join(dir, f.name))}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                    <Icon n="folder" s={20} />
+                  </span>
                   <strong>{f.name}</strong>
                 </button>
                 <span className="tile-act">

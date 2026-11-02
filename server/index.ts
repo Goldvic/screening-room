@@ -1742,6 +1742,83 @@ export async function start(opts: StartOpts = {}) {
     if (!fs.existsSync(f)) throw new HttpError(404, 'No poster');
     res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=2592000, immutable' }).send(fs.readFileSync(f));
   }));
+    // Poster for a FOLDER: check the folder's own poster.jpg first (what the bot saved),
+  // then walk up parent folders (posters live at the series root), then fall back to
+  // TMDB using the closest non-season folder name. Never 500s; returns 404 cleanly.
+  app.get('/api/folder-poster', h(async (req, res) => {
+    const r = await resolve(req.query);
+    if (r.isRoot) throw new HttpError(404, 'No poster');
+
+    const isSeason = (name: string) => /^(season|series|s)\s*\d+/i.test(name);
+    const basename = (p: string) => (r.offline ? path.basename(p) : posix.basename(p));
+    const dirname = (p: string) => (r.offline ? path.dirname(p) : posix.dirname(p));
+    const rootPath = r.offline
+      ? path.resolve(r.root.dir)
+      : posix.normalize(r.root.dir).replace(/\/+$/, '');
+
+    const tryLocal = async (full: string): Promise<boolean> => {
+      if (r.offline) {
+        for (const name of ['poster.jpg', 'folder.jpg', 'cover.jpg', 'poster.png', 'folder.png']) {
+          const p = path.join(full, name);
+          try {
+            if (fs.statSync(p).isFile()) {
+              res.set({
+                'Content-Type': name.endsWith('.png') ? 'image/png' : 'image/jpeg',
+                'Cache-Control': 'public, max-age=3600',
+              }).sendFile(p);
+              return true;
+            }
+          } catch { /* not there */ }
+        }
+      } else {
+        for (const name of ['poster.jpg', 'folder.jpg', 'cover.jpg']) {
+          try {
+            const p = posix.join(full, name);
+            const st = await r.B.stat(p);
+            if (!st.isDir && st.size > 100 && st.size < 8 * 1024 * 1024) {
+              res.writeHead(200, {
+                'Content-Type': 'image/jpeg',
+                'Cache-Control': 'public, max-age=3600',
+                'Content-Length': st.size,
+              });
+              r.B.read(p, 0, st.size - 1).pipe(res);
+              return true;
+            }
+          } catch { /* not there */ }
+        }
+      }
+      return false;
+    };
+
+    // 1. Try the current folder; if it's a season folder, walk up to the series root.
+    let folder = r.full;
+    let lookupName = basename(folder);
+    for (let depth = 0; depth < 3; depth++) {
+      if (await tryLocal(folder)) return;
+      if (!isSeason(lookupName)) break;
+      const parent = dirname(folder);
+      if (parent === folder || parent === rootPath) break;
+      folder = parent;
+      lookupName = basename(folder);
+    }
+
+    // 2. TMDB fallback using the closest non-season folder name.
+    while (isSeason(lookupName) && folder !== rootPath) {
+      const parent = dirname(folder);
+      if (parent === folder || parent === rootPath) break;
+      folder = parent;
+      lookupName = basename(folder);
+    }
+    const clean = lookupName.replace(/[-_.]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!clean) throw new HttpError(404, 'No poster');
+
+    const f = online.posterFile(clean, 0);
+    if (!fs.existsSync(f)) {
+      try { await online.meta(clean, 0); } catch { /* no key or no match */ }
+      if (!fs.existsSync(f)) throw new HttpError(404, 'No poster');
+    }
+    res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600' }).send(fs.readFileSync(f));
+  }));
   app.get('/api/os/search', h(async (req, res) => {
     res.json(await online.osSearch(String(req.query.q ?? ''), String(req.query.lang ?? 'en'), Number(req.query.year) || 0, Number(req.query.season) || 0, Number(req.query.episode) || 0));
   }));

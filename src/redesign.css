@@ -5882,3 +5882,21 @@ button.stat-pill:hover {
 .theatre:not(.float) .spin { transform: scale(var(--ui, 1)); }
 .theatre.mini .cues span { padding: 1px 6px; }
 .theatre.mini .cues.lift { bottom: 28%; }
+
+/* Folder tiles: show the folder's poster.jpg as a small thumbnail */
+.tile-ic { position: relative; overflow: hidden; }
+.tile-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  z-index: 1;
+}
+.tile-ic > svg {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.85));
+}
