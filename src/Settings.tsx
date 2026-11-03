@@ -75,7 +75,7 @@ const PRESETS = [
   { id: 'default', name: 'Graphite', c: '#131318' }, { id: 'midnight', name: 'Midnight', c: '#0f1a33' }, { id: 'oled', name: 'OLED black', c: '#000000' },
   { id: 'warm', name: 'Warm', c: '#2a1d14' }, { id: 'forest', name: 'Forest', c: '#0f2219' }, { id: 'paper', name: 'Paper (light)', c: '#f1f1f5' },
 ];
-type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app';
+type Tab = 'look' | 'play' | 'subs' | 'data' | 'offline' | 'app' | 'bot';
 const TABS: { id: Tab; label: string; icon: string; hint: string }[] = [
   { id: 'look', label: 'Appearance', icon: 'eye', hint: 'Accent, theme, compact mode, thumbnails' },
   { id: 'play', label: 'Playback & sound', icon: 'play', hint: 'Quality, volume, skip keys, autoplay' },
@@ -83,256 +83,63 @@ const TABS: { id: Tab; label: string; icon: string; hint: string }[] = [
   { id: 'data', label: 'Data & speed', icon: 'bolt', hint: 'Budget, Data Saver, network test' },
   { id: 'offline', label: 'Offline & downloads', icon: 'save', hint: 'Profiles, auto-save, folder' },
   { id: 'app', label: 'App & servers', icon: 'server', hint: 'Servers, TMDB, profiles, about' },
+  { id: 'bot', label: 'Media Downloader', icon: 'down', hint: 'Connect to the telegram bot API' },
 ];
 const LIMITS = [0, 250, 500, 1000, 2000, 5000, 10000];
 
-
 const SEARCH_INDEX: { tab: Tab; label: string; hint: string }[] = [
-{
-"tab": "look",
-"label": "Accent color",
-"hint": ""
-},
-{
-"tab": "look",
-"label": "Theme",
-"hint": ""
-},
-{
-"tab": "look",
-"label": "Colour style",
-"hint": ""
-},
-{
-"tab": "look",
-"label": "Custom accent colour",
-"hint": "Overrides the accent colour above"
-},
-{
-"tab": "look",
-"label": "Compact mode",
-"hint": "Tighter spacing, good for small screens"
-},
-{
-"tab": "look",
-"label": "Video thumbnails",
-"hint": "Made once on the server, then cached"
-},
-{
-"tab": "data",
-"label": "Monthly data budget",
-"hint": "0 means no limit. Counts streaming and downloads"
-},
-{
-"tab": "data",
-"label": "Switch to Low at 80% of the budget",
-"hint": "Automatically, until the month ends"
-},
-{
-"tab": "play",
-"label": "Default quality",
-"hint": ""
-},
-{
-"tab": "play",
-"label": "Default screen shape",
-"hint": ""
-},
-{
-"tab": "play",
-"label": "Power saving",
-"hint": "Lowers the video quality cap and turns off blur and animations to save battery"
-},
-{
-"tab": "play",
-"label": "Detect intros automatically",
-"hint": "Finds the opening music by comparing episodes. Reads about 7 minutes of 3 videos once per episode, so it uses some data on a server"
-},
-{
-"tab": "play",
-"label": "Show \u201cSkip intro",
-"hint": "Only on episodes whose file has an intro or recap chapter"
-},
-{
-"tab": "play",
-"label": "Play next episode automatically",
-"hint": ""
-},
-{
-"tab": "play",
-"label": "Download the next episode while I watch",
-"hint": "Saves it for offline in the background"
-},
-{
-"tab": "play",
-"label": "Maximum volume",
-"hint": "How far the volume slider can go. Above 100% a limiter keeps it clean"
-},
-{
-"tab": "play",
-"label": "Remember boost above 100%",
-"hint": "Off: every time the app starts, volume goes back to 100% or lower to protect your ears"
-},
-{
-"tab": "play",
-"label": "Default equalizer",
-"hint": ""
-},
-{
-"tab": "subs",
-"label": "Turn on subtitles automatically",
-"hint": "Picks a track in your language, inside the video or next to it"
-},
-{
-"tab": "subs",
-"label": "Your language",
-"hint": ""
-},
-{
-"tab": "subs",
-"label": "Subtitle size",
-"hint": ""
-},
-{
-"tab": "subs",
-"label": "Subtitle colour",
-"hint": ""
-},
-{
-"tab": "subs",
-"label": "Subtitle background",
-"hint": "How dark the box behind the words is"
-},
-{
-"tab": "subs",
-"label": "Subtitle outline",
-"hint": ""
-},
-{
-"tab": "subs",
-"label": "Subtitle position",
-"hint": "Distance from the bottom of the picture"
-},
-{
-"tab": "subs",
-"label": "Skip if the audio is already in that language",
-"hint": ""
-},
-{
-"tab": "subs",
-"label": "OpenSubtitles",
-"hint": "Free key at opensubtitles.com. The account is only needed to download. Stored encrypted on this computer"
-},
-{
-"tab": "look",
-"label": "TMDB key",
-"hint": "Free at themoviedb.org. Adds posters, ratings and descriptions"
-},
-{
-"tab": "look",
-"label": "Show posters instead of thumbnails",
-"hint": "Needs the TMDB key"
-},
-{
-"tab": "look",
-"label": "Watching so far",
-"hint": ""
-},
-{
-"tab": "offline",
-"label": "Save downloads to",
-"hint": ""
-},
-{
-"tab": "offline",
-"label": "Save while I watch",
-"hint": "Keeps a full-quality copy on this laptop in the background, so next time it plays offline and uses no data"
-},
-{
-"tab": "offline",
-"label": "Files at the same time",
-"hint": ""
-},
-{
-"tab": "offline",
-"label": "Speed limit",
-"hint": "Keeps some bandwidth for other things"
-},
-{
-"tab": "offline",
-"label": "Only download at night",
-"hint": "Downloads wait until the time window opens"
-},
-{
-"tab": "offline",
-"label": "Between",
-"hint": ""
-},
-{
-"tab": "offline",
-"label": "Tidy saved videos",
-"hint": "Find duplicates and check that saved copies are not broken"
-},
-{
-"tab": "offline",
-"label": "Pause on battery",
-"hint": "Downloads wait until the laptop is plugged in"
-},
-{
-"tab": "offline",
-"label": "Slow down at certain hours",
-"hint": "Limit the download speed between two times, for example while you work"
-},
-{
-"tab": "offline",
-"label": "Compress on",
-"hint": "A laptop with an NVIDIA, Intel or AMD graphics chip compresses many times faster than a server. Auto picks the quickest"
-},
-{
-"tab": "offline",
-"label": "Compression speed",
-"hint": "Fastest makes slightly bigger files. Smallest takes longer"
-},
-{
-"tab": "offline",
-"label": "Space limit for saved videos",
-"hint": "When it is full, watched videos are removed first, then the oldest. Your copies on the server stay"
-},
-{
-"tab": "offline",
-"label": "Delete watched downloads after",
-"hint": "Frees space automatically. Your copy on the server stays"
-},
-{
-"tab": "offline",
-"label": "Turbo browser download",
-"hint": ""
-},
-{
-"tab": "offline",
-"label": "Connections per file",
-"hint": ""
-},
-{
-"tab": "play",
-"label": "Open in another player",
-"hint": "For example VLC. Leave empty to use your computer\u2019s default player"
-},
-{
-"tab": "app",
-"label": "Open Cinema when I sign in",
-"hint": "It starts quietly in the tray and closes itself again unless a scheduled download or auto-save rule needs it"
-},
-{
-"tab": "app",
-"label": "Control playback from your phone",
-"hint": "Also lets a phone or smart TV browser watch what is playing"
-},
-{
-"tab": "app",
-"label": "Where your movies are stored",
-"hint": ""
-}
+{ "tab": "look", "label": "Accent color", "hint": "" },
+{ "tab": "look", "label": "Theme", "hint": "" },
+{ "tab": "look", "label": "Colour style", "hint": "" },
+{ "tab": "look", "label": "Custom accent colour", "hint": "Overrides the accent colour above" },
+{ "tab": "look", "label": "Compact mode", "hint": "Tighter spacing, good for small screens" },
+{ "tab": "look", "label": "Video thumbnails", "hint": "Made once on the server, then cached" },
+{ "tab": "data", "label": "Monthly data budget", "hint": "0 means no limit. Counts streaming and downloads" },
+{ "tab": "data", "label": "Switch to Low at 80% of the budget", "hint": "Automatically, until the month ends" },
+{ "tab": "play", "label": "Default quality", "hint": "" },
+{ "tab": "play", "label": "Default screen shape", "hint": "" },
+{ "tab": "play", "label": "Power saving", "hint": "Lowers the video quality cap and turns off blur and animations to save battery" },
+{ "tab": "play", "label": "Detect intros automatically", "hint": "Finds the opening music by comparing episodes. Reads about 7 minutes of 3 videos once per episode, so it uses some data on a server" },
+{ "tab": "play", "label": "Show \u201cSkip intro", "hint": "Only on episodes whose file has an intro or recap chapter" },
+{ "tab": "play", "label": "Play next episode automatically", "hint": "" },
+{ "tab": "play", "label": "Download the next episode while I watch", "hint": "Saves it for offline in the background" },
+{ "tab": "play", "label": "Maximum volume", "hint": "How far the volume slider can go. Above 100% a limiter keeps it clean" },
+{ "tab": "play", "label": "Remember boost above 100%", "hint": "Off: every time the app starts, volume goes back to 100% or lower to protect your ears" },
+{ "tab": "play", "label": "Default equalizer", "hint": "" },
+{ "tab": "subs", "label": "Turn on subtitles automatically", "hint": "Picks a track in your language, inside the video or next to it" },
+{ "tab": "subs", "label": "Your language", "hint": "" },
+{ "tab": "subs", "label": "Subtitle size", "hint": "" },
+{ "tab": "subs", "label": "Subtitle colour", "hint": "" },
+{ "tab": "subs", "label": "Subtitle background", "hint": "How dark the box behind the words is" },
+{ "tab": "subs", "label": "Subtitle outline", "hint": "" },
+{ "tab": "subs", "label": "Subtitle position", "hint": "Distance from the bottom of the picture" },
+{ "tab": "subs", "label": "Skip if the audio is already in that language", "hint": "" },
+{ "tab": "subs", "label": "OpenSubtitles", "hint": "Free key at opensubtitles.com. The account is only needed to download. Stored encrypted on this computer" },
+{ "tab": "look", "label": "TMDB key", "hint": "Free at themoviedb.org. Adds posters, ratings and descriptions" },
+{ "tab": "look", "label": "Show posters instead of thumbnails", "hint": "Needs the TMDB key" },
+{ "tab": "look", "label": "Watching so far", "hint": "" },
+{ "tab": "offline", "label": "Save downloads to", "hint": "" },
+{ "tab": "offline", "label": "Save while I watch", "hint": "Keeps a full-quality copy on this laptop in the background, so next time it plays offline and uses no data" },
+{ "tab": "offline", "label": "Files at the same time", "hint": "" },
+{ "tab": "offline", "label": "Speed limit", "hint": "Keeps some bandwidth for other things" },
+{ "tab": "offline", "label": "Only download at night", "hint": "Downloads wait until the time window opens" },
+{ "tab": "offline", "label": "Between", "hint": "" },
+{ "tab": "offline", "label": "Tidy saved videos", "hint": "Find duplicates and check that saved copies are not broken" },
+{ "tab": "offline", "label": "Pause on battery", "hint": "Downloads wait until the laptop is plugged in" },
+{ "tab": "offline", "label": "Slow down at certain hours", "hint": "Limit the download speed between two times, for example while you work" },
+{ "tab": "offline", "label": "Compress on", "hint": "A laptop with an NVIDIA, Intel or AMD graphics chip compresses many times faster than a server. Auto picks the quickest" },
+{ "tab": "offline", "label": "Compression speed", "hint": "Fastest makes slightly bigger files. Smallest takes longer" },
+{ "tab": "offline", "label": "Space limit for saved videos", "hint": "When it is full, watched videos are removed first, then the oldest. Your copies on the server stay" },
+{ "tab": "offline", "label": "Delete watched downloads after", "hint": "Frees space automatically. Your copy on the server stays" },
+{ "tab": "offline", "label": "Turbo browser download", "hint": "" },
+{ "tab": "offline", "label": "Connections per file", "hint": "" },
+{ "tab": "play", "label": "Open in another player", "hint": "For example VLC. Leave empty to use your computer\u2019s default player" },
+{ "tab": "app", "label": "Open Cinema when I sign in", "hint": "It starts quietly in the tray and closes itself again unless a scheduled download or auto-save rule needs it" },
+{ "tab": "app", "label": "Control playback from your phone", "hint": "Also lets a phone or smart TV browser watch what is playing" },
+{ "tab": "app", "label": "Where your movies are stored", "hint": "" },
+{ "tab": "bot", "label": "Media Downloader API URL", "hint": "The URL of your bot's API" },
+{ "tab": "bot", "label": "Media Downloader API Key", "hint": "From BOT_API_KEY in your .env" },
+{ "tab": "bot", "label": "Telegram User ID", "hint": "Your numeric Telegram ID" }
 ];
 
 function SearchResults({ q, onPick }: { q: string; onPick: (t: Tab) => void }) {
@@ -364,6 +171,11 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
   const [osPass, setOsPass] = useState('');
   const [t, setT] = useState<{ running: boolean; live: number; res?: { avg: number; peak: number; bytes: number }; err?: string }>({ running: false, live: 0 });
   const ctl = useRef<AbortController>();
+  
+  // Bot API Test state
+  const [botTest, setBotTest] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
+  const [botErr, setBotErr] = useState('');
+
   useEffect(() => {
     api<Srv>('settings').then(setSrv).catch(() => {});
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -411,6 +223,27 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
     else {
       const f = await bridge.selectFolder();
       if (f) { setMoveMsg('Moving…'); const e = await moveDownloads(f, setMoveMsg); setMoveMsg(e ?? 'Done. Your saved videos are in the new folder and still play offline.'); patch({}); }
+    }
+  };
+
+  const testBot = async () => {
+    setBotTest('testing'); setBotErr('');
+    const apiUrl = (s.botApiUrl || '').replace(/\/$/, '');
+    if (!apiUrl || !s.botApiKey) {
+      setBotTest('error'); setBotErr('URL and API Key are required.'); return;
+    }
+    try {
+      const res = await fetch(`${apiUrl}/api/ping`, { headers: { 'x-api-key': s.botApiKey } });
+      if (res.ok) {
+        setBotTest('ok');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setBotTest('error');
+        setBotErr(data.detail || `HTTP ${res.status}`);
+      }
+    } catch (e: any) {
+      setBotTest('error');
+      setBotErr('Could not reach the server. Check the URL.');
     }
   };
 
@@ -1390,7 +1223,99 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
         </section>
         )}
 
-        
+        {cur === 'bot' && (
+          <section className="look-panel">
+            <div className="look-block">
+              <div className="look-block-h">
+                <h4>Connection</h4>
+                <p className="muted small">Point the app to your Telegram bot</p>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 4px' }}>
+                
+                {/* API URL */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>
+                    API URL
+                  </label>
+                  <input 
+                    value={s.botApiUrl} 
+                    onChange={(e) => { set({ botApiUrl: e.target.value }); setBotTest('idle'); }} 
+                    placeholder="http://ip:port" 
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }}
+                  />
+                  <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>
+                    e.g. http://51.21.221.236:8080
+                  </p>
+                </div>
+                
+                {/* API Key */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>
+                    API Key
+                  </label>
+                  <input 
+                    type="password" 
+                    value={s.botApiKey} 
+                    onChange={(e) => { set({ botApiKey: e.target.value }); setBotTest('idle'); }} 
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }}
+                  />
+                  <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>
+                    From BOT_API_KEY in your .env
+                  </p>
+                </div>
+                
+                {/* Telegram ID */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>
+                    Telegram User ID
+                  </label>
+                  <input 
+                    value={s.telegramId} 
+                    onChange={(e) => { set({ telegramId: e.target.value }); setBotTest('idle'); }} 
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }}
+                  />
+                  <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>
+                    Your numeric Telegram ID
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Test Connection Box */}
+              <div style={{ marginTop: '28px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--line)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <b style={{ fontSize: '13.5px' }}>Test connection</b>
+                    <p className="muted small" style={{ margin: '4px 0 0', fontSize: '12px' }}>
+                      Ensure the bot is running and the key is correct.
+                    </p>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn" 
+                    onClick={testBot} 
+                    disabled={botTest === 'testing'}
+                    style={{ padding: '10px 16px', borderRadius: '10px' }}
+                  >
+                    {botTest === 'testing' ? 'Testing…' : 'Test Now'}
+                  </button>
+                </div>
+                
+                {botTest === 'ok' && (
+                  <div style={{ marginTop: 14, background: 'rgba(74,222,128,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#86efac', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Icon n="check" s={16} /> Connection successful!
+                  </div>
+                )}
+                {botTest === 'error' && (
+                  <div style={{ marginTop: 14, background: 'rgba(240,98,79,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#f0a090', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Icon n="close" s={16} /> {botErr}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {cur === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
         </div>

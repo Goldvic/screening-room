@@ -5,6 +5,7 @@ import SettingsDialog, { Toggle } from './Settings';
 import { AddToCollection, CollectionsPage, Collection, HomeCustomize, HomeRow, RuleDialog, Stars, TagsEditor, Tidy, Tour, ItemMeta } from './Extras';
 import { Hero, MagSide, Playlists, Rail, SavedFile, Tile, Today, Welcome, progPct, savedSub } from './Home';
 import { DownloadDialog, DownloadsPanel, StoragePanel } from './Downloads';
+import { Discover } from './Discover';
 import {
   ACCENTS, APP_NAME, Caps, SavedList, dayKey, DEFAULTS, Entry, Icon, Net, OFFLINE_ID, OPENED_ID, Prefs, PrefsCtx, Prog, Root, SAVER, SettingsCtx, VIDEO, VIDEO_EXTS,
   api, bridge, bytes, clock, hue, join, loadSettings, mbps, parseTitle, pct, post, qs, rate, turboDownload, turboOk, useNet, useUpdates, Settings,
@@ -21,7 +22,6 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [prefs, setPrefs] = useState<Prefs>({});
   const timers = useRef<Record<string, number>>({});
-  // Saved in the browser right away and on the server a moment later, so settings survive restarts of the desktop app.
   const queue = useCallback((key: string, value: unknown) => {
     clearTimeout(timers.current[key]);
     timers.current[key] = window.setTimeout(() => { post('prefs', { key, value }).catch(() => {}); }, 400);
@@ -241,7 +241,7 @@ function Library() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [onBattery, setOnBattery] = useState(false);
   const [floating, setFloating] = useState(false);
-  const [view, setView] = useState<'home' | 'library' | 'playlists' | 'collections' | 'insights'>('home');
+  const [view, setView] = useState<'home' | 'library' | 'playlists' | 'collections' | 'insights' | 'discover'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
   const [nameAsk, setNameAsk] = useState<{ title: string; value: string; label: string; go: (v: string) => void } | null>(null);
   const [selecting, setSelecting] = useState(false);
@@ -270,7 +270,6 @@ function Library() {
     setStatus('loading');
     try { setItems(await api<Entry[]>('list', { root, path: dir })); setStatus('ready'); }
     catch (e: any) {
-      // The folder is gone (moved, deleted or a bad link): step back to the nearest folder that exists instead of a dead end.
       if (dir && /not found/i.test(e.message)) { setDir(dir.split('/').slice(0, -1).join('/')); return; }
       setErr(e.message); setStatus('error');
     }
@@ -297,14 +296,12 @@ function Library() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-  // ----- videos from outside the library: Explorer "Open with", double-click, drag and drop, Open file -----
   const openLocal = async (files: string[]) => {
     const list = files.filter((f) => f && VIDEO.test(f));
     if (!list.length) { flash('That is not a video file Cinema can play'); return; }
     try {
       let first = '';
       for (const f of list) { const r = await post<{ name: string }>('opened', { path: f }); if (!first) first = r.name; }
-      // Start playing right away; the storage list refreshes in the background (it can be slow when the server is far away).
       setRoots((rs) => (rs.some((x) => x.id === OPENED_ID) ? rs : [...rs, { id: OPENED_ID, name: 'Opened', dir: '', free: 0, total: 0, offline: true, opened: true } as Root]));
       setPanel(null); setQuery(''); setRoot(OPENED_ID); setDir(''); beginPlay(first, OPENED_ID, '');
       loadRoots();
@@ -327,7 +324,6 @@ function Library() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  // Keyboard layer for the library (the player has its own keys). Ctrl+K opens the command palette, ? shows every shortcut.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (play) return;
@@ -403,7 +399,6 @@ function Library() {
     setPanel(null); setRoot(OFFLINE_ID); setDir(parts.slice(0, -1).join('/')); beginPlay(parts[parts.length - 1], OFFLINE_ID, parts.slice(0, -1).join('/'));
   };
 
-  // Play a video. If a full copy is already saved on this laptop, play that one (works with no internet and uses no data).
   useEffect(() => {
     if (view !== 'home' || panel) return;
     api<{ items: SavedFile[] }>('storage').then((d) => setSavedFiles([...d.items].sort((a, b) => b.mtime - a.mtime))).catch(() => {});
@@ -434,7 +429,7 @@ function Library() {
   };
   useEffect(() => { setPref('lastVisit', Date.now()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const isNew = (it: Entry) => !it.dir && (it.mtime < 1e11 ? it.mtime * 1000 : it.mtime) > sinceRef.current && !prog[pkey(it.name)];
-  useEffect(() => { // "Because you watched": unwatched videos next to the last one you finished
+  useEffect(() => {
     if (view !== 'home') return;
     const last = Object.entries(prog).filter(([, p]) => p.watched).sort((a, b) => b[1].updated - a[1].updated)[0];
     if (!last) { setBecause(null); return; }
@@ -451,14 +446,14 @@ function Library() {
     }).catch(() => setBecause(null));
     return () => { dead = true; };
   }, [view, roots.length, Object.keys(prog).length]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { // season tabs: sibling folders when you are inside "Season 02"
+  useEffect(() => {
     const last = dir.split('/').pop() ?? '';
     if (!dir || !/^(season|series|s)\s*\d+/i.test(last) || root === null) { setSibs([]); return; }
     let dead = false;
     api<Entry[]>('list', { root, path: dirOf(dir) }).then((l) => { if (!dead) setSibs(l.filter((e) => e.dir && /^(season|series|s)\s*\d+/i.test(e.name)).map((e) => e.name).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))); }).catch(() => setSibs([]));
     return () => { dead = true; };
   }, [dir, root]);
-  useEffect(() => { // phone remote: commands arrive here and are handed to the player
+  useEffect(() => {
     const t = setInterval(async () => {
       if (document.hidden) return;
       try {
@@ -469,7 +464,7 @@ function Library() {
     }, play ? 900 : 4000);
     return () => clearInterval(t);
   }, [play]);
-  useEffect(() => { // pop-out window: play what the main window sent
+  useEffect(() => {
     if (!isPop) return;
     document.documentElement.classList.add('pop');
     const r = Number(popQ.get('root')), n = popQ.get('name');
@@ -523,7 +518,6 @@ function Library() {
     saveOffline(list, items.filter((i) => list.includes(i.name)).reduce((a, i) => a + i.size, 0)); endSelect();
   };
 
-  // Browser-only turbo download (the desktop app uses "Save for offline" instead).
   const download = (it: Entry) => {
     const url = `/api/download?${qs({ root: rid, path: join(dir, it.name) })}`;
     if (s.turbo && turboOk() && it.size > 24 * 1024 * 1024) {
@@ -546,7 +540,6 @@ function Library() {
   const saveOffline = (names: string[], sizes: number, r: number = rid, d: string = dir) => setTarget({ root: r, paths: names.map((n) => join(d, n)), names, sizes });
 
   const videos = useMemo(() => items.filter((i) => !i.dir && VIDEO.test(i.name)).map((i) => i.name), [items]);
-  // The player follows the video, not the folder you are looking at.
   const pRoot = playLoc?.root ?? rid, pDir = playLoc?.dir ?? dir;
   const pCur = rootOf(pRoot);
   const sameLoc = pRoot === rid && pDir === dir;
@@ -653,7 +646,7 @@ function Library() {
       <header className="topnav" aria-label="Main navigation">
         <div className="tn-brand" title={APP_NAME} onClick={() => setView('home')}><span className="lamp" /><span>{APP_NAME}</span></div>
         <nav className="tn-tabs">
-          {([['home', 'Home', 'home'], ['library', 'Library', 'film'], ['playlists', 'Playlists', 'list'], ['collections', 'Collections', 'folder']] as const).map(([id, label, ic]) => (
+          {([['home', 'Home', 'home'], ['library', 'Library', 'film'], ['playlists', 'Playlists', 'list'], ['collections', 'Collections', 'folder'], ['discover', 'Discover', 'search']] as const).map(([id, label, ic]) => (
             <button key={id} className={view === id ? 'tn-tab on' : 'tn-tab'} onClick={() => setView(id)} title={label}><Icon n={ic} s={17} /><span>{label}</span></button>
           ))}
         </nav>
@@ -839,7 +832,6 @@ function Library() {
           });
           const weekSec = week.reduce((a, [, p]) => a + watchedSecs(p), 0);
           const savedBytes = savedFiles.reduce((a, f) => a + (Number(f.size) || 0), 0);
-          // Rank by show/movie title — not season folder names like "Season 01"
           const byTitle = new Map<string, number>();
           for (const [k, p] of all) {
             try {
@@ -1208,6 +1200,8 @@ function Library() {
         )}
           </>
         )}
+
+        {view === 'discover' && <Discover />}
       </main>
 
       {play && root !== null && (

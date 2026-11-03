@@ -129,6 +129,7 @@ export type Settings = {
   vol: number; maxVol: number; rememberBoost: boolean; eqPreset: string;
   dlProfile: string; dlLoud: boolean; dlDialogue: boolean; predownload: boolean; autoCache: boolean; skipIntro: boolean; autoIntro: boolean; eco: 'off' | 'on' | 'battery'; theme: 'dark' | 'light';
   posters: boolean; filter: 'all' | 'unwatched' | 'progress' | 'watched' | 'fav' | 'rated'; density: number; externalPlayer: string;
+  botApiUrl: string; botApiKey: string; telegramId: string;
 };
 export const DEFAULTS: Settings = {
   accent: 'Violet', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
@@ -138,6 +139,7 @@ export const DEFAULTS: Settings = {
   vol: 1, maxVol: 500, rememberBoost: false, eqPreset: 'Flat',
   dlProfile: 'orig', dlLoud: false, dlDialogue: false, predownload: false, autoCache: true, skipIntro: true, autoIntro: false, eco: 'off', theme: 'dark',
   posters: false, filter: 'all', externalPlayer: '',
+  botApiUrl: 'http://51.21.221.236:8082', botApiKey: '', telegramId: '',
 };
 export function loadSettings(): Settings {
   try {
