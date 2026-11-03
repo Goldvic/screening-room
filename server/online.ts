@@ -11,6 +11,29 @@ const GENRES: Record<number, string> = {
   10765: 'Sci-Fi & Fantasy', 10766: 'Soap', 10767: 'Talk', 10768: 'War & Politics',
 };
 
+const MONTHS = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+
+/** Turn a raw folder name like "Oppenheimer.2023.1080p.BluRay.x264" into { title: "Oppenheimer", year: 2023 }. */
+export function cleanTitle(name: string): { title: string; year: number } {
+  let t = name.replace(/[\[(][^\])]*(?:\.(?:com|tv|net|org|to|cc|me|ws)|www|\b(?:1080p|720p|480p|x264|x265|webrip|bluray|web-dl)\b)[^\])]*[\])]/gi, ' ');
+  t = t.replace(/\bwww\.[^\s]+/gi, ' ');
+  t = t.replace(/\s*\|.*$/, '');                                   // "... | Korean Drama" site suffixes
+  t = t.replace(/\s*[(\[]\s*(?:episode|ep)\b[^)\]]*[)\]]?.*$/i, ''); // "(Episode 3 Added)"
+  t = t.replace(/\s+(?:season|series)\s*\d+\b.*$/i, '');            // "Season 2 Episode 5"
+  t = t.replace(/\s+S\d{1,2}\b.*$/i, '');                           // "S01 ..."
+  const ep = /[Ss](\d{1,2})[ ._-]*[Ee](\d{1,3})/.exec(t);
+  if (ep) t = t.slice(0, ep.index);
+  const ym = /[ ._(\[-]((?:19|20)\d{2})(?=[ ._)\]-]|$)/.exec(t);
+  const year = ym ? Number(ym[1]) : 0;
+  if (ym) t = t.slice(0, ym.index);
+  // Episode dates on shows like "WWE RAW: 2nd November" / "WWE RAW 2 Nov" / "Late Show November 2nd"
+  t = t.replace(new RegExp(`[\\s:,\\-–]*\\b\\d{1,2}(?:st|nd|rd|th)?\\s+${MONTHS}\\b.*$`, 'i'), '');
+  t = t.replace(new RegExp(`[\\s:,\\-–]*\\b${MONTHS}\\s+\\d{1,2}(?:st|nd|rd|th)?\\b.*$`, 'i'), '');
+  t = t.replace(/\b(2160p|1080p|720p|480p|360p|4k|uhd|bluray|blu-ray|brrip|bdrip|webrip|web-dl|webdl|web|hdrip|dvdrip|hdtv|x264|x265|h264|h265|hevc|av1|aac|ac3|dts|10bit|remux|proper|repack|extended|unrated|yify|rarbg|amzn|nf|dsnp|hmax|hdr|dv|multi|dual|subbed|dubbed|complete)\b.*$/i, '');
+  t = t.replace(/[._]+/g, ' ').replace(/\s*[-\[(:,]+\s*$/, '').replace(/\s+/g, ' ').trim();
+  return { title: t || name.replace(/[._-]+/g, ' ').trim(), year };
+}
+
 export type Meta = { found: boolean; title?: string; year?: number; overview?: string; rating?: number; genres?: string[]; kind?: string; poster?: boolean };
 
 export class Online {
@@ -29,7 +52,17 @@ export class Online {
   }
   private norm(x: string) { return x.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim(); }
   private async savePoster(q: string, year: number, url: string) {
-    try { const p = await fetch(url); if (p.ok) { fs.writeFileSync(this.posterFile(q, year), Buffer.from(await p.arrayBuffer())); return true; } } catch { /* poster is optional */ }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const p = await fetch(url, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA } });
+        if (p.ok) {
+          const buf = Buffer.from(await p.arrayBuffer());
+          if (buf.length > 500) { fs.writeFileSync(this.posterFile(q, year), buf); return true; }
+        }
+      } catch { /* network hiccup: try again */ }
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
+    console.warn('[poster] could not download image for', JSON.stringify(q), '-', url);
     return false;
   }
   private metaFromTmdb(hit: any, kind: string): Meta {
@@ -39,15 +72,45 @@ export class Online {
   }
 
   /** TMDB first (with retries on looser searches), then TVmaze (series) and iTunes (movies), which need no key. */
-  async meta(q: string, year: number): Promise<Meta> {
+  private inflight = new Map<string, Promise<Meta>>();
+  private active = 0;
+  private waiters: (() => void)[] = [];
+  private async slot<T>(fn: () => Promise<T>): Promise<T> {
+    while (this.active >= 4) await new Promise<void>((ok) => this.waiters.push(ok)); // at most 4 lookups at once
+    this.active++;
+    try { return await fn(); } finally { this.active--; this.waiters.shift()?.(); }
+  }
+  /** Same title asked for twice at once (grid card + detail sheet) shares one lookup. */
+  meta(q: string, year: number): Promise<Meta> {
+    const k = this.keyOf(q, year);
+    let p = this.inflight.get(k);
+    if (!p) {
+      p = this.slot(() => this.metaRaw(q, year)).finally(() => this.inflight.delete(k));
+      this.inflight.set(k, p);
+    }
+    return p;
+  }
+  private async metaRaw(q: string, year: number): Promise<Meta> {
     const key = this.cfg().tmdbKey.trim();
     const file = path.join(this.dir, `${this.keyOf(q, year)}.json`);
-    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* not cached yet */ }
+    try {
+      const cached: Meta = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const fresh = Date.now() - fs.statSync(file).mtimeMs < 20 * 1000;
+      // A cached miss, or a hit whose poster never downloaded, is retried after 20 seconds instead of sticking forever.
+      if ((cached.found && cached.poster) || fresh) return cached;
+    } catch { /* not cached yet */ }
     let out: Meta = { found: false };
     let tmdbError: HttpError | null = null;
     if (key) {
       try {
-        const tries: [string, string][] = [[q, String(year || '')], [q, ''], [q.split(/\s[-:–]\s/)[0], ''], [q.replace(/\b(part|vol|volume)\s*\w+$/i, '').trim(), '']].filter((x, i, a) => x[0] && a.findIndex((y) => y[0] === x[0] && y[1] === x[1]) === i) as [string, string][];
+        const colonHead = q.split(/\s*:\s*|\s[-–]\s/)[0];                 // "Show: Subtitle" -> "Show"
+        const noArticle = q.replace(/^(?:the|a|an)\s+/i, '');             // "The Show" -> "Show"
+        const tries: [string, string][] = [
+          [q, String(year || '')], [q, ''], [colonHead, ''],
+          [q.replace(/\b(part|vol|volume)\s*\w+$/i, '').trim(), ''],
+          [noArticle, ''],
+          [q.replace(/[^\p{L}\p{N} ]+/gu, ' ').replace(/\s+/g, ' ').trim(), ''], // punctuation stripped
+        ].filter((x, i, a) => x[0] && a.findIndex((y) => y[0] === x[0] && y[1] === x[1]) === i) as [string, string][];
         for (const [query, y] of tries) {
           const r = await fetch(this.tmdbUrl('search/multi', key, { query, year: y }), { headers: this.tmdbHeaders(key) }).catch(() => { throw new HttpError(502, 'Could not reach TMDB. Check your internet connection.'); });
           if (r.status === 401) throw new HttpError(400, 'TMDB rejected the key. Check it in Settings.');
@@ -63,6 +126,8 @@ export class Online {
     if (!out.found && tmdbError && !key) throw tmdbError;
     if (!out.found && !key) throw new HttpError(400, 'Nothing found. Add a TMDB key in Settings for better results.');
     if (tmdbError && !out.found) throw tmdbError;
+    if (!out.found) console.warn('[poster] nothing found on TMDB/TVmaze/iTunes for', JSON.stringify(q), year || '');
+    else if (!out.poster) console.warn('[poster] found', JSON.stringify(out.title), 'but it has no poster image');
     fs.writeFileSync(file, JSON.stringify(out));
     return out;
   }

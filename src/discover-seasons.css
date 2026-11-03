@@ -1,0 +1,26 @@
+/* ============ Discover: season / episode browser (inside the detail sheet) ============ */
+.dc-sheet { max-height: 92vh; overflow-y: auto; }
+.dc-seasons { display: grid; gap: 12px; padding: 14px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line); }
+.dc-seasons h3 { margin: 0; font: 700 13px var(--sans); display: flex; align-items: baseline; gap: 8px; }
+.dc-seasons h3 span { color: var(--mute); font-weight: 500; font-size: 12px; }
+.dc-note { margin: 0; color: var(--mute); font-size: 12.5px; }
+.dc-note.err { color: var(--danger); }
+.dc-schips, .dc-eps { display: flex; flex-wrap: wrap; gap: 6px; }
+.dc-sch { height: 30px; padding: 0 13px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); color: var(--mute);
+  font: 650 12.5px var(--sans); cursor: pointer; transition: all .15s; }
+.dc-sch:hover { color: var(--text); border-color: var(--mute); }
+.dc-sch.on { background: var(--lamp); border-color: var(--lamp); color: #111; }
+.dc-ep { min-width: 40px; height: 32px; padding: 0 9px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  font: 650 12.5px var(--sans); cursor: pointer; transition: all .12s; }
+.dc-ep:hover { border-color: var(--lamp); }
+.dc-ep.on { background: var(--lamp); border-color: var(--lamp); color: #111; }
+.dc-seasons-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dc-seasons-bar .sp { flex: 1; }
+.dc-link { background: none; border: 0; padding: 0; color: var(--lamp); font: 600 12.5px var(--sans); cursor: pointer; }
+.dc-link:hover { text-decoration: underline; }
+.dc-dlsel { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 16px; border: 0; border-radius: 11px;
+  background: var(--lamp); color: #111; font: 700 13px var(--sans); cursor: pointer; }
+.dc-dlsel:disabled { opacity: .5; cursor: default; }
+.dc-spin { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--lamp);
+  animation: dc-rot .7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes dc-rot { to { transform: rotate(360deg); } }

@@ -17,7 +17,7 @@ import {
 } from './backend';
 import { Crypt, Root, Server, ServerInput, Store, plainCrypt } from './store';
 import { Downloads, DlItem, VIDEO } from './downloads';
-import { Online } from './online';
+import { Online, cleanTitle } from './online';
 import * as local from './local';
 
 const env = process.env;
@@ -1738,9 +1738,18 @@ export async function start(opts: StartOpts = {}) {
   }));
   app.get('/api/poster', h(async (req, res) => {
     const q = String(req.query.q ?? '').slice(0, 200), y = Number(req.query.year) || 0;
-    const f = online.posterFile(q, y);
-    if (!fs.existsSync(f)) throw new HttpError(404, 'No poster');
-    res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=2592000, immutable' }).send(fs.readFileSync(f));
+    const t = cleanTitle(q); // Discover sends raw titles from the bot; strip year/quality tags
+    const title = t.title || q, year = y || t.year;
+    let f = online.posterFile(title, year);
+    if (!fs.existsSync(f)) {
+      // Fetch on demand. Before, this route only served posters already cached by an earlier /api/meta call,
+      // so Discover results (which have no poster_url) always 404'd and showed the name fallback.
+      try { await online.meta(title, year); } catch (e: any) { console.warn('[poster] lookup failed for', JSON.stringify(title), year, '-', e?.message); }
+      if (!fs.existsSync(f) && year) { f = online.posterFile(title, 0); if (!fs.existsSync(f)) { try { await online.meta(title, 0); } catch { /* none */ } } }
+      if (!fs.existsSync(f)) throw new HttpError(404, 'No poster');
+    }
+    const fresh = Date.now() - fs.statSync(f).mtimeMs < 10 * 60 * 1000;
+    res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': fresh ? 'public, max-age=60' : 'public, max-age=2592000, immutable' }).send(fs.readFileSync(f));
   }));
     // Poster for a FOLDER: check the folder's own poster.jpg first (what the bot saved),
   // then walk up parent folders (posters live at the series root), then fall back to
@@ -1809,12 +1818,12 @@ export async function start(opts: StartOpts = {}) {
       folder = parent;
       lookupName = basename(folder);
     }
-    const clean = lookupName.replace(/[-_.]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    const { title: clean, year: cleanYear } = cleanTitle(lookupName);
     if (!clean) throw new HttpError(404, 'No poster');
 
-    const f = online.posterFile(clean, 0);
+    const f = online.posterFile(clean, cleanYear);
     if (!fs.existsSync(f)) {
-      try { await online.meta(clean, 0); } catch { /* no key or no match */ }
+      try { await online.meta(clean, cleanYear); } catch (e: any) { console.warn('[folder-poster] meta lookup failed for', JSON.stringify(clean), cleanYear, '-', e?.message); }
       if (!fs.existsSync(f)) throw new HttpError(404, 'No poster');
     }
     res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600' }).send(fs.readFileSync(f));
