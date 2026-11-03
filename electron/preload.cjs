@@ -28,4 +28,5 @@ contextBridge.exposeInMainWorld('cinema', {
   onUpdate: (cb) => { const f = (_e, s) => cb(s); ipcRenderer.on('update-status', f); return () => ipcRenderer.removeListener('update-status', f); },
   reveal: (file) => ipcRenderer.invoke('reveal', file),
   openFolder: (dir) => ipcRenderer.invoke('open-folder', dir),
+  openTrailer: (key, title) => ipcRenderer.invoke('open-trailer', String(key), String(title || '')),
 });

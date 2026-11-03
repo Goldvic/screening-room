@@ -50,6 +50,7 @@ export type Bridge = {
   updateInstall(): Promise<void>;
   onUpdate(cb: (s: UpdateState) => void): () => void;
   openFolder(dir: string): Promise<void>;
+  openTrailer(key: string, title?: string): Promise<string>;
   version: string;
 };
 export const bridge: Bridge | undefined = typeof window !== 'undefined' ? (window as any).cinema : undefined;

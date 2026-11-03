@@ -329,6 +329,46 @@ ipcMain.handle('open-stream', async (_e, apiPath, player) => {
   if (!str(player)) return 'Choose the player you want to use in Settings > Other players first.';
   return launch(player, `http://127.0.0.1:${port}${apiPath}&tk=${token}`);
 });
+// ----- trailers: play inside the app, in a window that looks like a normal Chrome to YouTube -----
+// YouTube refuses to play inside an Electron app that announces itself as "Electron" (error 152 / 153) and refuses embeds on a
+// 127.0.0.1 page. A normal top-level YouTube page has neither problem, so trailers get their own small window.
+const CHROME_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+const TRAILER_HOSTS = /(^|\.)(youtube\.com|youtube-nocookie\.com|youtu\.be|google\.com|gstatic\.com|googlevideo\.com|ytimg\.com)$/;
+let trailerWin = null;
+ipcMain.handle('open-trailer', (_e, key, title) => {
+  if (!/^[\w-]{6,20}$/.test(String(key))) return 'Bad trailer';
+  if (trailerWin && !trailerWin.isDestroyed()) trailerWin.close();
+  const ses = session.fromPartition('persist:trailer');
+  ses.setUserAgent(CHROME_UA);
+  ses.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'fullscreen'));
+  const w = new BrowserWindow({
+    width: 1120, height: 700, minWidth: 640, minHeight: 400, backgroundColor: '#000000',
+    title: str(title) ? `Trailer: ${title}` : 'Trailer', icon: ICON, autoHideMenuBar: true,
+    parent: win && !win.isDestroyed() ? win : undefined,
+    webPreferences: { partition: 'persist:trailer', contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false },
+  });
+  trailerWin = w;
+  w.removeMenu();
+  const wc = w.webContents;
+  wc.setUserAgent(CHROME_UA);
+  const hostOk = (u) => { try { const x = new URL(u); return x.protocol === 'https:' && TRAILER_HOSTS.test(x.hostname); } catch { return false; } };
+  wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+  wc.on('will-navigate', (ev, u) => { if (!hostOk(u)) ev.preventDefault(); });
+  // Show only the video: hide YouTube's top bar, side list and comments.
+  const tidy = () => wc.insertCSS(
+    'html,body{background:#000!important;overflow:hidden!important}' +
+    'ytd-masthead,#masthead-container,#secondary,#below,#comments,ytd-miniplayer,tp-yt-app-drawer,#guide,ytd-mini-guide-renderer{display:none!important}' +
+    'ytd-app{--ytd-masthead-height:0px!important}#page-manager{margin-top:0!important}' +
+    'ytd-watch-flexy #primary,ytd-watch-flexy #primary-inner,#columns{max-width:none!important;padding:0!important;margin:0!important;width:100%!important}' +
+    '#player,#player-container-outer,#player-container-inner,#movie_player,#ytd-player,.html5-video-container{width:100vw!important;height:100vh!important;max-height:100vh!important}' +
+    '.html5-main-video{width:100%!important;height:100%!important;left:0!important;object-fit:contain!important}'
+  ).catch(() => {});
+  wc.on('did-finish-load', tidy);
+  wc.on('did-navigate-in-page', tidy);
+  w.on('closed', () => { if (trailerWin === w) trailerWin = null; });
+  w.loadURL(`https://www.youtube.com/watch?v=${key}&autoplay=1&rel=0`);
+  return '';
+});
 ipcMain.handle('take-pending-open', () => { rendererReady = true; const f = pendingOpen; pendingOpen = null; return f; });
 ipcMain.handle('update-get', () => updView());
 ipcMain.handle('update-config', (_e, cfg) => {

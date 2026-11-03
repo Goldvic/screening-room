@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { SettingsCtx, Icon, bytes, hue } from './lib';
+import { SettingsCtx, Icon, bytes, hue, bridge } from './lib';
 // @ts-ignore -- CSS imports are handled by the bundler.
 import './discover.css';
 // @ts-ignore -- CSS imports are handled by the bundler.
@@ -464,7 +464,13 @@ export function Discover() {
         : `Trailer lookup failed (server answered ${r.status}).`);
       if (!r.ok) throw new Error(d.error || 'Could not look up the trailer.');
       if (!d.key) { flash('No trailer found for this title'); return; }
-      setTrailer({ title: item.title, key: d.key });
+      // In the desktop app the trailer opens in its own in-app window; in a plain browser the embedded player is used.
+      if (bridge?.openTrailer) {
+        const bad = await bridge.openTrailer(d.key, botDisplayName(item.title));
+        if (bad) flash(bad);
+      } else {
+        setTrailer({ title: item.title, key: d.key });
+      }
     } catch (e: any) { console.error('[trailer]', e); flash(e.message || 'Trailer failed'); }
     finally { setTrailerBusy(false); }
   };
