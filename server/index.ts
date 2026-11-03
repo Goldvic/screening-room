@@ -1732,6 +1732,14 @@ export async function start(opts: StartOpts = {}) {
     res.set('Cache-Control', 'private, max-age=3600').json(await online.meta(q, Number(req.query.year) || 0));
   }));
   app.get('/api/meta/search', h(async (req, res) => { res.json({ items: await online.candidates(String(req.query.q ?? '').slice(0, 200)) }); }));
+  app.get('/api/trailer', h(async (req, res) => {
+  const q = String(req.query.q ?? '').slice(0, 200);
+  if (!q) throw new HttpError(400, 'Missing title');
+  try {
+    const t = await online.trailer(q, Number(req.query.year) || 0, String(req.query.kind ?? ''));
+    res.set('Cache-Control', 'private, max-age=3600').json(t ?? {});
+  } catch (e: any) { console.warn('[trailer] failed for', JSON.stringify(q), '-', e?.message); throw e; }
+}));
   app.post('/api/meta/choose', h(async (req, res) => {
     const b = req.body ?? {};
     res.json(await online.choose(String(b.q ?? '').slice(0, 200), Number(b.year) || 0, Number(b.id), String(b.kind)));

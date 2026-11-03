@@ -159,6 +159,39 @@ export class Online {
     } catch { return null; }
   }
 
+  /** Official YouTube trailer for a title, found through TMDB. `kind` ('tv' | 'movie') only breaks ties between same-named titles. */
+  async trailer(q: string, year: number, kind = ''): Promise<{ key: string; name: string } | null> {
+    const key = this.cfg().tmdbKey.trim();
+    if (!key) throw new HttpError(400, 'Add a TMDB key in Settings to watch trailers.');
+    const file = path.join(this.dir, `${this.keyOf(`${q}|${kind}`, year)}.trailer.json`);
+    try {
+      const c = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (c.key) return c;
+      if (Date.now() - fs.statSync(file).mtimeMs < 10 * 60 * 1000) return null;
+    } catch { /* not cached yet */ }
+    let out: { key: string; name: string } | null = null;
+    const tries: [string, string][] = [[q, String(year || '')], [q, ''], [q.split(/\s*:\s*|\s[-–]\s/)[0], '']]
+      .filter((x, i, a) => x[0] && a.findIndex((y) => y[0] === x[0] && y[1] === x[1]) === i) as [string, string][];
+    for (const [query, y] of tries) {
+      const r = await fetch(this.tmdbUrl('search/multi', key, { query, year: y }), { headers: this.tmdbHeaders(key), signal: AbortSignal.timeout(15000) })
+        .catch(() => { throw new HttpError(502, 'Could not reach TMDB. Check your internet connection.'); });
+      if (!r.ok) throw new HttpError(502, `TMDB answered ${r.status}`);
+      const list: any[] = ((await r.json()) as any).results?.filter((x: any) => x.media_type === 'movie' || x.media_type === 'tv') ?? [];
+      const n = this.norm(query);
+      const same = list.filter((x) => this.norm(x.title || x.name || '') === n);
+      const hit = same.find((x) => (!kind || x.media_type === kind) && (!year || String(x.release_date || x.first_air_date || '').startsWith(String(year))))
+        ?? same.find((x) => !kind || x.media_type === kind) ?? same[0] ?? list[0];
+      if (!hit) continue;
+      const vr = await fetch(this.tmdbUrl(`${hit.media_type}/${hit.id}/videos`, key, { include_video_language: 'en,null' }), { headers: this.tmdbHeaders(key), signal: AbortSignal.timeout(15000) }).catch(() => null);
+      if (!vr?.ok) continue;
+      const vids: any[] = (((await vr.json()) as any).results ?? []).filter((v: any) => v.site === 'YouTube' && v.key);
+      const pick = vids.find((v) => v.type === 'Trailer' && v.official) ?? vids.find((v) => v.type === 'Trailer') ?? vids.find((v) => v.type === 'Teaser') ?? vids[0];
+      if (pick) { out = { key: String(pick.key), name: String(pick.name ?? 'Trailer') }; break; }
+    }
+    fs.writeFileSync(file, JSON.stringify(out ?? {}));
+    return out;
+  }
+
   /** Manual search for the "Wrong match?" box. */
   async candidates(q: string) {
     const key = this.cfg().tmdbKey.trim();

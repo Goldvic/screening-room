@@ -309,6 +309,8 @@ export function Discover() {
   const [history, setHistory] = useState<any[]>([]);
   const [watches, setWatches] = useState<any[]>([]);
   const [scheduled, setScheduled] = useState<any[]>([]);
+  const [trailer, setTrailer] = useState<{ title: string; key: string } | null>(null);
+  const [trailerBusy, setTrailerBusy] = useState(false);
   const [pick, setPick] = useState<BotItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
@@ -330,7 +332,7 @@ export function Discover() {
     return res.json();
   }, [ready, apiUrl, apiKey, userId]);
 
-  const flash = (m: string) => { setToast(m); window.setTimeout(() => setToast(''), 2600); };
+  const flash = (m: string) => { setToast(m); window.setTimeout(() => setToast(''), 6000); };
 
   // Load whatever the current tab needs. `silent` = background refresh (no skeleton flicker).
   const load = useCallback(async (t: Tab, silent = false) => {
@@ -450,12 +452,29 @@ export function Discover() {
     catch (e: any) { setErr(e.message); }
   };
 
+  const watchTrailer = async (item: BotItem) => {
+    setTrailerBusy(true); setErr('');
+    try {
+      const name = botDisplayName(item.title).replace(/\s*\|.*$/, '');
+      const kind = isSeries(item) ? 'tv' : item.category === 'movie' ? 'movie' : '';
+      const r = await fetch(`/api/trailer?q=${encodeURIComponent(name)}&year=${item.year || 0}&kind=${kind}`);
+      const d = await r.json().catch(() => null);
+      if (!d) throw new Error(r.status === 404
+        ? 'Your Cinema server has no /api/trailer route yet. Add it to server/index.ts and let it restart.'
+        : `Trailer lookup failed (server answered ${r.status}).`);
+      if (!r.ok) throw new Error(d.error || 'Could not look up the trailer.');
+      if (!d.key) { flash('No trailer found for this title'); return; }
+      setTrailer({ title: item.title, key: d.key });
+    } catch (e: any) { console.error('[trailer]', e); flash(e.message || 'Trailer failed'); }
+    finally { setTrailerBusy(false); }
+  };
+
   useEffect(() => {
     if (!pick) return;
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && setPick(null);
+    const k = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (trailer) setTrailer(null); else setPick(null); };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
-  }, [pick]);
+  }, [pick, trailer]);
 
   /* ----- not configured ----- */
   if (!ready) {
@@ -658,9 +677,31 @@ export function Discover() {
                 {isSeries(pick) && (
                   <button className="dc-ghost" disabled={busy} onClick={() => watchShow(pick)}><Icon n="bookmark" s={16} /> Watch for new episodes</button>
                 )}
+                <button className="dc-ghost" disabled={trailerBusy} onClick={() => watchTrailer(pick)}><Icon n="play" s={16} /> {trailerBusy ? 'Finding…' : 'Watch trailer'}</button>
                 <button className="dc-ghost" onClick={() => setPick(null)}>Cancel</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {trailer && (
+        <div className="dc-modal dc-tmodal" onClick={() => setTrailer(null)}>
+          <div className="dc-tbox" onClick={e => e.stopPropagation()}>
+            <button className="dc-close" onClick={() => setTrailer(null)} aria-label="Close trailer"><Icon n="close" s={16} /></button>
+            <div className="dc-frame">
+              <iframe
+                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&origin=${encodeURIComponent(window.location.origin)}`}
+                title={`Trailer: ${trailer.title}`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+            <p className="dc-note">
+              Trailer for {botDisplayName(trailer.title)}. If YouTube asks you to sign in or says it cannot play it here,{' '}
+              <a className="dc-link" href={`https://www.youtube.com/watch?v=${trailer.key}`} target="_blank" rel="noreferrer">open it on YouTube</a>.
+            </p>
           </div>
         </div>
       )}
