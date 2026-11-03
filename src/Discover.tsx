@@ -691,11 +691,11 @@ export function Discover() {
             <button className="dc-close" onClick={() => setTrailer(null)} aria-label="Close trailer"><Icon n="close" s={16} /></button>
             <div className="dc-frame">
               <iframe
-                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&origin=${encodeURIComponent(window.location.origin)}`}
+                src={`https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&rel=0&playsinline=1`}
                 title={`Trailer: ${trailer.title}`}
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                 allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
+                referrerPolicy="no-referrer-when-downgrade"
               />
             </div>
             <p className="dc-note">

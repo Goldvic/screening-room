@@ -230,7 +230,14 @@ function createWindow() {
   win.loadURL(origin);
   win.on('resize', saveBounds); win.on('move', saveBounds);
   win.webContents.on('did-start-loading', () => { rendererReady = false; });
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  // Links that ask for a new window (for example "open it on YouTube") go to the user's real browser, where they are signed in.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const u = new URL(url);
+      if (u.protocol === 'https:' && /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/.test(u.hostname)) shell.openExternal(url);
+    } catch { /* ignore bad URLs */ }
+    return { action: 'deny' };
+  });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(origin)) e.preventDefault(); });
   // Closing the window while downloads are running keeps them going in the tray.
   win.on('close', async (e) => {
@@ -391,6 +398,16 @@ app.whenReady().then(async () => {
   }
   const url = new URL(origin);
   await session.defaultSession.cookies.set({ url: `${url.protocol}//${url.hostname}`, name: 'cinema', value: token, httpOnly: true, sameSite: 'strict', path: '/' });
+  // YouTube refuses to play an embed when the page around it is http://127.0.0.1 (no usable Referer -> "Video player configuration error" / "sign in").
+  // So requests to the YouTube player get a normal https Referer, the same as a website embedding it would send.
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['https://www.youtube.com/embed/*', 'https://www.youtube-nocookie.com/embed/*', 'https://www.youtube.com/youtubei/*', 'https://www.youtube.com/api/*'] },
+    (details, cb) => {
+      const h = { ...details.requestHeaders };
+      h['Referer'] = 'https://www.youtube.com/';
+      cb({ requestHeaders: h });
+    },
+  );
   // Only allow what a video player needs.
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(['fullscreen', 'clipboard-sanitized-write'].includes(perm)));
   buildMenu();
