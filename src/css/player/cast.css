@@ -1,12 +1,17 @@
 /* Player cast dialog (Chromecast / DLNA). */
 
-.castbox { position: absolute; right: 18px; bottom: 110px; z-index: 9; width: min(340px, calc(100% - 32px)); border-radius: var(--r-lg); border: none; background: var(--glass); backdrop-filter: blur(28px); box-shadow: inset 0 1px 0 var(--on-media-line), 0 24px 60px var(--shade-4); overflow: hidden; color: var(--on-media); animation: de-in var(--t-med) var(--ease); }
+.castbox { position: absolute; right: 18px; bottom: 110px; z-index: 9; width: min(340px, calc(100% - 32px)); border-radius: var(--r-lg); border: none; background: var(--glass); backdrop-filter: blur(28px); box-shadow: inset 0 1px 0 var(--on-media-line), 0 24px 60px var(--shade-4); overflow-x: hidden; overflow-y: auto; max-height: calc(100% - 130px); overscroll-behavior: contain; color: var(--on-media); animation: de-in var(--t-med) var(--ease); }
 
 .castbox-h { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) var(--sp-3) 10px; border-bottom: 1px solid var(--on-media-line); }
 .castbox-h b { display: flex; align-items: center; gap: var(--sp-2); font: 600 var(--fs-md) var(--sans); }
 .castbox-h .dlg-sub { display: block; margin-top: 2px; margin-left: 24px; font: 400 var(--fs-xs) var(--sans); color: var(--on-media-mute); }
 
-.castlist, .castctl { padding: 8px 0 12px; display: grid; gap: 2px; }
+.castlist, .castctl { padding: 8px 0 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; min-width: 0; }
+.castlist > *, .castctl > * { min-width: 0; max-width: 100%; }
+/* TV list: device rows (.opt) run edge to edge, everything else (messages, buttons, help text) gets side padding */
+.castlist:not(.cast-phone) > :not(.opt) { margin-inline: 14px; }
+.castlist:not(.cast-phone) > .inline { justify-self: start; margin-block: 6px; }
+.castlist:not(.cast-phone) > p { margin-block: 4px; }
 .castctl { padding: 12px 14px 14px; gap: 8px; }
 .castctl input[type="range"] { width: 100%; accent-color: var(--lamp); }
 
@@ -19,7 +24,8 @@
 .cast-phone { justify-items: center; text-align: center; padding: 12px 14px 14px; gap: 10px; }
 .cast-qr { width: 168px; height: 168px; padding: 8px; border-radius: var(--r); background: #fff; }
 .cast-qr svg { display: block; width: 100%; height: 100%; }
-.cast-hint { margin: 0; max-width: 260px; }
+.cast-hint { margin: 0; max-width: 100%; overflow-wrap: anywhere; }
+.cast-phone .muted.small { overflow-wrap: anywhere; }
 .cast-url { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: 4px 4px 4px 10px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--on-media) 8%, transparent); border: 1px solid var(--on-media-line); }
 .cast-url span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-xs) var(--mono); color: var(--on-media-mute); text-align: left; }
 
