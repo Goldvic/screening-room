@@ -201,7 +201,6 @@ function Library() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [err, setErr] = useState('');
   const [play, setPlay] = useState<string | null>(null);
-  // Where the playing video lives. Browsing to other folders must not move, restart or stop it.
   const [playLoc, setPlayLoc] = useState<{ root: number; dir: string } | null>(null);
   const [playVideos, setPlayVideos] = useState<string[] | null>(null);
   const beginPlay = (name: string, r: number, d: string) => { setPlayLoc({ root: r, dir: d }); setPlayVideos(null); setPlay(name); };
@@ -220,7 +219,7 @@ function Library() {
   const [skipSetup, setSkipSetup] = useState(() => { try { return localStorage.getItem('cinema.skipSetup') === '1'; } catch { return false; } });
   const search = useRef<HTMLInputElement>(null);
   const pre = useRef(new Set<string>());
-  const net = useNet(null, 30000); // month total and mode only; the live speed lives in <NetMini/>
+  const net = useNet(null, 30000);
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
   const [palette, setPalette] = useState(false);
@@ -252,7 +251,7 @@ function Library() {
   const rootOf = (id: number | null) => roots.find((r) => r.id === id);
   const cur = rootOf(root);
   const offline = !!cur?.offline;
-  const opened = !!cur?.opened; // videos opened from Explorer / drag and drop: played in place, never copied
+  const opened = !!cur?.opened;
   const rid = root ?? -1;
   const pkey = (name: string, d = dir, r = root) => `${rootOf(r)?.name}:${join(d, name)}`;
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3600); };
@@ -642,35 +641,89 @@ function Library() {
       onDragLeave={(e) => { if (e.currentTarget === e.target) setDragging(false); }}
       onDrop={onDrop}>
       {dragging && <div className="dropzone" aria-hidden="true"><Icon n="play" s={42} /><strong>Drop to play</strong><span>The videos are played where they are. Nothing is copied.</span></div>}
+      
       <aside className="sidebar" aria-label="Main navigation">
-        <button className="sidebar-brand" title={APP_NAME} onClick={() => setView('home')}><span className="lamp" /><span className="sidebar-label">{APP_NAME}</span></button>
-        <button className="sidebar-search" onClick={() => setPalette(true)} title="Search and commands (Ctrl+K)"><Icon n="search" s={17} /><span className="sidebar-label">Search</span><kbd className="sidebar-label">Ctrl K</kbd></button>
+        <div className="sidebar-top">
+          <button className="sidebar-brand" title={APP_NAME} onClick={() => setView('home')}>
+            <span className="lamp" />
+            <span className="sidebar-label">{APP_NAME}</span>
+          </button>
+          <button className="sidebar-search" onClick={() => setPalette(true)} title="Search and commands (Ctrl+K)">
+            <Icon n="search" s={17} />
+            <span className="sidebar-label">Search</span>
+            <kbd className="sidebar-label">Ctrl K</kbd>
+          </button>
+        </div>
+
         <nav className="sidebar-nav">
-          {([['home', 'Home', 'home'], ['library', 'Library', 'film'], ['playlists', 'Playlists', 'list'], ['collections', 'Collections', 'folder'], ['discover', 'Discover', 'bolt'], ['insights', 'Insights', 'gauge']] as const).map(([id, label, ic]) => (
-            <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}><Icon n={ic} s={18} /><span className="sidebar-label">{label}</span></button>
-          ))}
+          <div className="sidebar-group">
+            <span className="sidebar-group-label">Browse</span>
+            {([
+              ['home', 'Home', 'home'], 
+              ['discover', 'Discover', 'bolt'], 
+              ['library', 'Library', 'film']
+            ] as const).map(([id, label, ic]) => (
+              <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}>
+                <Icon n={ic} s={18} />
+                <span className="sidebar-label">{label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="sidebar-group">
+            <span className="sidebar-group-label">Your Stuff</span>
+            {([
+              ['playlists', 'Playlists', 'list'], 
+              ['collections', 'Collections', 'folder'], 
+              ['insights', 'Insights', 'gauge']
+            ] as const).map(([id, label, ic]) => (
+              <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}>
+                <Icon n={ic} s={18} />
+                <span className="sidebar-label">{label}</span>
+              </button>
+            ))}
+          </div>
         </nav>
+
         <div className="sidebar-foot">
           {upd && (upd.state === 'available' || upd.state === 'downloading' || upd.state === 'ready') && (
             <button className="sidebar-link sidebar-update" title="Update available" onClick={() => (upd.state === 'available' ? bridge?.updateDownload() : upd.state === 'ready' ? bridge?.updateInstall() : undefined)}>
-              <Icon n="cloud" s={18} /><span className="sidebar-label">{upd.state === 'ready' ? 'Restart to update' : upd.state === 'downloading' ? `Updating ${upd.percent}%` : 'Update'}</span>
+              <Icon n="cloud" s={18} />
+              <span className="sidebar-label">{upd.state === 'ready' ? 'Restart to update' : upd.state === 'downloading' ? `Updating ${upd.percent}%` : 'Update'}</span>
             </button>
           )}
-          {bridge && <button className="sidebar-link sidebar-open" onClick={() => pickFile()} title="Open file (Ctrl O)"><Icon n="folder" s={18} /><span className="sidebar-label">Open file</span></button>}
-          <button className="sidebar-link" onClick={() => setPanel('servers')} title="Servers"><Icon n="server" s={18} /><span className="sidebar-label">Servers</span></button>
+          {bridge && (
+            <button className="sidebar-link sidebar-open" onClick={() => pickFile()} title="Open file (Ctrl O)">
+              <Icon n="folder" s={18} />
+              <span className="sidebar-label">Open file</span>
+            </button>
+          )}
+          <button className="sidebar-link" onClick={() => setPanel('servers')} title="Servers">
+            <Icon n="server" s={18} />
+            <span className="sidebar-label">Servers</span>
+          </button>
           <button className="sidebar-link" onClick={() => setPanel('downloads')} title="Downloads" aria-label="Downloads">
-            <Icon n="down" s={18} /><span className="sidebar-label">Downloads</span>
+            <Icon n="down" s={18} />
+            <span className="sidebar-label">Downloads</span>
             {queueInfo.active + queueInfo.waiting > 0 && <em className="sidebar-badge">{queueInfo.active + queueInfo.waiting}</em>}
           </button>
-          <button className="sidebar-link" onClick={() => setPanel('settings')} title="Settings" aria-label="Settings"><Icon n="sliders" s={18} /><span className="sidebar-label">Settings</span></button>
+          <button className="sidebar-link" onClick={() => setPanel('settings')} title="Settings" aria-label="Settings">
+            <Icon n="sliders" s={18} />
+            <span className="sidebar-label">Settings</span>
+          </button>
+          
           <div className="sidebar-data">
             <NetMini onClick={() => setDataOpen((x) => !x)} />
-            {dataOpen && <DataPanel budget={budget} saver={saver} queued={queueInfo.active + queueInfo.waiting}
-              onBudget={(g) => { post('settings', { budgetGB: g }).then(() => loadSrv()).catch(() => {}); }}
-              onClose={() => setDataOpen(false)}
-              onDownloads={() => { setDataOpen(false); setPanel('downloads'); }}
-              onInsights={() => { setDataOpen(false); setView('insights'); }}
-              onSettings={() => { setDataOpen(false); setPanel('settings'); }} />}
+            {dataOpen && (
+              <DataPanel 
+                budget={budget} saver={saver} queued={queueInfo.active + queueInfo.waiting}
+                onBudget={(g) => { post('settings', { budgetGB: g }).then(() => loadSrv()).catch(() => {}); }}
+                onClose={() => setDataOpen(false)}
+                onDownloads={() => { setDataOpen(false); setPanel('downloads'); }}
+                onInsights={() => { setDataOpen(false); setView('insights'); }}
+                onSettings={() => { setDataOpen(false); setPanel('settings'); }} 
+              />
+            )}
           </div>
         </div>
       </aside>

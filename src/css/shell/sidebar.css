@@ -1,74 +1,289 @@
-/* Sidebar: the main navigation. Replaces the old top bar (shell/topnav.css).
-   Three sizes, chosen by window width:
-     wide   (1100px and up)  228px rail with icons and labels
-     narrow (700 to 1099px)  68px rail with icons only (tooltips show the names)
-     small  (under 700px)    bottom bar with icons and short labels
-   Markup lives in App.tsx (<aside className="sidebar">). Tokens come from core/tokens.css. */
+/* Sidebar: the main navigation. 
+   Expands from a 84px icon rail to 240px on hover. 
+   Active state is strictly the colored icon/text (no boxes). */
 
-/* ================= 1. LAYOUT ================= */
+/* ================= 1. ELEMENTS & LAYOUT ================= */
 
-.sidebar { position: relative; z-index: 20; display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; padding: var(--sp-3); border-right: 1px solid var(--line); background: var(--panel); }
-
-.sidebar-nav { display: flex; flex: 1; flex-direction: column; gap: 2px; min-height: 0; margin-top: var(--sp-2); overflow-y: auto; }
-
-.sidebar-foot { display: flex; flex-direction: column; gap: 2px; padding-top: var(--sp-3); border-top: 1px solid var(--line); }
-
-.sidebar-brand { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 var(--sp-3); font: 600 var(--fs-xl)/1 var(--serif); letter-spacing: -.01em; text-align: left; }
-
-.sidebar-search { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--r); background: var(--raise); color: var(--mute); font-size: var(--fs-md); text-align: left; }
-.sidebar-search .sidebar-label { flex: 1; }
-
-.sidebar-link { position: relative; display: flex; align-items: center; gap: var(--sp-3); flex: none; width: 100%; height: 40px; padding: 0 var(--sp-3); border-radius: var(--r); color: var(--mute); font: 500 var(--fs-md)/1 var(--sans); text-align: left; }
-.sidebar-link svg, .sidebar-search svg { flex: none; }
-
-.sidebar-badge { min-width: 18px; height: 18px; margin-left: auto; padding: 0 5px; border-radius: var(--r-pill); background: var(--lamp); color: var(--on-lamp); font: 600 var(--fs-xs)/18px var(--sans); font-style: normal; text-align: center; }
-
-/* Wrapper that anchors the data-usage popup next to the net meter */
-.sidebar-data { position: relative; }
-
-
-/* ================= 2. COLORS ================= */
-
-.sidebar-brand .lamp { flex: none; }
-
-.sidebar-search:hover { border-color: var(--lamp-line); color: var(--text); }
-
-.sidebar-link:hover { background: var(--wash-1); color: var(--text); }
-.sidebar-link.on { background: var(--lamp-soft); color: var(--lamp); }
-.sidebar-link.on::before { content: ''; position: absolute; top: 10px; bottom: 10px; left: 4px; width: 3px; border-radius: var(--r-pill); background: var(--lamp); }
-
-.sidebar-update { background: var(--lamp-soft); color: var(--lamp); }
-.sidebar-update:hover { background: var(--lamp-line); color: var(--text); }
-
-
-/* ================= 3. STATES ================= */
-
-.sidebar-brand:focus-visible, .sidebar-search:focus-visible, .sidebar-link:focus-visible { outline-offset: -2px; }
-
-.sidebar-search, .sidebar-link { transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast); }
-
-
-/* ================= 4. OTHER MODES ================= */
-
-/* Mini player window: no navigation */
-html.pop .sidebar { display: none !important; }
-
-/* Narrow: icon rail */
-@media (max-width: 1099px) {
-  .sidebar { padding: var(--sp-3) var(--sp-2); }
-  .sidebar .sidebar-label { display: none; }
-  .sidebar-brand, .sidebar-search, .sidebar-link { justify-content: center; padding: 0; }
-  .sidebar-badge { position: absolute; top: 3px; right: 5px; min-width: 16px; height: 16px; margin: 0; font-size: 10px; line-height: 16px; }
+/* Removed absolute positioning so it sits inside the grid */
+.sidebar { 
+  position: relative; 
+  height: 100%;
+  z-index: 40; 
+  display: flex; 
+  flex-direction: column; 
+  background: var(--panel); 
+  border-right: 1px solid var(--line); 
+  padding: var(--sp-3) 0; 
+  overflow: hidden; 
+  white-space: nowrap;
 }
 
-/* Small: bottom bar */
+.sidebar-top { 
+  display: flex; 
+  flex-direction: column; 
+  gap: var(--sp-2); 
+  flex: none; 
+  padding: 0; 
+  transition: padding var(--t-med) var(--ease);
+}
+
+.sidebar:hover .sidebar-top {
+  padding: 0 var(--sp-3);
+}
+
+.sidebar-nav { 
+  display: flex; 
+  flex-direction: column; 
+  gap: var(--sp-4); 
+  flex: 1; 
+  overflow-y: auto; 
+  overflow-x: hidden; 
+  margin-top: var(--sp-3); 
+  padding: 0;
+  scrollbar-width: none;
+}
+.sidebar-nav::-webkit-scrollbar { display: none; }
+
+.sidebar-group { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 2px; 
+}
+
+.sidebar-foot { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 2px; 
+  flex: none; 
+  padding-top: var(--sp-3); 
+  border-top: 1px solid var(--line); 
+}
+
+/* ================= 2. EXPAND/COLLAPSE BEHAVIOR ================= */
+
+.sidebar-link { 
+  position: relative; 
+  display: flex;
+  align-items: center;
+  justify-content: center; 
+  width: 100%; 
+  height: 48px; 
+  border-radius: 0; 
+  color: var(--mute); 
+  font: 500 var(--fs-md)/1 var(--sans); 
+  text-align: left; 
+  transition: background var(--t-fast), color var(--t-fast), padding var(--t-med) var(--ease);
+  flex-shrink: 0;
+}
+
+.sidebar:hover .sidebar-link { 
+  justify-content: flex-start; 
+  padding: 0 var(--sp-5); 
+}
+
+.sidebar-brand { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  height: 44px; 
+  font: 600 var(--fs-xl)/1 var(--serif); 
+  letter-spacing: -.01em; 
+  text-align: left; 
+  justify-content: center;
+  transition: all var(--t-med) var(--ease);
+  width: 100%;
+}
+
+.sidebar:hover .sidebar-brand {
+  justify-content: flex-start;
+}
+
+.sidebar-search { 
+  display: flex; 
+  align-items: center; 
+  height: 48px; 
+  width: 100%;
+  border: 1px solid transparent; 
+  border-radius: var(--r); 
+  background: transparent; 
+  color: var(--mute); 
+  font-size: var(--fs-md); 
+  text-align: left; 
+  justify-content: center;
+  padding: 0;
+  transition: all var(--t-med) var(--ease);
+  flex-shrink: 0;
+}
+
+.sidebar:hover .sidebar-search {
+  justify-content: flex-start;
+  padding: 0 var(--sp-3);
+  border-color: var(--line);
+  background: var(--raise);
+}
+
+.sidebar-label { 
+  display: none;
+  margin-left: 10px; 
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+.sidebar:hover .sidebar-label { 
+  display: block;
+  opacity: 1; 
+}
+
+.sidebar-link svg, 
+.sidebar-search svg,
+.sidebar-brand svg,
+.sidebar-brand .lamp {
+  flex: none; 
+}
+
+.sidebar:not(:hover) .sidebar-link svg,
+.sidebar:not(:hover) .sidebar-search svg {
+  width: 26px;
+  height: 26px;
+}
+
+.sidebar-brand .lamp { 
+  width: 10px; 
+  height: 10px; 
+}
+.sidebar:not(:hover) .sidebar-brand .lamp {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-group-label { 
+  padding: 0 var(--sp-4); 
+  margin-bottom: var(--sp-1); 
+  font: 600 var(--fs-xs) var(--sans); 
+  letter-spacing: .08em; 
+  text-transform: uppercase; 
+  color: var(--mute); 
+  opacity: 0; 
+  transition: opacity var(--t-fast) var(--ease); 
+  pointer-events: none; 
+}
+
+.sidebar:not(:hover) .sidebar-group-label {
+  display: none; 
+}
+
+.sidebar:hover .sidebar-group-label { 
+  opacity: .7; 
+  pointer-events: auto; 
+}
+
+/* ================= 3. COLORS & ACTIVE STATES ================= */
+
+.sidebar-search:hover { 
+  color: var(--text); 
+}
+.sidebar:hover .sidebar-search:hover {
+  border-color: var(--lamp-line);
+}
+
+.sidebar-link:hover { 
+  background: var(--wash-1); 
+  color: var(--text); 
+}
+
+/* The active state: STRICTLY color. No backgrounds, no boxes. */
+.sidebar-link.on, 
+.sidebar-link.on:hover { 
+  background: transparent; 
+  color: var(--lamp); 
+  box-shadow: none;
+}
+
+.sidebar-badge { 
+  min-width: 18px; 
+  height: 18px; 
+  border-radius: var(--r-pill); 
+  background: var(--lamp); 
+  color: var(--on-lamp); 
+  font: 600 var(--fs-xs)/18px var(--sans); 
+  font-style: normal; 
+  text-align: center; 
+}
+
+.sidebar:not(:hover) .sidebar-badge { 
+  position: absolute; 
+  top: 4px; 
+  right: 8px; 
+  margin: 0; 
+  font-size: 10px; 
+  line-height: 16px; 
+  min-width: 16px; 
+  height: 16px; 
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.sidebar:hover .sidebar-badge { 
+  position: static; 
+  margin-left: auto; 
+  padding: 0 5px; 
+  box-shadow: none;
+}
+
+.sidebar-update { 
+  color: var(--lamp); 
+}
+
+.sidebar-update:hover { 
+  background: var(--wash-1); 
+  color: var(--lamp); 
+}
+
+.sidebar:not(:hover) .netmini { 
+  justify-content: center; 
+  padding: 8px 0; 
+}
+
+.sidebar:not(:hover) .netmini-speed, 
+.sidebar:not(:hover) .netmini-today { 
+  display: none; 
+}
+
+.sidebar:hover .netmini { 
+  justify-content: flex-start; 
+  padding: 8px var(--sp-3); 
+}
+
+.sidebar-brand:focus-visible, 
+.sidebar-search:focus-visible, 
+.sidebar-link:focus-visible { 
+  outline-offset: -2px; 
+}
+
+/* ================= 4. RESPONSIVE (BOTTOM BAR) ================= */
+
 @media (max-width: 699px) {
-  .sidebar { flex-direction: row; align-items: stretch; gap: 0; padding: 0 var(--sp-1); border-top: 1px solid var(--line); border-right: 0; overflow-x: auto; }
+  .sidebar { 
+    position: relative; 
+    width: 100%; 
+    height: auto; 
+    flex-direction: row; 
+    align-items: stretch; 
+    gap: 0; 
+    padding: 0 var(--sp-1); 
+    border-top: 1px solid var(--line); 
+    border-right: 0; 
+    overflow-x: auto; 
+  }
+  .sidebar:hover { width: 100%; padding: 0 var(--sp-1); box-shadow: none; }
+  .sidebar:hover .sidebar-brand, .sidebar:hover .sidebar-search, .sidebar:hover .sidebar-link { justify-content: center; padding: 0 var(--sp-2); }
+  .sidebar-top, .sidebar-group-label, .sidebar-data, .sidebar-open, .sidebar-update { display: none; }
   .sidebar-nav, .sidebar-foot { display: contents; }
-  .sidebar-brand, .sidebar-data, .sidebar-open, .sidebar-update { display: none; }
   .sidebar-search { flex: none; width: 56px; height: auto; border: 0; background: none; }
-  .sidebar-link { flex: 1 0 60px; flex-direction: column; justify-content: center; gap: 3px; width: auto; height: 56px; padding: 0 var(--sp-2); font-size: 10.5px; }
-  .sidebar .sidebar-link .sidebar-label { display: block; }
-  .sidebar-link.on::before { top: 0; bottom: auto; left: 25%; right: 25%; width: auto; height: 3px; border-radius: 0 0 var(--r-pill) var(--r-pill); }
-  .sidebar-badge { top: 6px; right: 12px; }
+  .sidebar-link { 
+    flex: 1 0 60px; flex-direction: column; justify-content: center; gap: 3px; width: auto; height: 56px; margin: 0; padding: 0 var(--sp-2); font-size: 10.5px; border-radius: 0;
+  }
+  .sidebar:not(:hover) .sidebar-link svg, .sidebar:not(:hover) .sidebar-search svg { width: 18px; height: 18px; }
+  .sidebar:not(:hover) .sidebar-brand .lamp { width: 10px; height: 10px; }
+  .sidebar .sidebar-link .sidebar-label { display: block; opacity: 1; width: auto; margin-left: 0; }
+  .sidebar:not(:hover) .sidebar-badge { position: static; margin-left: auto; padding: 0 5px; box-shadow: none; }
 }
