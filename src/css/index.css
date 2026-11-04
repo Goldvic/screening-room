@@ -31,6 +31,7 @@
 
 /* ---------- 5. Player ---------- */
 @import './player/player-frame.css';
+@import './player/hud.css';
 @import './player/top-bar.css';
 @import './player/seek-bar.css';
 @import './player/controls.css';

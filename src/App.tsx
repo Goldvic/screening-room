@@ -6,7 +6,8 @@ import { AddToCollection, CollectionsPage, Collection, HomeCustomize, HomeRow, R
 import { Hero, MagSide, Playlists, Rail, SavedFile, Tile, Today, Welcome, progPct, savedSub } from './Home';
 import { DownloadDialog, DownloadsPanel, StoragePanel } from './Downloads';
 import { Discover } from './Discover';
-import { Art, folderPosterUrl, Thumb } from './components/Art';
+import { Library } from './pages/Library';
+import { Art } from './components/Art';
 import { Details } from './components/Details';
 import { Confirm, Ask } from './components/Confirm';
 import { NameDialog, NameAsk } from './components/NameDialog';
@@ -53,20 +54,24 @@ export default function App() {
   if (!ready) return <div className="boot" aria-label="Loading"><span className="lamp big" /></div>;
   return (
     <SettingsCtx.Provider value={{ s: settings, set }}>
-      <PrefsCtx.Provider value={{ prefs, setPref }}><Library /></PrefsCtx.Provider>
+      <PrefsCtx.Provider value={{ prefs, setPref }}><Shell /></PrefsCtx.Provider>
     </SettingsCtx.Provider>
   );
 }
 
-function Library() {
+function Shell() {
   const { s, set } = useContext(SettingsCtx);
   const { prefs, setPref } = useContext(PrefsCtx);
   const [host, setHost] = useState('');
   const [hasServer, setHasServer] = useState(true);
   const [rootsErr, setRootsErr] = useState('');
   const [roots, setRoots] = useState<Root[]>([]);
+  
   const [root, setRoot] = useState<number | null>(null);
   const [dir, setDir] = useState('');
+  const [lastLoc, setLastLoc] = useState<{ root: number; dir: string } | null>(null);
+  const activeLoc = lastLoc || { root: root ?? -1, dir };
+
   const [items, setItems] = useState<Entry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [err, setErr] = useState('');
@@ -74,11 +79,10 @@ function Library() {
   const [playLoc, setPlayLoc] = useState<{ root: number; dir: string } | null>(null);
   const [playVideos, setPlayVideos] = useState<string[] | null>(null);
   const beginPlay = (name: string, r: number, d: string) => { setPlayLoc({ root: r, dir: d }); setPlayVideos(null); setPlay(name); };
+  
   const [ask, setAsk] = useState<Ask | null>(null);
   const [toast, setToast] = useState('');
   const [prog, setProg] = useState<Record<string, Prog>>({});
-  const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<'name' | 'new' | 'size'>('name');
   const [panel, setPanel] = useState<null | 'settings' | 'servers' | 'downloads' | 'storage' | 'tidy'>(null);
   const [dls, setDls] = useState<DL[]>([]);
   const [caps, setCaps] = useState<Caps | null>(null);
@@ -87,7 +91,6 @@ function Library() {
   const [budget, setBudget] = useState(0);
   const [queueInfo, setQueueInfo] = useState({ active: 0, waiting: 0, speed: 0 });
   const [skipSetup, setSkipSetup] = useState(() => { try { return localStorage.getItem('cinema.skipSetup') === '1'; } catch { return false; } });
-  const search = useRef<HTMLInputElement>(null);
   const pre = useRef(new Set<string>());
   const net = useNet(null, 30000);
   const upd = useUpdates();
@@ -97,26 +100,19 @@ function Library() {
   const [addTo, setAddTo] = useState<string[] | null>(null);
   const [ruleFor, setRuleFor] = useState(false);
   const [customize, setCustomize] = useState(false);
-  const [tagFilter, setTagFilter] = useState('');
   const [heroI, setHeroI] = useState(0);
   const [because, setBecause] = useState<{ title: string; items: Entry[]; root: number; dir: string } | null>(null);
-  const [sibs, setSibs] = useState<string[]>([]);
   const sinceRef = useRef<number>(prefs.lastVisit ?? Date.now());
   const prefsRef = useRef(prefs); prefsRef.current = prefs;
   const popQ = useMemo(() => new URLSearchParams(location.search), []);
   const isPop = popQ.get('pop') === '1';
   const [help, setHelp] = useState(false);
-  const [menuFor, setMenuFor] = useState<string | null>(null);
   const [onBattery, setOnBattery] = useState(false);
   const [floating, setFloating] = useState(false);
   const [view, setView] = useState<'home' | 'library' | 'playlists' | 'collections' | 'insights' | 'discover'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
   const [nameAsk, setNameAsk] = useState<NameAsk | null>(null);
-  const [selecting, setSelecting] = useState(false);
-  const [sel, setSel] = useState<string[]>([]);
   const [playlist, setPlaylist] = useState<string[] | null>(null);
-  const [libMenu, setLibMenu] = useState(false);
-  const [sortMenu, setSortMenu] = useState(false);
 
   const rootOf = (id: number | null) => roots.find((r) => r.id === id);
   const cur = rootOf(root);
@@ -125,6 +121,7 @@ function Library() {
   const rid = root ?? -1;
   const pkey = (name: string, d = dir, r = root) => `${rootOf(r)?.name}:${join(d, name)}`;
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3600); };
+  
   const loadProg = useCallback(() => api<Record<string, Prog>>('progress').then(setProg).catch(() => {}), []);
   const loadSrv = useCallback(() => api<{ budgetGB: number }>('settings').then((j) => setBudget(j.budgetGB)).catch(() => {}), []);
   const loadCaps = useCallback(() => api<Caps>('caps').then(setCaps).catch(() => {}), []);
@@ -144,18 +141,11 @@ function Library() {
   }, [root, dir]);
 
   useEffect(() => { loadRoots(); loadProg(); loadSrv(); loadCaps(); }, [loadRoots, loadProg, loadSrv, loadCaps]);
-  useEffect(() => { setQuery(''); load(); }, [load]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     const t = setInterval(() => { if (document.hidden) return; api<{ active: number; waiting: number; speed: number }>('dl').then((j) => setQueueInfo((o) => (o.active === j.active && o.waiting === j.waiting ? o : j))).catch(() => {}); }, 2500);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === '/' && !play && !panel && (e.target as HTMLElement).tagName !== 'INPUT') { e.preventDefault(); search.current?.focus(); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [play, panel]);
 
   const refreshAll = () => Promise.all([load(), loadRoots(), loadProg()]);
   const refreshRef = useRef(refreshAll); refreshRef.current = refreshAll;
@@ -171,7 +161,7 @@ function Library() {
       let first = '';
       for (const f of list) { const r = await post<{ name: string }>('opened', { path: f }); if (!first) first = r.name; }
       setRoots((rs) => (rs.some((x) => x.id === OPENED_ID) ? rs : [...rs, { id: OPENED_ID, name: 'Opened', dir: '', free: 0, total: 0, offline: true, opened: true } as Root]));
-      setPanel(null); setQuery(''); setRoot(OPENED_ID); setDir(''); beginPlay(first, OPENED_ID, '');
+      setPanel(null); setRoot(OPENED_ID); setDir(''); beginPlay(first, OPENED_ID, '');
       loadRoots();
     } catch (e: any) { flash(e.message); }
   };
@@ -200,15 +190,13 @@ function Library() {
       const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       if (mod && k === 'k') { e.preventDefault(); setHelp(false); setPalette((x) => !x); return; }
       if (palette || help) { if (e.key === 'Escape') { setPalette(false); setHelp(false); } return; }
-      if (mod && k === 'f') { e.preventDefault(); setView('library'); setTimeout(() => search.current?.focus(), 60); return; }
-      if (mod && k === 'a' && view === 'library' && !typing) { e.preventDefault(); setSelecting(true); setSel(videos); return; }
+      if (mod && k === 'f') { e.preventDefault(); setView('library'); return; }
       if (mod && ['1', '2', '3'].includes(k)) { e.preventDefault(); setView((['home', 'library', 'playlists'] as const)[Number(k) - 1]); return; }
       if (mod && k === '4') { e.preventDefault(); setPanel('downloads'); return; }
       if (mod && k === ',') { e.preventDefault(); setPanel('settings'); return; }
       if (mod && k === 'd') { e.preventDefault(); setPanel('downloads'); return; }
       if (typing || mod) return;
-      if (e.key === 'Escape') { if (menuFor) setMenuFor(null); else if (selecting) endSelect(); else if (panel) setPanel(null); return; }
-      if (e.key === 'Delete' && selecting && sel.length) { e.preventDefault(); const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); return; }
+      if (e.key === 'Escape') { if (panel) setPanel(null); return; }
       if (e.key === '?') { e.preventDefault(); setHelp(true); }
     };
     window.addEventListener('keydown', onKey);
@@ -222,14 +210,10 @@ function Library() {
     { t: 'Open Settings', k: 'Ctrl ,', run: () => setPanel('settings') },
     { t: 'Open Servers', k: '', run: () => setPanel('servers') },
     { t: 'Refresh', k: 'F5', run: () => { refreshAll().then(() => flash('Refreshed')); } },
-    { t: 'Select videos', k: 'Ctrl A', run: () => { setView('library'); setSelecting(true); } },
     { t: s.theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme', k: '', run: () => set({ theme: s.theme === 'dark' ? 'light' : 'dark' }) },
     { t: s.eco === 'on' ? 'Turn power saving off' : 'Turn power saving on', k: '', run: () => set({ eco: s.eco === 'on' ? 'off' : 'on' }) },
     { t: 'Keyboard shortcuts', k: '?', run: () => setHelp(true) },
     ...(bridge ? [{ t: 'Open a video from this computer', k: 'Ctrl O', run: () => pickFile() }] : []),
-    ...items.map((it) => it.dir
-      ? { t: `Open folder: ${it.name}`, k: '', run: () => { setView('library'); setDir(join(dir, it.name)); } }
-      : { t: `Play: ${it.name.replace(/\.[^.]+$/, '')}`, k: '', run: () => startPlay(it.name) }),
   ];
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDragging(false);
@@ -240,25 +224,29 @@ function Library() {
 
   const serversChanged = async () => { setDir(''); setRoot(null); await Promise.all([loadRoots(), loadCaps()]); };
 
-  const remove = async (names: string[]) => {
-    for (const n of names) await api('item', { root: rid, path: join(dir, n) }, 'DELETE');
-    flash(opened ? 'Removed from the list' : offline ? (names.length === 1 ? 'Deleted from this laptop' : `${names.length} items deleted from this laptop`) : (names.length === 1 ? 'Deleted from the server' : `${names.length} items deleted from the server`));
-    await refreshAll();
+  const remove = async (names: string[], r: number, d: string) => {
+    for (const n of names) await api('item', { root: r, path: join(d, n) }, 'DELETE');
+    flash('Deleted');
+    await Promise.all([loadRoots(), loadProg()]);
   };
-  const confirmDelete = (names: string[], what: string) =>
+  const confirmDelete = (names: string[], what: string) => {
+    const isOffline = names.length && typeof what === 'string' && /laptop/i.test(what);
     setAsk({
-      title: opened ? `Remove ${what}?` : `Delete ${what}?`,
-      body: opened ? 'This only removes it from this list. The video file stays where it is on your computer.'
-        : offline ? 'This removes the downloaded copy from this laptop. The original on your server is not touched.' : 'This removes it from your server permanently. It cannot be undone.',
-      label: opened ? 'Remove from list' : offline ? 'Delete from laptop' : 'Delete from server', go: () => remove(names),
+      title: `Delete ${what}?`,
+      body: isOffline
+        ? 'This removes the downloaded copy from this laptop. The original on your server is not touched.'
+        : 'This removes it from your server permanently. It cannot be undone.',
+      label: isOffline ? 'Delete from laptop' : 'Delete from server',
+      go: () => remove(names, activeLoc.root, activeLoc.dir),
     });
+  };
   const setWatched = async (name: string, watched: boolean) => {
-    const p = prog[pkey(name)];
-    await post('progress', { key: pkey(name), pos: watched ? p?.pos ?? 0 : 0, dur: p?.dur ?? 0, watched });
+    const p = prog[pkey(name, activeLoc.dir, activeLoc.root)];
+    await post('progress', { key: pkey(name, activeLoc.dir, activeLoc.root), pos: watched ? p?.pos ?? 0 : 0, dur: p?.dur ?? 0, watched });
     loadProg();
   };
   const toggleFav = (name: string) => {
-    const k = pkey(name), f = prefs.favs ?? [];
+    const k = pkey(name, activeLoc.dir, activeLoc.root), f = prefs.favs ?? [];
     setPref('favs', f.includes(k) ? f.filter((x) => x !== k) : [...f, k]);
   };
   const playOffline = (destRel: string) => {
@@ -284,16 +272,16 @@ function Library() {
   const cols: Collection[] = prefs.collections ?? [];
   const setCols = (c: Collection[]) => setPref('collections', c);
   const metaMap = prefs.meta ?? {};
-  const metaOf = (name: string): ItemMeta => metaMap[pkey(name)] ?? {};
-  const setMetaFor = (name: string, patch: Partial<ItemMeta>) => setPref('meta', { ...metaMap, [pkey(name)]: { ...metaOf(name), ...patch } });
+  const metaOf = (name: string): ItemMeta => metaMap[pkey(name, activeLoc.dir, activeLoc.root)] ?? {};
+  const setMetaFor = (name: string, patch: Partial<ItemMeta>) => setPref('meta', { ...metaMap, [pkey(name, activeLoc.dir, activeLoc.root)]: { ...metaOf(name), ...patch } });
   const allTags = [...new Set(Object.values(metaMap).flatMap((m) => m.t ?? []))].sort();
   const baseName = (p: string) => p.split('/').pop() ?? p;
   const dirOf = (p: string) => p.split('/').slice(0, -1).join('/');
   const addWatch = (sec: number) => {
-    const cur = prefsRef.current.daylog ?? {};
+    const c = prefsRef.current.daylog ?? {};
     const k = dayKey();
-    const keep = Object.fromEntries(Object.entries(cur).filter(([d]) => d >= dayKey(new Date(Date.now() - 120 * 86400_000))));
-    setPref('daylog', { ...keep, [k]: (cur[k] ?? 0) + sec });
+    const keep = Object.fromEntries(Object.entries(c).filter(([d]) => d >= dayKey(new Date(Date.now() - 120 * 86400_000))));
+    setPref('daylog', { ...keep, [k]: (c[k] ?? 0) + sec });
   };
   useEffect(() => { setPref('lastVisit', Date.now()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const isNew = (it: Entry) => !it.dir && (it.mtime < 1e11 ? it.mtime * 1000 : it.mtime) > sinceRef.current && !prog[pkey(it.name)];
@@ -314,13 +302,6 @@ function Library() {
     }).catch(() => setBecause(null));
     return () => { dead = true; };
   }, [view, roots.length, Object.keys(prog).length]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const last = dir.split('/').pop() ?? '';
-    if (!dir || !/^(season|series|s)\s*\d+/i.test(last) || root === null) { setSibs([]); return; }
-    let dead = false;
-    api<Entry[]>('list', { root, path: dirOf(dir) }).then((l) => { if (!dead) setSibs(l.filter((e) => e.dir && /^(season|series|s)\s*\d+/i.test(e.name)).map((e) => e.name).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))); }).catch(() => setSibs([]));
-    return () => { dead = true; };
-  }, [dir, root]);
   useEffect(() => {
     const t = setInterval(async () => {
       if (document.hidden) return;
@@ -348,20 +329,12 @@ function Library() {
   };
   const lists: SavedList[] = prefs.playlists ?? [];
   const setLists = (l: SavedList[]) => setPref('playlists', l);
-  const savePlaylist = () => {
-    const names = videos.filter((n) => sel.includes(n));
-    if (!names.length || !cur) return;
-    setNameAsk({ title: 'Save playlist', value: `${crumbs[crumbs.length - 1] || cur.name} playlist`, label: 'Save playlist', go: (v) => {
-      setLists([...lists, { id: `${Date.now()}`, name: v.trim() || 'My playlist', root: cur.name, dir, items: names }]);
-      endSelect(); flash('Playlist saved. Find it under Playlists');
-    } });
-  };
   const playList = (l: SavedList) => {
     const r = roots.find((x) => x.name === l.root);
     if (!r) { flash('That storage is not connected right now'); return; }
     setPanel(null); setPlaylist(l.items); startPlay(l.items[0], r.id, l.dir, true);
   };
-  const startPlay = async (name: string, r: number = rid, d: string = dir, keepList = false) => {
+  const startPlay = async (name: string, r: number = activeLoc.root, d: string = activeLoc.dir, keepList = false) => {
     setFloating(false);
     if (!keepList) setPlaylist(null);
     const rt = roots.find((x) => x.id === r);
@@ -371,23 +344,11 @@ function Library() {
         if (j.state === 'done' && j.dest) { flash('Playing the saved copy from this laptop'); playOffline(j.dest); return; }
       } catch { /* server unreachable: fall through */ }
     }
-    setRoot(r); setDir(d); beginPlay(name, r, d);
-  };
-  const toggleSel = (name: string) => setSel((x) => (x.includes(name) ? x.filter((n) => n !== name) : [...x, name]));
-  const endSelect = () => { setSelecting(false); setSel([]); };
-  const playSelected = () => {
-    const list = videos.filter((n) => sel.includes(n));
-    if (!list.length) return;
-    endSelect(); setPlaylist(list); beginPlay(list[0], rid, dir);
-  };
-  const saveSelected = () => {
-    const list = videos.filter((n) => sel.includes(n));
-    if (!list.length) return;
-    saveOffline(list, items.filter((i) => list.includes(i.name)).reduce((a, i) => a + i.size, 0)); endSelect();
+    beginPlay(name, r, d);
   };
 
   const download = (it: Entry) => {
-    const url = `/api/download?${qs({ root: rid, path: join(dir, it.name) })}`;
+    const url = `/api/download?${qs({ root: activeLoc.root, path: join(activeLoc.dir, it.name) })}`;
     if (s.turbo && turboOk() && it.size > 24 * 1024 * 1024) {
       const id = `${Date.now()}${Math.random()}`;
       const ctl = new AbortController();
@@ -405,30 +366,15 @@ function Library() {
       document.body.appendChild(a); a.click(); a.remove();
     }
   };
-  const saveOffline = (names: string[], sizes: number, r: number = rid, d: string = dir) => setTarget({ root: r, paths: names.map((n) => join(d, n)), names, sizes });
+  const saveOffline = (names: string[], sizes: number, r: number = activeLoc.root, d: string = activeLoc.dir) => setTarget({ root: r, paths: names.map((n) => join(d, n)), names, sizes });
 
   const videos = useMemo(() => items.filter((i) => !i.dir && VIDEO.test(i.name)).map((i) => i.name), [items]);
-  const pRoot = playLoc?.root ?? rid, pDir = playLoc?.dir ?? dir;
+  const pRoot = playLoc?.root ?? activeLoc.root, pDir = playLoc?.dir ?? activeLoc.dir;
   const pCur = rootOf(pRoot);
-  const sameLoc = pRoot === rid && pDir === dir;
+  const sameLoc = pRoot === activeLoc.root && pDir === activeLoc.dir;
   useEffect(() => { if (play && sameLoc && status === 'ready') setPlayVideos(videos); }, [videos, sameLoc, play, status]); // eslint-disable-line react-hooks/exhaustive-deps
   const seen = videos.filter((n) => prog[pkey(n)]?.watched);
   const favs = prefs.favs ?? [];
-  const shown = useMemo(() => {
-    const f = items.filter((i) => {
-      if (!i.name.toLowerCase().includes(query.toLowerCase())) return false;
-      if (i.dir || s.filter === 'all') return true;
-      const p = prog[pkey(i.name)];
-      if (tagFilter && !(metaOf(i.name).t ?? []).includes(tagFilter)) return false;
-      return s.filter === 'rated' ? (metaOf(i.name).r ?? 0) >= 4 : s.filter === 'progress' ? !!p && !p.watched && p.pos > 20 : s.filter === 'unwatched' ? !p?.watched : s.filter === 'watched' ? !!p?.watched : favs.includes(pkey(i.name));
-    });
-    const c = (a: Entry, b: Entry) => sort === 'new' ? b.mtime - a.mtime : sort === 'size' ? b.size - a.size : a.name.localeCompare(b.name, undefined, { numeric: true });
-    return [...f.filter((i) => i.dir).sort(c), ...f.filter((i) => !i.dir).sort(c)];
-  }, [items, query, sort, s.filter, tagFilter, prog, favs]); // eslint-disable-line react-hooks/exhaustive-deps
-  const folders = shown.filter((i) => i.dir);
-  const files = shown.filter((i) => !i.dir);
-  const posters = s.view !== 'list' ? files.filter((i) => VIDEO.test(i.name)) : [];
-  const rows = s.view !== 'list' ? files.filter((i) => !VIDEO.test(i.name)) : files;
 
   const cardOf = (k: string, p?: Prog): Card | null => {
     const i = k.indexOf(':'), parts = k.slice(i + 1).split('/');
@@ -455,11 +401,6 @@ function Library() {
     const fresh = videos.find((n) => !prog[pkey(n)]?.watched);
     return { name: fresh ?? videos[0], label: fresh && seen.length ? 'Play next' : 'Play' };
   })();
-  const randomPick = () => {
-    const pool = videos.filter((n) => !prog[pkey(n)]?.watched);
-    const list = pool.length ? pool : videos;
-    if (list.length) startPlay(list[Math.floor(Math.random() * list.length)]);
-  };
 
   const crumbs = dir ? dir.split('/') : [];
   const floor = s.saverAuto && budget > 0 && net.month >= budget * 0.8e9 ? 2 : 0;
@@ -473,32 +414,6 @@ function Library() {
     pre.current.add(pkey(nx, pDir, pRoot));
     post('dl/add', { root: pRoot, paths: [join(pDir, nx)], profile: s.dlProfile, opts: { loud: s.dlLoud, dialogue: s.dlDialogue } })
       .then((r: any) => r.queued && flash(`Saving “${nx.replace(/\.[^.]+$/, '')}” for offline`)).catch(() => {});
-  };
-
-  const fileActions = (it: Entry, isVid: boolean, p?: Prog) => {
-    const done = (fn: () => void) => () => { setMenuFor(null); fn(); };
-    const open = menuFor === it.name;
-    return (
-      <>
-        {isVid && <button className={favs.includes(pkey(it.name)) ? 'icon on' : 'icon'} title="Favorite" aria-label={`Favorite ${it.name}`} aria-pressed={favs.includes(pkey(it.name))} onClick={() => toggleFav(it.name)}><Icon n="heart" s={17} /></button>}
-        {!offline && <button className="icon" title="Save for offline" aria-label={`Save ${it.name} for offline`} onClick={() => saveOffline([it.name], it.size)}><Icon n="save" s={17} /></button>}
-        <button className={open ? 'icon on-m' : 'icon'} title="More" aria-label={`More actions for ${it.name}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setMenuFor(open ? null : it.name)}><Icon n="more" s={17} /></button>
-        {open && (
-          <>
-            <div className="amenu-bg" onClick={() => setMenuFor(null)} />
-            <div className="amenu" role="menu">
-              {isVid && <button role="menuitem" onClick={done(() => setAddTo([it.name]))}><Icon n="folder" s={15} /> Add to collection…</button>}
-              {isVid && <button role="menuitem" onClick={done(() => setDetail(it.name))}><Icon n="info" s={15} /> Details</button>}
-              {isVid && <button role="menuitem" onClick={done(() => setWatched(it.name, !p?.watched))}><Icon n="check" s={15} /> {p?.watched ? 'Mark as unwatched' : 'Mark as watched'}</button>}
-              {!offline && !bridge && <button role="menuitem" onClick={done(() => download(it))}><Icon n="down" s={15} /> Download</button>}
-              {offline && bridge && <button role="menuitem" onClick={done(() => { api<{ path: string }>('localpath', { root: rid, path: join(dir, it.name) }).then((r) => bridge?.reveal(r.path)); })}><Icon n="folder" s={15} /> Show in folder</button>}
-              <i className="amenu-sep" />
-              <button role="menuitem" className="del" onClick={done(() => confirmDelete([it.name], `“${it.name}”`))}><Icon n="trash" s={15} /> {offline ? 'Delete from this laptop' : 'Delete from server'}</button>
-            </div>
-          </>
-        )}
-      </>
-    );
   };
 
   if (!hasServer && !skipSetup && !play && roots.length > 0 && !roots.some((r) => !r.offline || r.opened) && panel !== 'servers') {
@@ -528,25 +443,16 @@ function Library() {
         <nav className="sidebar-nav">
           <div className="sidebar-group">
             <span className="sidebar-group-label">Browse</span>
-            {([
-              ['home', 'Home', 'home'],
-              ['discover', 'Discover', 'bolt'],
-              ['library', 'Library', 'film']
-            ] as const).map(([id, label, ic]) => (
+            {([['home', 'Home', 'home'], ['discover', 'Discover', 'bolt'], ['library', 'Library', 'film']] as const).map(([id, label, ic]) => (
               <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}>
                 <Icon n={ic} s={18} />
                 <span className="sidebar-label">{label}</span>
               </button>
             ))}
           </div>
-
           <div className="sidebar-group">
             <span className="sidebar-group-label">Your Stuff</span>
-            {([
-              ['playlists', 'Playlists', 'list'],
-              ['collections', 'Collections', 'folder'],
-              ['insights', 'Insights', 'gauge']
-            ] as const).map(([id, label, ic]) => (
+            {([['playlists', 'Playlists', 'list'], ['collections', 'Collections', 'folder'], ['insights', 'Insights', 'gauge']] as const).map(([id, label, ic]) => (
               <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}>
                 <Icon n={ic} s={18} />
                 <span className="sidebar-label">{label}</span>
@@ -887,273 +793,69 @@ function Library() {
         )}
 
         {view === 'library' && (
-          <>
-            <div className="lib-head">
-              <div className="lib-src" role="tablist" aria-label="Storage">
-                {roots.map((r) => (
-                  <button key={r.id} role="tab" aria-selected={r.id === root} className={r.id === root ? 'lib-src-b on' : 'lib-src-b'} onClick={() => { setRoot(r.id); setDir(''); }} title={r.total ? `${bytes(r.free)} free of ${bytes(r.total)}` : r.dir}>
-                    {r.opened ? <><Icon n="film" s={14} /> Opened files</> : r.offline ? <><Icon n="hdd" s={14} /> On this laptop</> : <><Icon n="server" s={14} /> {r.name}</>}
-                  </button>
-                ))}
-                <span className="grow" />
-                <span className={rootsErr ? 'lib-status bad' : hasServer && host ? 'lib-status ok' : 'lib-status'}><i />{hasServer ? (rootsErr ? `Cannot reach ${host}` : host ? host : 'Connecting…') : 'No server set up'}</span>
-              </div>
-              <nav className="lib-crumbs" aria-label="Folder path">
-                {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
-                <button className={dir ? 'lib-crumb' : 'lib-crumb here'} onClick={() => setDir('')}>{opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? '…'}</button>
-                {crumbs.map((c, i) => <span key={i} className="lib-crumb-w"><em>›</em><button className={i === crumbs.length - 1 ? 'lib-crumb here' : 'lib-crumb'} onClick={() => setDir(crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
-              </nav>
-            </div>
-
-            {sibs.length > 1 && (
-              <div className="season-tabs" role="tablist">
-                {sibs.map((n) => <button key={n} role="tab" aria-selected={n === dir.split('/').pop()} className={n === dir.split('/').pop() ? 'on' : ''} onClick={() => setDir(join(dirOf(dir), n))}>{n}</button>)}
-              </div>
-            )}
-
-            {items.length > 0 && (
-              <div className="lib-bar c2">
-                <div className="lib-c2-title">
-                  {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
-                  <div className="lib-c2-text">
-                    <h1 className="lib-c2-h">{dir ? (crumbs[crumbs.length - 1] || 'Library') : (opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? 'Library')}</h1>
-                    <p className="lib-c2-sub">
-                      {dir && crumbs.length > 1 ? `${crumbs.slice(0, -1).join(' · ')} · ` : ''}
-                      {shown.length === items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : `${shown.length} of ${items.length}`}
-                    </p>
-                  </div>
-                  <div className="lib-quiet" role="toolbar" aria-label="Library tools">
-                    <div className="lib-sort-wrap">
-                      <button type="button" className={sortMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setSortMenu((x) => !x); setLibMenu(false); }} aria-haspopup="menu" aria-expanded={sortMenu}>
-                        Sort · {sort === 'name' ? 'Name' : sort === 'new' ? 'Newest' : 'Largest'} ▾
-                      </button>
-                      {sortMenu && (
-                        <>
-                          <div className="tn-back" onClick={() => setSortMenu(false)} />
-                          <div className="lib-sort-menu" role="menu">
-                            <div className="lib-menu-lab">Sort by</div>
-                            {([['name', 'Name'], ['new', 'Newest'], ['size', 'Largest']] as const).map(([id, label]) => (
-                              <button key={id} role="menuitem" className={sort === id ? 'on' : ''} onClick={() => { setSort(id); setSortMenu(false); }}>{label}{sort === id ? ' ✓' : ''}</button>
-                            ))}
-                            {s.view !== 'list' && (
-                              <>
-                                <div className="lib-menu-lab">Poster size</div>
-                                <div className="lib-dens-row">
-                                  <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    <button type="button" className={s.view === 'grid' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'grid' })}>Grid</button>
-                    <button type="button" className={s.view === 'list' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'list' })}>List</button>
-                    <button type="button" className={s.view === 'wall' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'wall' })}>Wall</button>
-                    {videos.length > 1 && (
-                      <button type="button" className={selecting ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => (selecting ? endSelect() : setSelecting(true))}>{selecting ? 'Done' : 'Select'}</button>
-                    )}
-                    {nextUp && !(dir && videos.length > 0) && <button className="btn sm" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={14} /> {nextUp.label}</button>}
-                    <div className="lib-more">
-                      <button type="button" className={libMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setLibMenu((x) => !x); setSortMenu(false); }} aria-haspopup="menu" aria-expanded={libMenu} title="More"><Icon n="more" s={16} /></button>
-                      {libMenu && (
-                        <>
-                          <div className="tn-back" onClick={() => setLibMenu(false)} />
-                          <div className="lib-menu" role="menu">
-                            <button role="menuitem" onClick={() => { setLibMenu(false); refreshAll().then(() => flash('Refreshed')); }}><Icon n="rotate" s={15} /> Refresh<kbd>F5</kbd></button>
-                            {videos.length > 1 && <button role="menuitem" onClick={() => { setLibMenu(false); randomPick(); }}><Icon n="bolt" s={15} /> Surprise me</button>}
-                            {!offline && dir && <button role="menuitem" onClick={() => { setLibMenu(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={15} /> Save folder for offline</button>}
-                            {!offline && !bridge && dir && <a role="menuitem" href={`/api/download?${qs({ root: rid, path: dir })}`} onClick={() => setLibMenu(false)}><Icon n="down" s={15} /> Download folder</a>}
-                            {seen.length > 0 && <><i className="amenu-sep" /><button role="menuitem" className="del" onClick={() => { setLibMenu(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete {seen.length} watched</button></>}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <label className="lib-search c2">
-                  <Icon n="search" s={16} />
-                  <input ref={search} placeholder="Search this folder" value={query} onChange={(e) => setQuery(e.target.value)} />
-                  {query ? <button className="lib-x" onClick={() => setQuery('')} aria-label="Clear search">×</button> : <kbd>/</kbd>}
-                </label>
-
-                <div className="lib-row lib-chips">
-                  <div className="chips" role="group" aria-label="Show">
-                    {([['all', 'All'], ['unwatched', 'Not watched'], ['progress', 'In progress'], ['fav', 'Favorites'], ['rated', 'Rated 4+'], ['watched', 'Watched']] as const).map(([id, label]) => (
-                      <button key={id} className={s.filter === id ? 'chipf on' : 'chipf'} aria-pressed={s.filter === id} onClick={() => set({ filter: id as Settings['filter'] })}>{label}</button>
-                    ))}
-                  </div>
-                  {allTags.length > 0 && (
-                    <select className="lib-sel quiet" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag">
-                      <option value="">All tags</option>
-                      {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {dir && videos.length > 0 && (
-              <section className="series-head">
-                <span className="series-bg" aria-hidden="true"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
-                <span className="series-art"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
-                <div className="series-info">
-                  <h1>{crumbs[crumbs.length - 1]}</h1>
-                  <p className="muted">{videos.length} video{videos.length > 1 ? 's' : ''} · {seen.length} watched{videos.length - seen.length > 0 ? ` · ${videos.length - seen.length} to go` : ''}</p>
-                  <i className="bar"><b style={{ width: `${(seen.length / videos.length) * 100}%` }} /></i>
-                  <span className="inline sh-act">
-                    {nextUp && <button className="btn big" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {seen.length ? 'Next episode' : 'Start'}</button>}
-                    {!offline && !opened && <button className="btn ghost big" onClick={() => setRuleFor(true)} title="Keep new or upcoming episodes saved on this laptop"><Icon n="save" s={15} /> Auto-save…</button>}
-                  </span>
-                </div>
-              </section>
-            )}
-
-            {selecting && (
-              <div className="seldock" role="status">
-                <strong className="sd-n"><b>{sel.length}</b> selected</strong>
-                <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play</button>
-                <button className="sd-b" onClick={() => setSel(sel.length === videos.length ? [] : videos)}>{sel.length === videos.length ? 'Clear' : 'Select all'}</button>
-                <i className="sd-sep" />
-                <button className="sd-b" disabled={!sel.length} onClick={() => setAddTo(videos.filter((n) => sel.includes(n)))}><Icon n="folder" s={15} /> Collection</button>
-                <button className="sd-b" disabled={!sel.length} onClick={savePlaylist}><Icon n="list" s={15} /> Playlist</button>
-                {!offline && <button className="sd-b" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Offline</button>}
-                <button className="sd-b danger" disabled={!sel.length} onClick={() => { const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete</button>
-                <i className="sd-sep" />
-                <button className="sd-b" onClick={endSelect} aria-label="Cancel selection">Cancel</button>
-              </div>
-            )}
-            {status === 'loading' && root !== null && <div className="skeletons" aria-label="Loading">{Array.from({ length: 10 }, (_, k) => <i key={k} />)}</div>}
-            {status === 'error' && !rootsErr && (
-              <div className="note err">
-                <strong>Could not read this folder.</strong> {err}
-                <p className="muted">Check that the server is reachable and the media folder is right (Servers).</p>
-                <button className="btn" onClick={load}>Try again</button>
-              </div>
-            )}
-            {status === 'ready' && items.length === 0 && <p className="note">{opened ? 'No opened videos. Drop a video here, press Ctrl+O, or right-click a video in Explorer and choose Open with Cinema.' : offline ? 'Nothing downloaded yet. Use the save icon on a movie, or “Save for offline” inside the player.' : 'This folder is empty. Downloads from the bot will show up here.'}</p>}
-            {status === 'ready' && items.length > 0 && shown.length === 0 && <p className="note">Nothing matches{query ? ` “${query}”` : ' this filter'}.</p>}
-
-            {folders.length > 0 && (
-              <div className="tiles">
-                {folders.map((f) => (
-                  <div key={f.name} className="tile" style={{ '--h': hue(f.name) } as CSSProperties}>
-                    <button className="tile-open" onClick={() => setDir(join(dir, f.name))}>
-                      <span className="tile-ic">
-                        {s.posters && (
-                          <img
-                            className="tile-poster"
-                            alt=""
-                            loading="lazy"
-                            src={folderPosterUrl(rid, join(dir, f.name))}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        )}
-                        <Icon n="folder" s={20} />
-                      </span>
-                      <strong>{f.name}</strong>
-                    </button>
-                    <span className="tile-act">
-                      {!offline && <button className="icon" title="Save folder for offline" aria-label={`Save folder ${f.name} for offline`} onClick={() => saveOffline([f.name], 0)}><Icon n="save" s={16} /></button>}
-                      {!offline && !bridge && <a className="icon" title="Download folder" aria-label={`Download folder ${f.name}`} href={`/api/download?${qs({ root: rid, path: join(dir, f.name) })}`}><Icon n="down" s={16} /></a>}
-                      <button className="icon danger" title="Delete" aria-label={`Delete folder ${f.name}`} onClick={() => confirmDelete([f.name], `“${f.name}”`)}><Icon n="trash" s={16} /></button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {posters.length > 0 && (
-              <ul className={(s.posters ? 'posters portrait' : 'posters') + (s.view === 'wall' ? ' wall' : '')}>
-                {posters.map((it) => {
-                  const p = prog[pkey(it.name)];
-                  const part = p && !p.watched && p.pos > 30;
-                  return (
-                    <li key={it.name} className={(p?.watched ? 'poster done' : 'poster') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')} style={{ '--h': hue(it.name) } as CSSProperties}>
-                      {selecting && <span className={sel.includes(it.name) ? 'selmark on' : 'selmark'} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                      {isNew(it) && <span className="new-b">NEW</span>}
-                      <button className="poster-open" onClick={() => (selecting ? toggleSel(it.name) : startPlay(it.name))}>
-                        <span className="frame">
-                          <Art root={rid} path={join(dir, it.name)} v={it.mtime} name={it.name} />
-                          <span className="go"><Icon n="play" s={18} /></span>
-                          {p?.watched && <span className="tag"><Icon n="check" s={12} /> Watched</span>}
-                          {favs.includes(pkey(it.name)) && <span className="fav-dot" aria-label="Favorite"><Icon n="heart" s={13} /></span>}
-                          {part && <i className="prog"><b style={{ width: `${pct(p)}%` }} /></i>}
-                        </span>
-                        <span className="p-name" title={it.name}>{it.name.replace(/\.[^.]+$/, '')}</span>
-                        <span className="small muted">{bytes(it.size)}{part ? `, stopped at ${clock(p.pos)}` : ''}</span>
-                      </button>
-                      <span className="p-act">{fileActions(it, true, p)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {rows.length > 0 && (
-              <ul className="rows">
-                {rows.map((it) => {
-                  const isVid = VIDEO.test(it.name);
-                  const p = prog[pkey(it.name)];
-                  const part = p && !p.watched && p.pos > 30;
-                  return (
-                    <li key={it.name} className={(p?.watched ? 'row done' : 'row') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')}>
-                      {selecting && isVid && <span className={sel.includes(it.name) ? 'selmark on inrow' : 'selmark inrow'} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                      {isNew(it) && <span className="new-b inrow">NEW</span>}
-                      <button className="open" onClick={() => isVid && (selecting ? toggleSel(it.name) : startPlay(it.name))}>
-                        <span className="ico">{isVid && s.thumbs ? <Thumb root={rid} path={join(dir, it.name)} v={it.mtime} icon="film" /> : <Icon n={isVid ? 'film' : 'file'} />}</span>
-                        <span className="info">
-                          <span className="name">{it.name}</span>
-                          <span className="meta muted small">{bytes(it.size)}, {new Date(it.mtime * 1000).toLocaleDateString()}{part ? `, stopped at ${clock(p.pos)}` : ''}</span>
-                          {part && <i className="prog"><b style={{ width: `${pct(p)}%` }} /></i>}
-                        </span>
-                        {p?.watched && <span className="tag"><Icon n="check" s={13} /> Watched</span>}
-                      </button>
-                      <span className="r-act">{fileActions(it, isVid, p)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </>
+          <Library
+            roots={roots}
+            host={host}
+            hasServer={hasServer}
+            rootsErr={rootsErr}
+            root={root}
+            dir={dir}
+            setRoot={(r) => { setRoot(r); setLastLoc({ root: r, dir: '' }); }}
+            setDir={(d) => { setDir(d); setLastLoc({ root: root ?? -1, dir: d }); }}
+            items={items}
+            status={status}
+            err={err}
+            prog={prog}
+            load={load}
+            pkey={(name, d = activeLoc.dir, r = activeLoc.root) => pkey(name, d, r)}
+            metaOf={(name) => metaOf(name)}
+            allTags={allTags}
+            onMetaFor={setMetaFor}
+            onOpenPlayer={(name, r, d) => { setLastLoc({ root: r, dir: d }); startPlay(name, r, d); }}
+            onPlaySelection={(list, r, d) => { setLastLoc({ root: r, dir: d }); setPlaylist(list); beginPlay(list[0], r, d); }}
+            onSaveOffline={(names, sizes, r, d) => setTarget({ root: r, paths: names.map((n) => join(d, n)), names, sizes })}
+            onOpenDetails={(name) => setDetail(name)}
+            onConfirmDelete={confirmDelete}
+            onOpenRule={() => setRuleFor(true)}
+            onAskName={setNameAsk}
+            onFlash={flash}
+            onAddTo={setAddTo}
+            onSetWatched={setWatched}
+            onToggleFav={toggleFav}
+          />
         )}
 
         {view === 'discover' && <Discover />}
       </main>
 
-      {play && root !== null && (
+      {play && pRoot !== -1 && (
         <Player
           key={`${pRoot}:${join(pDir, play)}`} root={pRoot} dir={pDir} name={play} videos={playlist ?? playVideos ?? videos} playlist={!!playlist} floating={floating} onFloat={setFloating}
-          pkey={pkey(play, pDir, pRoot)} saved={prog[pkey(play, pDir, pRoot)]} offline={!!pCur?.offline} opened={!!pCur?.opened} saver={eco ? Math.max(saver, 1) : saver} caps={caps}
+          pkey={pkey(play, pDir, pRoot)} saved={prog[pkey(play, pDir, pRoot)]} offline={!!pCur?.offline} opened={!!pCur?.opened} saver={eco ? Math.max(saver, 1) : s.saver} caps={caps}
           onClose={() => { if (isPop) { window.close(); return; } setPlay(null); setPlayLoc(null); setPlayVideos(null); setPlaylist(null); setFloating(false); setTimeout(loadProg, 500); }}
           onNext={setPlay} onStarted={onStarted} onTick={addWatch}
-          onDownload={(n) => saveOffline([n], (sameLoc ? items.find((i) => i.name === n)?.size : 0) ?? 0, pRoot, pDir)}
-          onDelete={(n) => {
-            setPlay(null); setPlayLoc(null); setPlayVideos(null); setFloating(false);
-            if (!sameLoc) { setRoot(pRoot); setDir(pDir); flash('Opened its folder. Delete it from the list.'); return; }
-            confirmDelete([n], `“${n}”`);
-          }}
+          onDownload={(n) => setTarget({ root: pRoot, paths: [join(pDir, n)], names: [n], sizes: 0 })}
+          onDelete={(n) => confirmDelete([n], `“${n}”`)}
         />
       )}
       {panel === 'settings' && <SettingsDialog mode={net.mode} prog={prog} onClose={() => setPanel(null)} onStorage={() => setPanel('storage')} onServers={() => setPanel('servers')} onTidy={() => setPanel('tidy')} onSaved={loadSrv} />}
       {panel === 'servers' && <Setup firstRun={false} onClose={() => setPanel(null)} onChanged={serversChanged} onOffline={() => setPanel(null)} />}
       {panel === 'downloads' && <DownloadsPanel onClose={() => setPanel(null)} onPlay={playOffline} onStorage={() => setPanel('storage')} />}
-      {panel === 'storage' && <StoragePanel onClose={() => setPanel(null)} onPlay={playOffline} onChanged={() => { loadRoots(); loadProg(); if (offline) load(); }} />}
+      {panel === 'storage' && <StoragePanel onClose={() => setPanel(null)} onPlay={playOffline} onChanged={() => { loadRoots(); loadProg(); }} />}
       {target && (
         <DownloadDialog {...target} caps={caps} onClose={() => setTarget(null)}
           onScheduled={(t) => { setTarget(null); flash(t); setPanel('downloads'); }}
           onQueued={(n) => { setTarget(null); flash(n ? `Added ${n} to Downloads` : 'Already saved or queued'); if (n) setPanel('downloads'); }} />
       )}
-      {detail && <Details name={detail} folder={dir} size={items.find((i) => i.name === detail)?.size} prog={prog[pkey(detail)]} meta={metaOf(detail)} allTags={allTags} onMeta={(p) => setMetaFor(detail, p)} remote={!offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
+      {detail && <Details name={detail} folder={activeLoc.dir} size={items.find((i) => i.name === detail)?.size} prog={prog[pkey(detail)]} meta={metaOf(detail)} allTags={allTags} onMeta={(p) => setMetaFor(detail, p)} remote={!cur?.offline} onClose={() => setDetail(null)} onPlay={() => { startPlay(detail); setDetail(null); }} onSave={() => { const n = detail; setDetail(null); saveOffline([n], items.find((i) => i.name === n)?.size ?? 0); }} />}
       {addTo && <AddToCollection cols={cols} count={addTo.length} onClose={() => setAddTo(null)} onPick={(id, name) => {
         const rn = cur?.name ?? '';
-        const ents = addTo.map((n) => ({ root: rn, path: join(dir, n) }));
+        const ents = addTo.map((n) => ({ root: rn, path: join(activeLoc.dir, n) }));
         if (id === 'new') setCols([...cols, { id: `${Date.now()}`, name: name ?? 'Collection', items: ents }]);
         else setCols(cols.map((c) => (c.id === id ? { ...c, items: [...c.items, ...ents.filter((e) => !c.items.some((x) => x.root === e.root && x.path === e.path))] } : c)));
-        setAddTo(null); endSelect(); flash('Added to the collection');
+        setAddTo(null); flash('Added to the collection');
       }} />}
-      {ruleFor && cur && <RuleDialog root={rid} dir={dir} label={dir.split('/').pop() ?? cur.name} onClose={() => setRuleFor(false)} onDone={(m) => { setRuleFor(false); flash(m); }} />}
+      {ruleFor && cur && <RuleDialog root={activeLoc.root} dir={activeLoc.dir} label={activeLoc.dir.split('/').pop() ?? cur.name} onClose={() => setRuleFor(false)} onDone={(m) => { setRuleFor(false); flash(m); }} />}
       {customize && (() => {
         const DEF = [['continue', 'Continue watching'], ['because', 'Because you watched…'], ['saved', 'Saved on this laptop'], ['favorites', 'Favorites'], ['collections', 'Collections'], ['recent', 'Recently added']];
         const cfg = prefs.homeRows ?? [];

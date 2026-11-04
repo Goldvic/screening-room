@@ -1,10 +1,9 @@
 /* Sidebar: the main navigation. 
-   Expands from a 84px icon rail to 240px on hover. 
-   Active state is strictly the colored icon/text (no boxes). */
+   Expands from an 84px icon rail to 240px on hover. 
+   Active state is a soft accent pill. */
 
 /* ================= 1. ELEMENTS & LAYOUT ================= */
 
-/* Removed absolute positioning so it sits inside the grid */
 .sidebar { 
   position: relative; 
   height: 100%;
@@ -13,20 +12,22 @@
   flex-direction: column; 
   background: var(--panel); 
   border-right: 1px solid var(--line); 
-  padding: var(--sp-3) 0; 
+  padding: var(--sp-4) 0; 
   overflow: hidden; 
   white-space: nowrap;
+  /* The grid column expands on hover via app-frame.css, no width transition needed here */
 }
 
 .sidebar-top { 
   display: flex; 
   flex-direction: column; 
-  gap: var(--sp-2); 
+  gap: var(--sp-4); 
   flex: none; 
   padding: 0; 
   transition: padding var(--t-med) var(--ease);
 }
 
+/* When hovered, add inner padding to the top section */
 .sidebar:hover .sidebar-top {
   padding: 0 var(--sp-3);
 }
@@ -34,11 +35,11 @@
 .sidebar-nav { 
   display: flex; 
   flex-direction: column; 
-  gap: var(--sp-4); 
+  gap: var(--sp-5); 
   flex: 1; 
   overflow-y: auto; 
   overflow-x: hidden; 
-  margin-top: var(--sp-3); 
+  margin-top: var(--sp-6); 
   padding: 0;
   scrollbar-width: none;
 }
@@ -47,19 +48,71 @@
 .sidebar-group { 
   display: flex; 
   flex-direction: column; 
-  gap: 2px; 
+  gap: 4px; 
 }
 
 .sidebar-foot { 
   display: flex; 
   flex-direction: column; 
-  gap: 2px; 
+  gap: 4px; 
   flex: none; 
-  padding-top: var(--sp-3); 
-  border-top: 1px solid var(--line); 
+  padding-top: var(--sp-4); 
+  border-top: 1px solid var(--wash-1); 
 }
 
 /* ================= 2. EXPAND/COLLAPSE BEHAVIOR ================= */
+
+.sidebar-brand { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  height: 44px; 
+  font: 700 var(--fs-xl)/1 var(--serif); 
+  letter-spacing: -.02em; 
+  color: var(--text);
+  text-align: left; 
+  justify-content: center;
+  transition: all var(--t-med) var(--ease);
+  width: 100%;
+}
+.sidebar:hover .sidebar-brand {
+  justify-content: flex-start;
+  padding: 0 10px;
+}
+
+.sidebar-brand .lamp {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 0 16px 4px var(--lamp-glow);
+  flex: none;
+}
+
+.sidebar-search { 
+  display: flex; 
+  align-items: center; 
+  height: 40px; 
+  width: 100%;
+  border: 1px solid transparent; 
+  border-radius: var(--r); 
+  background: transparent; 
+  color: var(--mute); 
+  font-size: var(--fs-sm); 
+  text-align: left; 
+  justify-content: center;
+  padding: 0;
+  gap: 10px;
+  transition: all var(--t-med) var(--ease);
+  flex-shrink: 0;
+}
+.sidebar:hover .sidebar-search {
+  justify-content: flex-start;
+  padding: 0 12px;
+  border-color: var(--line);
+  background: var(--raise);
+}
+.sidebar-search:hover {
+  color: var(--text);
+}
 
 .sidebar-link { 
   position: relative; 
@@ -67,98 +120,38 @@
   align-items: center;
   justify-content: center; 
   width: 100%; 
-  height: 48px; 
-  border-radius: 0; 
+  height: 44px; 
+  border-radius: var(--r); 
   color: var(--mute); 
   font: 500 var(--fs-md)/1 var(--sans); 
   text-align: left; 
+  padding: 0;
+  gap: 14px;
   transition: background var(--t-fast), color var(--t-fast), padding var(--t-med) var(--ease);
   flex-shrink: 0;
 }
-
 .sidebar:hover .sidebar-link { 
   justify-content: flex-start; 
-  padding: 0 var(--sp-5); 
+  padding: 0 12px; 
 }
 
-.sidebar-brand { 
-  display: flex; 
-  align-items: center; 
-  gap: 10px; 
-  height: 44px; 
-  font: 600 var(--fs-xl)/1 var(--serif); 
-  letter-spacing: -.01em; 
-  text-align: left; 
-  justify-content: center;
-  transition: all var(--t-med) var(--ease);
-  width: 100%;
-}
-
-.sidebar:hover .sidebar-brand {
-  justify-content: flex-start;
-}
-
-.sidebar-search { 
-  display: flex; 
-  align-items: center; 
-  height: 48px; 
-  width: 100%;
-  border: 1px solid transparent; 
-  border-radius: var(--r); 
-  background: transparent; 
-  color: var(--mute); 
-  font-size: var(--fs-md); 
-  text-align: left; 
-  justify-content: center;
-  padding: 0;
-  transition: all var(--t-med) var(--ease);
-  flex-shrink: 0;
-}
-
-.sidebar:hover .sidebar-search {
-  justify-content: flex-start;
-  padding: 0 var(--sp-3);
-  border-color: var(--line);
-  background: var(--raise);
-}
-
+/* The label animation */
 .sidebar-label { 
   display: none;
-  margin-left: 10px; 
+  margin-left: 0; 
   opacity: 0;
   transition: opacity var(--t-fast) var(--ease);
+  flex: 1;
 }
-
 .sidebar:hover .sidebar-label { 
   display: block;
   opacity: 1; 
 }
 
-.sidebar-link svg, 
-.sidebar-search svg,
-.sidebar-brand svg,
-.sidebar-brand .lamp {
-  flex: none; 
-}
-
-.sidebar:not(:hover) .sidebar-link svg,
-.sidebar:not(:hover) .sidebar-search svg {
-  width: 26px;
-  height: 26px;
-}
-
-.sidebar-brand .lamp { 
-  width: 10px; 
-  height: 10px; 
-}
-.sidebar:not(:hover) .sidebar-brand .lamp {
-  width: 16px;
-  height: 16px;
-}
-
+/* Group labels (Browse, Your Stuff) */
 .sidebar-group-label { 
   padding: 0 var(--sp-4); 
-  margin-bottom: var(--sp-1); 
+  margin-bottom: 8px; 
   font: 600 var(--fs-xs) var(--sans); 
   letter-spacing: .08em; 
   text-transform: uppercase; 
@@ -167,11 +160,9 @@
   transition: opacity var(--t-fast) var(--ease); 
   pointer-events: none; 
 }
-
 .sidebar:not(:hover) .sidebar-group-label {
   display: none; 
 }
-
 .sidebar:hover .sidebar-group-label { 
   opacity: .7; 
   pointer-events: auto; 
@@ -179,84 +170,77 @@
 
 /* ================= 3. COLORS & ACTIVE STATES ================= */
 
-.sidebar-search:hover { 
-  color: var(--text); 
-}
-.sidebar:hover .sidebar-search:hover {
-  border-color: var(--lamp-line);
-}
-
 .sidebar-link:hover { 
-  background: var(--wash-1); 
+  background: var(--wash-2); 
   color: var(--text); 
 }
 
-/* The active state: STRICTLY color. No backgrounds, no boxes. */
+/* The active state: a soft accent pill */
 .sidebar-link.on, 
 .sidebar-link.on:hover { 
-  background: transparent; 
+  background: var(--lamp-soft); 
   color: var(--lamp); 
-  box-shadow: none;
+  font-weight: 600;
+}
+.sidebar-link.on svg {
+  color: var(--lamp);
 }
 
 .sidebar-badge { 
-  min-width: 18px; 
-  height: 18px; 
+  min-width: 20px; 
+  height: 20px; 
   border-radius: var(--r-pill); 
   background: var(--lamp); 
   color: var(--on-lamp); 
-  font: 600 var(--fs-xs)/18px var(--sans); 
+  font: 700 var(--fs-xs)/20px var(--sans); 
   font-style: normal; 
   text-align: center; 
+  padding: 0 6px;
 }
 
 .sidebar:not(:hover) .sidebar-badge { 
   position: absolute; 
   top: 4px; 
-  right: 8px; 
+  right: 6px; 
   margin: 0; 
   font-size: 10px; 
-  line-height: 16px; 
   min-width: 16px; 
-  height: 16px; 
+  height: 16px;
+  line-height: 16px;
   box-shadow: 0 0 0 2px var(--panel);
 }
 
 .sidebar:hover .sidebar-badge { 
   position: static; 
   margin-left: auto; 
-  padding: 0 5px; 
   box-shadow: none;
 }
 
 .sidebar-update { 
   color: var(--lamp); 
 }
-
 .sidebar-update:hover { 
-  background: var(--wash-1); 
-  color: var(--lamp); 
+  background: var(--lamp-soft); 
 }
 
+.sidebar:not(:hover) .sidebar-link svg,
+.sidebar:not(:hover) .sidebar-search svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Network meter specific overrides in sidebar */
 .sidebar:not(:hover) .netmini { 
   justify-content: center; 
   padding: 8px 0; 
 }
-
 .sidebar:not(:hover) .netmini-speed, 
 .sidebar:not(:hover) .netmini-today { 
   display: none; 
 }
-
 .sidebar:hover .netmini { 
   justify-content: flex-start; 
-  padding: 8px var(--sp-3); 
-}
-
-.sidebar-brand:focus-visible, 
-.sidebar-search:focus-visible, 
-.sidebar-link:focus-visible { 
-  outline-offset: -2px; 
+  padding: 8px 12px; 
 }
 
 /* ================= 4. RESPONSIVE (BOTTOM BAR) ================= */
@@ -283,7 +267,6 @@
     flex: 1 0 60px; flex-direction: column; justify-content: center; gap: 3px; width: auto; height: 56px; margin: 0; padding: 0 var(--sp-2); font-size: 10.5px; border-radius: 0;
   }
   .sidebar:not(:hover) .sidebar-link svg, .sidebar:not(:hover) .sidebar-search svg { width: 18px; height: 18px; }
-  .sidebar:not(:hover) .sidebar-brand .lamp { width: 10px; height: 10px; }
   .sidebar .sidebar-link .sidebar-label { display: block; opacity: 1; width: auto; margin-left: 0; }
   .sidebar:not(:hover) .sidebar-badge { position: static; margin-left: auto; padding: 0 5px; box-shadow: none; }
 }

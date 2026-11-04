@@ -6,38 +6,43 @@
 
 .lib-head {
   display: grid;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
   margin-bottom: var(--sp-4);
 }
 
+/* The redesigned Source Tabs (Segmented control) */
 .lib-src {
   display: flex;
   align-items: center;
   gap: var(--sp-1);
   flex-wrap: wrap;
-  padding: var(--sp-1);
+  padding: 4px;
   width: fit-content;
   max-width: 100%;
-  border-radius: var(--r);
+  border-radius: var(--r-lg);
   background: var(--panel);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
 }
 
 .lib-src-b {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: 6px 14px;
-  border-radius: var(--r-sm);
+  padding: 8px 16px;
+  border-radius: var(--r);
   color: var(--mute);
   font: 600 var(--fs-sm) var(--sans);
-  transition: background var(--t-fast), color var(--t-fast);
+  transition: all var(--t-fast) var(--ease);
 }
-.lib-src-b:hover { color: var(--text); }
-.lib-src-b.on {
+.lib-src-b:hover { 
+  color: var(--text); 
   background: var(--wash-2);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--line);
+}
+.lib-src-b.on {
+  background: var(--lamp-soft);
+  color: var(--lamp);
+  box-shadow: inset 0 0 0 1px var(--lamp-line);
 }
 .lib-src-b.on svg { color: var(--lamp); }
 
@@ -48,6 +53,7 @@
   padding: 0 12px 0 8px;
   color: var(--mute);
   font: 500 var(--fs-sm) var(--sans);
+  margin-left: auto;
 }
 .lib-status i {
   width: 7px;
@@ -63,15 +69,14 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-1);
-  font: 700 var(--fs-2xl) var(--sans);
-  letter-spacing: -.02em;
+  font: 800 var(--fs-3xl) var(--sans);
+  letter-spacing: -.03em;
 }
-
-.lib-back {
+.lib-crumbs .lib-back {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   margin-right: var(--sp-2);
   border-radius: 50%;
   background: var(--raise);
@@ -79,8 +84,7 @@
   color: var(--text);
   transition: border-color var(--t-fast);
 }
-.lib-back:hover { border-color: var(--lamp); color: var(--lamp); }
-
+.lib-crumbs .lib-back:hover { border-color: var(--lamp); color: var(--lamp); }
 .lib-crumb-w { display: inline-flex; align-items: center; gap: var(--sp-1); }
 .lib-crumb-w em {
   font-style: normal;
@@ -104,43 +108,26 @@
   position: sticky;
   top: 0;
   z-index: 8;
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--sp-3);
-  margin: 0 calc(var(--page-pad) * -1) var(--sp-4);
-  padding: var(--sp-4) var(--page-pad) var(--sp-3);
+  flex-wrap: wrap;
+  margin: 0 calc(var(--page-pad) * -1) var(--sp-5);
+  padding: var(--sp-3) var(--page-pad);
   background: color-mix(in srgb, var(--ink) 86%, transparent);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
 .lib-bar.c2 { margin-bottom: var(--sp-4); }
 
-.lib-c2-title {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-}
-.lib-c2-text { flex: 1; min-width: 0; }
-.lib-c2-h {
-  font: 700 var(--fs-3xl) var(--sans);
-  letter-spacing: -.03em;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lib-c2-sub {
-  margin: var(--sp-1) 0 0;
-  font: 500 var(--fs-md) var(--sans);
-  color: var(--mute);
-}
+.lib-c2-title { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
 
 .lib-quiet {
   display: flex;
   align-items: center;
   gap: var(--sp-1);
   flex-wrap: wrap;
-  flex: none;
 }
 .lib-quiet-b {
   height: 34px;
@@ -161,14 +148,15 @@
 /* Dropdown menus */
 .lib-sort-wrap,
 .lib-more { position: relative; }
+.lib-menu-back { position: fixed; inset: 0; z-index: 30; }
 
 .lib-sort-menu,
 .lib-menu {
   position: absolute;
   top: calc(100% + var(--sp-2));
   right: 0;
-  z-index: 30;
-  min-width: 190px;
+  z-index: 31;
+  min-width: 200px;
   padding: var(--sp-1);
   border-radius: var(--r-lg);
   background: var(--glass);
@@ -183,8 +171,8 @@
 .lib-menu a {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
+  justify-content: flex-start;
+  gap: var(--sp-3);
   padding: 9px 11px;
   border-radius: var(--r-sm);
   border: 0;
@@ -193,6 +181,7 @@
   font: 500 var(--fs-md) var(--sans);
   text-align: left;
   text-decoration: none;
+  white-space: nowrap;
 }
 .lib-sort-menu button:hover,
 .lib-menu button:hover,
@@ -214,8 +203,9 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  flex: 0 1 380px;
+  flex: 1;
   min-width: 190px;
+  max-width: 480px;
   height: 38px;
   padding: 0 12px;
   border-radius: var(--r-sm);
@@ -251,45 +241,6 @@
   padding: 0 4px;
 }
 .lib-search .lib-x:hover { color: var(--text); }
-
-/* Filter chips row (lives inside the sticky bar). */
-.lib-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin: 0;
-}
-.lib-chips { justify-content: space-between; }
-
-.chips { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
-.chipf {
-  padding: 6px 13px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--mute);
-  font: 600 var(--fs-sm) var(--sans);
-  transition: all var(--t-fast);
-}
-.chipf:hover {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--lamp) 45%, var(--line));
-}
-.chipf.on {
-  background: var(--text);
-  color: var(--ink);
-  border-color: var(--text);
-}
-
-.lib-sel.quiet {
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: var(--wash-1);
-  color: var(--mute);
-  padding: 6px 10px;
-  font-size: var(--fs-sm);
-}
 
 /* ================= 3. SERIES BANNER ================= */
 
@@ -826,8 +777,11 @@
   .lib-bar {
     margin: 0 calc(var(--page-pad) * -1) var(--sp-4);
     padding: var(--sp-3) var(--page-pad);
+    flex-direction: column;
+    align-items: stretch;
   }
-  .lib-crumbs { font-size: var(--fs-xl); }
+  .lib-search { max-width: none; flex-basis: 100%; }
+  .lib-crumbs { font-size: var(--fs-2xl); }
   .series-head {
     flex-direction: column;
     align-items: flex-start;
@@ -835,10 +789,6 @@
   }
   .series-art { flex-basis: auto; width: 100%; }
   .series-info h1 { font-size: var(--fs-2xl); }
-  .lib-search { flex-basis: 100%; }
-  .lib-c2-h { font-size: var(--fs-2xl); }
-  .lib-quiet { width: 100%; }
-  .lib-c2-title { flex-direction: column; align-items: stretch; }
 }
 
 @media (hover: none) {

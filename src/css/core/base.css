@@ -22,6 +22,7 @@ body {
   color: var(--text);
   font: 400 var(--fs-md)/1.5 var(--sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
@@ -54,7 +55,7 @@ dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0; f
 dt { color: var(--mute); }
 dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ---------- 3. Form elements: neutral starting point (shared.css adds the real look) ---------- */
+/* ---------- 3. Form elements ---------- */
 
 button, select, input, textarea { font: inherit; color: inherit; }
 
@@ -75,8 +76,6 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
 
 :focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
 
-/* Text fields show focus with an accent border and soft halo instead of an outline.
-   :where() keeps these rules at low specificity so any class can override them. */
 :where(input:not([type=range]):not([type=checkbox]):not([type=file]), select, textarea):focus-visible {
   outline: 0;
   border-color: var(--lamp);
@@ -96,7 +95,7 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--mute) padding-box; }
 
-/* ---------- 6. Reduced motion ---------- */
+/* ---------- 6. Reduced motion / Eco ---------- */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
 }

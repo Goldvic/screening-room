@@ -1,5 +1,14 @@
 /* Player frame: the stage, the video wrapper, the subtitle cues, and the mini-player float. */
 
+.theatre { 
+  position: fixed; 
+  inset: 0; 
+  background: var(--media-bg); 
+  z-index: 100; /* higher than the sidebar and navbar */
+  color: var(--on-media); 
+  user-select: none; 
+}
+
 .theatre:not(.ui) { cursor: none; }
 
 .stage { position: absolute; inset: 0; overflow: hidden; }
@@ -32,7 +41,7 @@
 .audio-only span { color: var(--on-media-mute); max-width: 340px; }
 
 /* Floating mini player */
-.theatre.float { inset: auto var(--sp-5) var(--sp-5) auto; width: min(420px, 52vw); height: auto; aspect-ratio: 16/9; border-radius: var(--r-lg); overflow: hidden; z-index: 40; box-shadow: 0 18px 60px var(--shade-4); border: 1px solid var(--on-media-line); }
+.theatre.float { inset: auto var(--sp-5) var(--sp-5) auto; width: min(420px, 52vw); height: auto; aspect-ratio: 16/9; border-radius: var(--r-lg); overflow: hidden; z-index: 100; box-shadow: 0 18px 60px var(--shade-4); border: 1px solid var(--on-media-line); }
 
 .theatre .cbtn { border-radius: var(--r); width: 42px; height: 42px; transition: background var(--t-fast), transform var(--t-fast); }
 .theatre .cbtn:hover { background: color-mix(in srgb, var(--on-media) 16%, transparent); }

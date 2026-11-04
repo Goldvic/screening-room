@@ -1,0 +1,19 @@
+/* Player HUD base: the top bar and the bottom controls sit on top of the video and fade with the controls.
+   .hud.top / .hud.bottom (top-bar.css, seek-bar.css) only set top/bottom, padding and background. */
+
+.hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 4; /* above the video (.vwrap) and the click surface (.surface), below menus and sheets */
+  transition: opacity var(--t-med);
+}
+
+/* Controls hide while playing and the mouse is still (Player.tsx adds .ui when they should show) */
+.theatre:not(.ui) .hud { opacity: 0; pointer-events: none; }
+
+/* Keyboard shortcuts list (used by the player sheet and the command palette) */
+.sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 24px; }
+.sheet-grid p { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin: 0; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.sheet-grid kbd { padding: 2px 8px; border-radius: var(--r-xs); background: var(--raise); border: 1px solid var(--line); font: 600 12px var(--sans); white-space: nowrap; }
+.sheet-grid span { color: var(--mute); font-size: var(--fs-md); text-align: right; }
