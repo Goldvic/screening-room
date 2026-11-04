@@ -1,28 +1,112 @@
-/* Base: resets and element defaults. Nothing here is specific to a page. */
+/* Base: resets and element defaults. Nothing here is specific to a page.
+   Colors, fonts, radius and sizes all come from core/tokens.css. */
+
+
+/* ---------- 1. Layout reset ---------- */
 
 * { box-sizing: border-box; }
+
 html, body, #root { height: 100%; }
-body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
-button, select, input { font: inherit; color: inherit; }
-button { cursor: pointer; background: none; border: 0; padding: 0; }
-a { color: inherit; text-decoration: none; }
-:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
-select { background: var(--raise); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--text); }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
-dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0; font-size: 13px; }
-dt { color: var(--mute); }
-dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation-duration: .01ms !important; }
+
+body { margin: 0; }
+
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; line-height: 1.25; text-wrap: balance; }
+
+p { margin: 0; }
+
+[hidden] { display: none !important; }
+
+
+/* ---------- 2. Page, text and links ---------- */
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font: 400 var(--fs-md)/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-input:not([type=range]):not([type=checkbox]):not([type=file]), textarea {
-  background: var(--raise); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--text); min-width: 0;
+html[data-compact="1"] body { font-size: var(--fs-sm); }
+
+a { color: inherit; text-decoration: none; }
+
+::selection { background: var(--lamp-glow); color: inherit; }
+
+code {
+  padding: 1px 6px;
+  border-radius: var(--r-xs);
+  background: var(--raise);
+  font: 400 .92em var(--mono);
+  user-select: all;
 }
-textarea { width: 100%; resize: vertical; font: 13px/1.4 ui-monospace, Consolas, monospace; }
-body { font: 13.5px/1.45 var(--sans); }
-select { border-radius: 8px; padding: 6px 9px; }
-code { background: var(--raise); padding: 2px 6px; border-radius: 6px; font-size: 12px; user-select: all; }
-kbd { font: 600 11px var(--sans); padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,.1); border: 1px solid var(--line); color: inherit; white-space: nowrap; }
-html[data-compact="1"] body { font-size: 12.5px; }
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: var(--wash-2);
+  color: inherit;
+  font: 500 var(--fs-xs)/1.5 var(--sans);
+  white-space: nowrap;
+}
+
+dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0; font-size: var(--fs-sm); }
+dt { color: var(--mute); }
+dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+
+/* ---------- 3. Form elements: neutral starting point (shared.css adds the real look) ---------- */
+
+button, select, input, textarea { font: inherit; color: inherit; }
+
+button { padding: 0; border: 0; background: none; cursor: pointer; }
+
+/* belongs in components/shared (kept here until that file is redesigned) */
+:where(select, input:not([type=range]):not([type=checkbox]):not([type=file]), textarea) {
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--text);
+}
+
+/* belongs in components/shared (kept here until that file is redesigned) */
+:where(textarea) { width: 100%; resize: vertical; font: 400 var(--fs-sm)/1.45 var(--mono); }
+
+
+/* ---------- 4. Focus ---------- */
+
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+/* Text fields show focus with an accent border and soft halo instead of an outline.
+   :where() keeps these rules at low specificity so any class can override them. */
+:where(input:not([type=range]):not([type=checkbox]):not([type=file]), select, textarea):focus-visible {
+  outline: 0;
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 3px var(--lamp-soft);
+}
+
+
+/* ---------- 5. Scrollbars ---------- */
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Thin pill, inset from the edge by a transparent border */
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--r-pill);
+  background: var(--wash-4) padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--mute) padding-box; }
+
+
+/* ---------- 6. Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}

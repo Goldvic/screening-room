@@ -1,27 +1,146 @@
-/* Design tokens: colors, fonts, radius. Every other file reads these through var(--name). */
+/* Design tokens: every color, font, radius, space, shadow and timing used by the app.
+   Other files read these with var(--name). Nothing outside this file may hard-code them.
+
+   Mood: dark cinematic. Near-black blue-tinted surfaces, one accent, soft corners.
+   The accent (--lamp) is overridden at runtime by the accent choice in Settings > Look,
+   so never rely on its exact value. Use --lamp, --lamp-soft, --lamp-line and --on-lamp. */
+
+
+/* ---------- 1. Dark theme (default) ---------- */
 
 :root {
-  --ink: #0d0d10;
-  --panel: #131318;
-  --raise: #1a1a21;
-  --line: #26262f;
-  --text: #e9ebf0;
-  --mute: #8a92a3;
-  --lamp: #f2b84b;
+  color-scheme: dark;
+
+  /* Surfaces, from furthest back to closest to the viewer */
+  --ink: #09090d;            /* app background */
+  --panel: #111118;          /* cards, sheets, sidebars */
+  --raise: #191923;          /* inputs, hovered cards, menus */
+  --line: #272734;           /* borders and dividers */
+
+  /* Text */
+  --text: #ecedf3;
+  --mute: #9096a8;
+
+  /* Accent (default is Violet; overridden at runtime) */
+  --lamp: #8b7bff;
+  --on-lamp: #0b0b10;                                              /* text or icon sitting on --lamp */
+  --lamp-soft: color-mix(in srgb, var(--lamp) 16%, transparent);   /* selected or active background */
+  --lamp-line: color-mix(in srgb, var(--lamp) 45%, transparent);   /* accent border */
+  --lamp-glow: color-mix(in srgb, var(--lamp) 35%, transparent);   /* focus and glow shadows */
+
+  /* Status */
   --danger: #f0624f;
-  --glass: rgba(12, 16, 23, .86);
-  --serif: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --success: #3fd6a0;
+  --warn: #f2b84b;
+  --info: #5eb2ff;
+
+  /* Translucent surfaces */
+  --glass: color-mix(in srgb, var(--panel) 82%, transparent);      /* blurred bars and floating panels */
+
+  /* Washes: a faint layer of text color over any surface. Use for hover, pressed and subtle fills. */
+  --wash-1: color-mix(in srgb, var(--text) 4%, transparent);
+  --wash-2: color-mix(in srgb, var(--text) 7%, transparent);
+  --wash-3: color-mix(in srgb, var(--text) 11%, transparent);
+  --wash-4: color-mix(in srgb, var(--text) 16%, transparent);
+
+  /* Shades: black layers over posters, video and backdrops. Same in every theme. */
+  --shade-1: rgba(0, 0, 0, .25);
+  --shade-2: rgba(0, 0, 0, .45);
+  --shade-3: rgba(0, 0, 0, .65);
+  --shade-4: rgba(0, 0, 0, .85);
+  --scrim: rgba(4, 4, 8, .62);                                     /* behind dialogs and sheets */
+
+  /* On-media: text and icons drawn on top of posters and video. Same in every theme. */
+  --on-media: #ffffff;
+  --on-media-mute: rgba(255, 255, 255, .72);
+  --on-media-line: rgba(255, 255, 255, .22);
+  --media-bg: #000000;                                             /* behind video, the player and the mini window */
+
+  /* Fonts */
   --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --r: 10px;
+  --serif: 'Fraunces', Georgia, 'Times New Roman', serif;          /* titles and brand only */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale */
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;           /* body */
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 24px;
+  --fs-3xl: 32px;
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 8px;               /* small controls, chips, inputs */
+  --r: 12px;                 /* default: buttons, cards, menus */
+  --r-lg: 16px;              /* large cards, sheets */
+  --r-xl: 22px;              /* dialogs, hero panels */
+  --r-pill: 999px;
+
+  /* Spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 48px;
+
+  /* Layout */
+  --nav-h: 60px;                                   /* top navigation bar height */
+  --page-pad: clamp(14px, 3vw, 40px);              /* horizontal page padding */
+  --page-max: 1560px;                              /* widest content column */
+
+  /* Shadows */
+  --shadow-color: rgba(0, 0, 0, .5);
+  --shadow-1: 0 1px 2px var(--shadow-color);
+  --shadow-2: 0 6px 18px -6px var(--shadow-color);
+  --shadow-3: 0 18px 44px -12px var(--shadow-color);
+  --shadow-glow: 0 0 0 1px var(--lamp-line), 0 8px 28px -8px var(--lamp-glow);
+
+  /* Motion */
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --t-fast: .12s;
+  --t-med: .2s;
+  --t-slow: .35s;
 }
 
+
+/* ---------- 2. Light theme ---------- */
+
 :root[data-theme="light"] {
-  --ink: #f5f5f8; --panel: #ffffff; --raise: #eeeef3; --line: #dcdce4; --text: #16161d; --mute: #6a6a78;
-  --glass: rgba(255,255,255,.9);
+  color-scheme: light;
+
+  --ink: #f4f4f8;
+  --panel: #ffffff;
+  --raise: #ecedf3;
+  --line: #dadae4;
+  --text: #15151c;
+  --mute: #636a7a;
+
+  --danger: #d9442f;
+  --success: #12936a;
+  --warn: #b97800;
+  --info: #1f78d1;
+
+  --shadow-color: rgba(30, 32, 60, .16);
 }
-/* colour styles */
-html[data-preset="midnight"] { --ink: #080d1a; --panel: #0e1630; --raise: #16203f; --line: #223056; }
-html[data-preset="oled"] { --ink: #000; --panel: #070709; --raise: #111114; --line: #1c1c22; }
-html[data-preset="warm"] { --ink: #120d09; --panel: #1b130d; --raise: #251a12; --line: #36271b; }
-html[data-preset="forest"] { --ink: #08120d; --panel: #0e1c15; --raise: #15291e; --line: #213a2c; }
-html[data-preset="paper"] { --ink: #f5f5f8; --panel: #ffffff; --raise: #eeeef3; --line: #dcdce4; --text: #16161d; --mute: #6a6a78; --glass: rgba(255,255,255,.9); }
+
+
+/* ---------- 3. Color styles (Settings > Look). Only surfaces change; accent stays user-chosen. ---------- */
+
+html[data-preset="midnight"] { --ink: #070c1a; --panel: #0d1530; --raise: #151f40; --line: #222f57; }
+html[data-preset="oled"]     { --ink: #000000; --panel: #060608; --raise: #101014; --line: #1b1b22; }
+html[data-preset="warm"]     { --ink: #110c08; --panel: #1a120c; --raise: #241911; --line: #35261a; }
+html[data-preset="forest"]   { --ink: #07110c; --panel: #0d1b14; --raise: #14281d; --line: #20382a; }
+
+/* Light surfaces inside the dark theme, so it also needs light text, status colors and softer shadows */
+html[data-preset="paper"] {
+  color-scheme: light;
+  --ink: #f4f4f8; --panel: #ffffff; --raise: #ecedf3; --line: #dadae4;
+  --text: #15151c; --mute: #636a7a;
+  --danger: #d9442f; --success: #12936a; --warn: #b97800; --info: #1f78d1;
+  --shadow-color: rgba(30, 32, 60, .16);
+}

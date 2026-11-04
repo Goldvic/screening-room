@@ -1,3 +1,46 @@
-/* Styles for components/poster-art */
+/* Poster art: the picture area inside posters, tiles and list thumbnails.
+   Markup (App.tsx, Art and Thumb components):
+     <span class="art">            fills its parent card
+       <span class="ph">icon</span>    placeholder icon, shown until a picture loads
+       <img>                           video thumbnail, fades in when it has the class "on"
+       <img class="poster-img on">     poster from the web, sits above the thumbnail
+     </span>
+   List rows use <span class="ico"> with the placeholder and thumbnail directly inside it.
+   The --h variable (a hue per title) is set by the card that holds the art. */
 
-.frame img.poster-img, .shot img.poster-img { z-index: 1; }
+
+/* ================= 1. LAYOUT ================= */
+
+.art { position: absolute; inset: 0; display: block; border-radius: inherit; overflow: hidden; }
+
+.ph { position: absolute; inset: 0; display: grid; place-items: center; }
+
+.art img, .ico img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.art img.poster-img { z-index: 1; }
+
+/* Hairline edge drawn above the picture so light posters keep a clean outline */
+.art::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; }
+
+
+/* ================= 2. COLORS ================= */
+
+.art { background: linear-gradient(145deg, hsl(var(--h, 220) 28% 24%), hsl(var(--h, 220) 24% 12%)); }
+
+.ph { color: hsl(var(--h, 40) 50% 72% / .55); }
+.ico .ph { color: var(--mute); }
+
+.art::after { box-shadow: inset 0 0 0 1px var(--wash-2); }
+
+
+/* ================= 3. STATES ================= */
+
+/* Pictures fade in once loaded */
+.art img, .ico img { opacity: 0; transition: opacity var(--t-slow) var(--ease); }
+.art img.on, .ico img.on { opacity: 1; }
+
+
+/* ================= 4. SHARED SHIMMER ================= */
+
+/* Loading shimmer used by the skeleton rules in library.css and data-panel.css */
+@keyframes sk { to { background-position: -200% 0; } }

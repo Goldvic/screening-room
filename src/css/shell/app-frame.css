@@ -1,4 +1,42 @@
-/* Styles for shell/frame */
+/* App frame: the page grid (sidebar + content), the content scroll area, the toast,
+   the boot screen and the drag-and-drop overlay. */
 
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--raise); border: 1px solid var(--line); padding: 10px 18px; border-radius: 12px; z-index: 40; }
-.boot { height: 100%; display: grid; place-items: center; }
+
+/* ================= 1. LAYOUT ================= */
+
+.shell { --sidebar-w: 228px; display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100%; }
+
+.main { min-width: 0; min-height: 0; padding: var(--sp-6) var(--page-pad) var(--sp-8); overflow: auto; }
+
+.boot { display: grid; place-items: center; height: 100%; }
+
+.toast { position: fixed; bottom: var(--sp-6); left: 50%; z-index: 40; padding: 10px 18px; transform: translateX(-50%); }
+
+.dropzone { position: fixed; inset: 0; z-index: 200; display: grid; place-content: center; justify-items: center; gap: var(--sp-2); text-align: center; pointer-events: none; }
+
+
+/* ================= 2. COLORS ================= */
+
+.toast { border: 1px solid var(--line); border-radius: var(--r); background: var(--raise); color: var(--text); font-size: var(--fs-md); box-shadow: var(--shadow-3); }
+
+.dropzone { border: 3px dashed var(--lamp); background: var(--shade-4); color: var(--on-media); }
+.dropzone strong { font: 600 var(--fs-3xl) var(--serif); }
+.dropzone span { color: var(--on-media-mute); }
+
+
+/* ================= 3. RESPONSIVE AND MODES ================= */
+
+html[data-compact="1"] .main { padding: var(--sp-4) var(--sp-5) var(--sp-7); }
+
+html.pop .shell { grid-template-columns: minmax(0, 1fr); }
+
+@media (max-width: 1099px) {
+  .shell { --sidebar-w: 68px; }
+}
+
+@media (max-width: 699px) {
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .sidebar { order: 2; }
+  .main { padding: var(--sp-4) var(--sp-4) var(--sp-6); }
+  .toast { bottom: 76px; }
+}

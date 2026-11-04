@@ -11,7 +11,7 @@
 @import './pages/setup.css';
 @import './player/audio-menu.css';
 @import './overlays/command-palette.css';
-@import './shell/topnav.css';
+@import './shell/sidebar.css';
 @import './pages/library.css';
 @import './shell/net-meter.css';
 @import './shell/download-tray.css';

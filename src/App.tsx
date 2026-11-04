@@ -224,7 +224,6 @@ function Library() {
   const upd = useUpdates();
   const [dragging, setDragging] = useState(false);
   const [palette, setPalette] = useState(false);
-  const [more, setMore] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [addTo, setAddTo] = useState<string[] | null>(null);
   const [ruleFor, setRuleFor] = useState(false);
@@ -638,27 +637,34 @@ function Library() {
   }
 
   return (
-    <div className="shell tn"
+    <div className="shell"
       onDragOver={(e) => { if (bridge && e.dataTransfer.types.includes('Files')) { e.preventDefault(); setDragging(true); } }}
       onDragLeave={(e) => { if (e.currentTarget === e.target) setDragging(false); }}
       onDrop={onDrop}>
       {dragging && <div className="dropzone" aria-hidden="true"><Icon n="play" s={42} /><strong>Drop to play</strong><span>The videos are played where they are. Nothing is copied.</span></div>}
-      <header className="topnav" aria-label="Main navigation">
-        <div className="tn-brand" title={APP_NAME} onClick={() => setView('home')}><span className="lamp" /><span>{APP_NAME}</span></div>
-        <nav className="tn-tabs">
-          {([['home', 'Home', 'home'], ['library', 'Library', 'film'], ['playlists', 'Playlists', 'list'], ['collections', 'Collections', 'folder'], ['discover', 'Discover', 'search']] as const).map(([id, label, ic]) => (
-            <button key={id} className={view === id ? 'tn-tab on' : 'tn-tab'} onClick={() => setView(id)} title={label}><Icon n={ic} s={17} /><span>{label}</span></button>
+      <aside className="sidebar" aria-label="Main navigation">
+        <button className="sidebar-brand" title={APP_NAME} onClick={() => setView('home')}><span className="lamp" /><span className="sidebar-label">{APP_NAME}</span></button>
+        <button className="sidebar-search" onClick={() => setPalette(true)} title="Search and commands (Ctrl+K)"><Icon n="search" s={17} /><span className="sidebar-label">Search</span><kbd className="sidebar-label">Ctrl K</kbd></button>
+        <nav className="sidebar-nav">
+          {([['home', 'Home', 'home'], ['library', 'Library', 'film'], ['playlists', 'Playlists', 'list'], ['collections', 'Collections', 'folder'], ['discover', 'Discover', 'bolt'], ['insights', 'Insights', 'gauge']] as const).map(([id, label, ic]) => (
+            <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}><Icon n={ic} s={18} /><span className="sidebar-label">{label}</span></button>
           ))}
         </nav>
-        <button className="tn-search" onClick={() => setPalette(true)} title="Search and commands (Ctrl+K)"><Icon n="search" s={16} /><span>Search or jump to…</span><kbd>Ctrl K</kbd></button>
-        <div className="tn-right">
+        <div className="sidebar-foot">
           {upd && (upd.state === 'available' || upd.state === 'downloading' || upd.state === 'ready') && (
-            <button className="tn-pill" title="Update available" onClick={() => (upd.state === 'available' ? bridge?.updateDownload() : upd.state === 'ready' ? bridge?.updateInstall() : undefined)}>
-              <Icon n="cloud" s={15} /><span>{upd.state === 'ready' ? 'Restart to update' : upd.state === 'downloading' ? `Updating ${upd.percent}%` : 'Update'}</span>
+            <button className="sidebar-link sidebar-update" title="Update available" onClick={() => (upd.state === 'available' ? bridge?.updateDownload() : upd.state === 'ready' ? bridge?.updateInstall() : undefined)}>
+              <Icon n="cloud" s={18} /><span className="sidebar-label">{upd.state === 'ready' ? 'Restart to update' : upd.state === 'downloading' ? `Updating ${upd.percent}%` : 'Update'}</span>
             </button>
           )}
-          <div className="tn-more">
-            <NetMini onClick={() => { setMore(false); setDataOpen((x) => !x); }} />
+          {bridge && <button className="sidebar-link sidebar-open" onClick={() => pickFile()} title="Open file (Ctrl O)"><Icon n="folder" s={18} /><span className="sidebar-label">Open file</span></button>}
+          <button className="sidebar-link" onClick={() => setPanel('servers')} title="Servers"><Icon n="server" s={18} /><span className="sidebar-label">Servers</span></button>
+          <button className="sidebar-link" onClick={() => setPanel('downloads')} title="Downloads" aria-label="Downloads">
+            <Icon n="down" s={18} /><span className="sidebar-label">Downloads</span>
+            {queueInfo.active + queueInfo.waiting > 0 && <em className="sidebar-badge">{queueInfo.active + queueInfo.waiting}</em>}
+          </button>
+          <button className="sidebar-link" onClick={() => setPanel('settings')} title="Settings" aria-label="Settings"><Icon n="sliders" s={18} /><span className="sidebar-label">Settings</span></button>
+          <div className="sidebar-data">
+            <NetMini onClick={() => setDataOpen((x) => !x)} />
             {dataOpen && <DataPanel budget={budget} saver={saver} queued={queueInfo.active + queueInfo.waiting}
               onBudget={(g) => { post('settings', { budgetGB: g }).then(() => loadSrv()).catch(() => {}); }}
               onClose={() => setDataOpen(false)}
@@ -666,24 +672,8 @@ function Library() {
               onInsights={() => { setDataOpen(false); setView('insights'); }}
               onSettings={() => { setDataOpen(false); setPanel('settings'); }} />}
           </div>
-          <button className="tn-ic" onClick={() => setPanel('downloads')} title="Downloads" aria-label="Downloads">
-            <Icon n="down" s={19} />
-            {queueInfo.active + queueInfo.waiting > 0 && <em className="nav-badge">{queueInfo.active + queueInfo.waiting}</em>}
-          </button>
-          <button className="tn-ic" onClick={() => setPanel('settings')} title="Settings" aria-label="Settings"><Icon n="sliders" s={19} /></button>
-          <div className="tn-more">
-            <button className={more ? 'tn-ic on' : 'tn-ic'} onClick={() => { setDataOpen(false); setMore((x) => !x); }} title="More" aria-label="More" aria-expanded={more}><Icon n="grid" s={19} /></button>
-            {more && <>
-              <div className="tn-back" onClick={() => setMore(false)} />
-              <div className="tn-menu" role="menu">
-                <button role="menuitem" onClick={() => { setMore(false); setView('insights'); }}><Icon n="gauge" s={16} /> Insights</button>
-                {bridge && <button role="menuitem" onClick={() => { setMore(false); pickFile(); }}><Icon n="folder" s={16} /> Open file <kbd>Ctrl O</kbd></button>}
-                <button role="menuitem" onClick={() => { setMore(false); setPanel('servers'); }}><Icon n="server" s={16} /> Servers</button>
-              </div>
-            </>}
-          </div>
         </div>
-      </header>
+      </aside>
 
       <main className="main" style={{ ['--pw' as string]: `${s.density}px` }}>
         {saver > s.saver && <p className="note">Data Saver switched to Low because you used most of this month’s data budget.</p>}
@@ -1465,7 +1455,7 @@ function NetMini({ onClick }: { onClick: () => void }) {
   const net = useNet(null, 2500);
   return (
     <button className="netmini" onClick={onClick} title={`Network: ${net.ok ? rate(net.speed) : 'offline'} · today ${bytes(net.today)}`}>
-      <i className={net.active ? 'dot on' : 'dot'} /><span>{net.ok ? rate(net.speed) : 'offline'}</span><small>{bytes(net.today)} today</small>
+      <i className={net.active ? 'netmini-dot on' : 'netmini-dot'} /><span className="netmini-speed">{net.ok ? rate(net.speed) : 'offline'}</span><small className="netmini-today">{bytes(net.today)} today</small>
     </button>
   );
 }
