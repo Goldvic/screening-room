@@ -1,23 +1,109 @@
-/* Styles for shell/download-tray */
+/* shell/download-tray
+   Used by App.tsx (Tray): the small floating cards for browser downloads.
+   Classes: dl-tray, dl-tray-item (.is-run .is-done .is-cancel .is-error),
+            dl-tray-top, dl-tray-name, dl-tray-bar, dl-tray-info */
 
-.dl { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 4px; }
-.dl-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.dl-top strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dl .prog { margin-top: 2px; height: 4px; }
-/* belongs in player/top-bar (kept here so the look stays identical) */
-.ttl strong { font: 500 18px var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dl-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-/* belongs in shell/topnav (kept here so the look stays identical) */
-.dropzone strong { font: 700 26px var(--serif); }
-.dl-top {
+/* ================= LAYOUT ================= */
+
+.dl-tray {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 35;
+  display: grid;
+  gap: var(--sp-2);
+  width: min(360px, calc(100vw - 2 * var(--sp-4)));
+}
+
+.dl-tray-item {
+  display: grid;
+  gap: var(--sp-1);
+  padding: 10px var(--sp-3);
+}
+
+.dl-tray-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  border-bottom: 0.5px solid rgba(255,255,255,.05);
+  gap: var(--sp-2);
 }
-@media (max-width: 520px) {
-  .dl-top { flex-direction: column; align-items: flex-start; }
+
+.dl-tray-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-tray-bar {
+  display: block;
+  height: 4px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+.dl-tray-bar b {
+  display: block;
+  height: 100%;
+}
+
+
+/* ================= COLORS ================= */
+
+.dl-tray-item {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-3);
+}
+
+.dl-tray-name {
+  font-weight: 500;
+}
+
+.dl-tray-bar {
+  border-radius: var(--r-pill);
+  background: var(--wash-3);
+}
+.dl-tray-bar b {
+  border-radius: inherit;
+  background: var(--lamp);
+  transition: width var(--t-med) linear;
+}
+
+.dl-tray-info {
+  color: var(--mute);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ================= STATES ================= */
+
+.dl-tray-item.is-done .dl-tray-bar b {
+  background: var(--success);
+}
+.dl-tray-item.is-cancel .dl-tray-bar b {
+  background: var(--mute);
+}
+.dl-tray-item.is-error {
+  border-color: var(--danger);
+}
+.dl-tray-item.is-error .dl-tray-bar b {
+  background: var(--danger);
+}
+.dl-tray-item.is-error .dl-tray-info {
+  color: var(--danger);
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+/* Small windows: the bottom bar is showing, so lift the tray above it. */
+@media (max-width: 699px) {
+  .dl-tray {
+    right: var(--sp-3);
+    bottom: 76px;
+    width: calc(100vw - 2 * var(--sp-3));
+  }
 }

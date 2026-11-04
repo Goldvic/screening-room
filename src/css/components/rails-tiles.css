@@ -1,84 +1,327 @@
-/* Styles for components/rails-tiles */
+/* components/rails-tiles
+   Used by Home.tsx (Rail, Tile) and Extras.tsx (CollectionsPage).
+   Rail: rail, rail-h, rail-hint, rail-wrap, rail-arrow (.l .r), rail-row
+   Tile: tilewrap, tile-x, tilecard, tilecard-art, tilecard-t, tilecard-sub,
+         tile-go, tile-badge, tile-prog */
 
-.badge-s { position: absolute; top: 7px; left: 7px; z-index: 2; font: 600 10px var(--sans); text-transform: uppercase; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; background: rgba(0,0,0,.65); color: #5eead4; }
-.tilecard .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
-.rail-wrap { position: relative; }
-.rail-arrow { position: absolute; top: calc(50% - 30px); z-index: 4; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); backdrop-filter: blur(8px); border: 1px solid var(--line); color: var(--text); opacity: 0; transition: opacity .15s; }
-.rail-arrow.l { left: -12px; }
-.rail-arrow.r { right: -12px; transform: scaleX(-1); }
-.rail-wrap:hover .rail-arrow { opacity: 1; }
-.rail-arrow:hover { background: var(--lamp); color: #111; }
-@media (hover: none) {
-  .rail-arrow { display: none; }
+/* ================= LAYOUT ================= */
+
+/* Tile width is set once per rail so the arrows can centre on the artwork. */
+.rail {
+  --tile-w: 236px;
+  display: grid;
 }
 
-.rail-hint {
-  font: 500 12px var(--sans);
-  color: var(--mute);
+.rail-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
 }
-.rail-wrap { position: relative; }
+.rail-h h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+}
+
+.rail-wrap {
+  position: relative;
+}
+
+.rail-row {
+  display: flex;
+  gap: var(--sp-4);
+  padding: 4px 2px 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
 .rail-arrow {
   position: absolute;
-  top: 50%;
-  transform: translateY(-60%);
-  z-index: 3;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,.1);
-  background: rgba(16,16,22,.85);
-  backdrop-filter: blur(12px);
-  color: #fff;
+  top: calc(var(--tile-w) * 5 / 16 + 4px); /* middle of a 16:10 tile */
+  z-index: 4;
   display: grid;
   place-items: center;
-  opacity: 0;
-  transition: opacity .15s, background .15s, transform .15s;
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
-}
-.rail-wrap:hover .rail-arrow { opacity: 1; }
-.rail-arrow:hover {
-  background: rgba(30,30,40,.95);
-  transform: translateY(-60%) scale(1.05);
-}
-.rail-arrow.l { left: 4px; }
-.rail-arrow.r { right: 4px; }
-.rail-arrow.r svg { transform: scaleX(-1); }
-.badge-s {
-  position: absolute;
-  top: 8px; left: 8px;
-  z-index: 2;
-  font: 600 10px var(--sans);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: 3px 7px;
-  border-radius: 6px;
-  background: rgba(0,0,0,.6);
-  backdrop-filter: blur(6px);
-  color: #5eead4;
-}
-.tilecard .prog {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 3px;
-  background: rgba(0,0,0,.35);
-}
-.tilecard .prog b {
-  display: block;
-  height: 100%;
-  background: var(--lamp);
-}
-@media (max-width: 640px) {
-  .rail-arrow { display: none; }
-}
-
-.rail-hint {
-  font: 500 12.5px var(--sans);
-  color: var(--mute);
-}
-.rail-arrow {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.1);
-  background: rgba(16,18,26,.9);
+}
+.rail-arrow.l { left: var(--sp-1); }
+.rail-arrow.r { right: var(--sp-1); }
+.rail-arrow.r svg { transform: scaleX(-1); }
+
+.rail-row > .tilecard,
+.rail-row > .tilewrap {
+  flex: 0 0 var(--tile-w);
+}
+
+.tilewrap {
+  position: relative;
+  scroll-snap-align: start;
+}
+.tilewrap > .tilecard {
+  width: 100%;
+}
+
+.tilecard {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  scroll-snap-align: start;
+}
+
+.tilecard-art {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Soft shade at the bottom so the progress bar and badge stay readable. */
+.tilecard-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tilecard-t,
+.tilecard-sub {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tilecard-t { margin-top: var(--sp-1); }
+
+.tile-go {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+}
+.tile-go svg {
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 13px;
+}
+
+.tile-badge {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  z-index: 3;
+  padding: 3px 7px;
+}
+
+.tile-prog {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: block;
+  height: 3px;
+}
+.tile-prog b {
+  display: block;
+  height: 100%;
+}
+
+.tile-x {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+
+/* ================= COLORS AND TYPE ================= */
+
+.rail-h h2 {
+  color: var(--text);
+  font: 600 var(--fs-lg)/1.2 var(--sans);
+  letter-spacing: -.015em;
+}
+.rail-hint {
+  color: var(--mute);
+  font: 500 var(--fs-sm) var(--sans);
+}
+
+.rail-row {
+  scrollbar-color: var(--wash-3) transparent;
+}
+
+.rail-arrow {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-2);
+  color: var(--text);
+}
+
+.tilecard {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tilecard-art {
+  border-radius: var(--r-lg);
+  background: linear-gradient(145deg, hsl(var(--h, 220) 28% 20%), var(--panel));
+  box-shadow: var(--shadow-2);
+}
+.tilecard-art::after {
+  background: linear-gradient(0deg, var(--shade-1), transparent 45%);
+}
+
+.tilecard-t {
+  font: 600 var(--fs-md)/1.25 var(--sans);
+  letter-spacing: -.01em;
+}
+.tilecard-sub {
+  color: var(--mute);
+  font-size: var(--fs-xs);
+}
+
+.tile-go {
+  background: var(--shade-1);
+}
+.tile-go svg {
+  border-radius: 50%;
+  background: var(--lamp);
+  color: var(--on-lamp);
+  box-shadow: var(--shadow-2);
+}
+
+.tile-badge {
+  border-radius: var(--r-xs);
+  background: var(--shade-3);
+  backdrop-filter: blur(6px);
+  color: var(--on-media);
+  font: 600 10px var(--sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.tile-prog {
+  background: var(--on-media-line);
+}
+.tile-prog b {
+  background: var(--lamp);
+}
+
+.tile-x {
+  border-radius: 50%;
+  background: var(--shade-3);
+  color: var(--on-media);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+
+/* ================= STATES ================= */
+
+.rail-arrow {
+  opacity: 0;
+  transition: opacity var(--t-fast), background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+}
+.rail-wrap:hover .rail-arrow,
+.rail-arrow:focus-visible {
+  opacity: 1;
+}
+.rail-arrow:hover {
+  border-color: var(--lamp);
+  background: var(--lamp);
+  color: var(--on-lamp);
+}
+.rail-arrow:active {
+  transform: scale(.94);
+}
+.rail-arrow:disabled {
+  opacity: .3;
+  cursor: default;
+}
+
+.tilecard-art {
+  transition: transform var(--t-med), box-shadow var(--t-med);
+}
+.tilecard:hover .tilecard-art,
+.tilecard:focus-visible .tilecard-art {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
+}
+.tilecard:active .tilecard-art {
+  transform: translateY(-1px);
+}
+
+.tile-go {
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.tilecard:hover .tile-go,
+.tilecard:focus-visible .tile-go {
+  opacity: 1;
+}
+
+.tile-x {
+  opacity: 0;
+  transition: opacity var(--t-fast), background var(--t-fast);
+}
+.tilewrap:hover .tile-x,
+.tile-x:focus-visible {
+  opacity: 1;
+}
+.tile-x:hover {
+  background: var(--danger);
+}
+
+
+/* ================= COMPACT MODE ================= */
+
+html[data-compact="1"] .rail {
+  --tile-w: 204px;
+}
+html[data-compact="1"] .rail-row {
+  gap: var(--sp-3);
+}
+html[data-compact="1"] .tilecard-t {
+  font-size: var(--fs-sm);
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 640px) {
+  .rail,
+  html[data-compact="1"] .rail {
+    --tile-w: 168px;
+  }
+  .rail-arrow {
+    display: none;
+  }
+}
+
+/* Touch screens have no hover: no arrows (swipe instead), and the remove button stays visible. */
+@media (hover: none) {
+  .rail-arrow {
+    display: none;
+  }
+  .tile-x {
+    opacity: 1;
+  }
 }

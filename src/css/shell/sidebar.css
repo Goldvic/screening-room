@@ -81,9 +81,6 @@ html.pop .sidebar { display: none !important; }
 /* -> overlays/data-panel */
 .sidebar-data .dpanel { top: auto; right: auto; bottom: 0; left: calc(100% + var(--sp-3)); }
 
-/* -> pages/home */
-.home { display: grid; gap: 22px; padding-bottom: 28px; }
-
 /* -> pages/setup */
 .seg { display: inline-flex; margin-left: auto; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .setup-card { width: min(560px, 96vw); padding: 28px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--panel); }

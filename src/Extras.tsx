@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Icon, api, bytes, parseTitle, post } from './lib';
+import './css/components/stars-tags.css';
 
 export type Collection = { id: string; name: string; items: { root: string; path: string }[] };
 export type ItemMeta = { r?: number; t?: string[] };
@@ -11,7 +12,7 @@ export function Stars({ value, onChange }: { value: number; onChange: (n: number
   return (
     <span className="stars" role="radiogroup" aria-label="Rating">
       {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} role="radio" aria-checked={value === n} className={n <= value ? 'on' : ''} onClick={() => onChange(value === n ? 0 : n)} aria-label={`${n} star${n > 1 ? 's' : ''}`}>★</button>
+        <button key={n} role="radio" aria-checked={value === n} className={n <= value ? 'stars-btn on' : 'stars-btn'} onClick={() => onChange(value === n ? 0 : n)} aria-label={`${n} star${n > 1 ? 's' : ''}`}>★</button>
       ))}
     </span>
   );
@@ -23,9 +24,9 @@ export function TagsEditor({ tags, all, onChange }: { tags: string[]; all: strin
   const sugg = all.filter((t) => !tags.includes(t) && t.startsWith(v.toLowerCase())).slice(0, 5);
   return (
     <div className="tagbox">
-      <span className="taglist">{tags.map((t) => <button key={t} className="tag" onClick={() => onChange(tags.filter((x) => x !== t))} title="Remove">{t} ×</button>)}</span>
+      <span className="tagbox-list">{tags.map((t) => <button key={t} className="tagbox-chip" onClick={() => onChange(tags.filter((x) => x !== t))} title="Remove">{t} ×</button>)}</span>
       <input value={v} placeholder="Add a tag and press Enter" onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(v); } }} />
-      {v && sugg.length > 0 && <span className="taglist">{sugg.map((t) => <button key={t} className="tag ghost" onClick={() => add(t)}>{t}</button>)}</span>}
+      {v && sugg.length > 0 && <span className="tagbox-list">{sugg.map((t) => <button key={t} className="tagbox-chip is-suggest" onClick={() => add(t)}>{t}</button>)}</span>}
     </div>
   );
 }
@@ -55,7 +56,7 @@ export function CollectionsPage({ cols, art, onPlay, onRename, onDelete, onRemov
             {c.items.map((it, i) => (
               <span key={it.path + i} className="tilewrap">
                 <button className="tilecard" onClick={() => onPlay(it, c.items)}>
-                  <span className="tilecard-art">{art(it)}<span className="go"><Icon n="play" s={18} /></span></span>
+                  <span className="tilecard-art">{art(it)}<span className="tile-go"><Icon n="play" s={18} /></span></span>
                   <span className="tilecard-t" title={base(it.path)}>{base(it.path).replace(/\.[^.]+$/, '')}</span>
                 </button>
                 <button className="tile-x" onClick={() => onRemove(c, i)} aria-label="Remove from collection" title="Remove from this collection">×</button>
@@ -147,14 +148,13 @@ export function HomeCustomize({ rows, onChange, onClose }: { rows: HomeRow[]; on
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog de-settings hc-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Customise Home">
-        <div className="set-accent" aria-hidden="true" />
-        <div className="dlg-head">
+      <div className="dialog hc-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Customise Home">
+        <div className="hc-head">
           <div>
             <h3>Customise Home</h3>
-            <span className="dlg-sub">Move rows between columns</span>
+            <span className="hc-sub muted small">Move rows between columns</span>
           </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+          <button className="icon sm" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
         </div>
 
         <div className="hc-cols">
@@ -164,7 +164,7 @@ export function HomeCustomize({ rows, onChange, onClose }: { rows: HomeRow[]; on
               {visible.map((r, i) => (
                 <li key={r.id}>
                   <label>
-                    <input type="checkbox" checked onChange={() => toggle(r.id)} />
+                    <input type="checkbox" className="hc-check" checked onChange={() => toggle(r.id)} />
                     <span>{r.label}</span>
                   </label>
                   <span className="hc-order">
@@ -183,7 +183,7 @@ export function HomeCustomize({ rows, onChange, onClose }: { rows: HomeRow[]; on
               {hidden.map((r) => (
                 <li key={r.id}>
                   <label>
-                    <input type="checkbox" checked={false} onChange={() => toggle(r.id)} />
+                    <input type="checkbox" className="hc-check" checked={false} onChange={() => toggle(r.id)} />
                     <span>{r.label}</span>
                   </label>
                 </li>
@@ -193,7 +193,7 @@ export function HomeCustomize({ rows, onChange, onClose }: { rows: HomeRow[]; on
           </div>
         </div>
 
-        <div className="dlg-actions"><button className="btn" onClick={onClose}>Done</button></div>
+        <div className="hc-foot"><button className="btn" onClick={onClose}>Done</button></div>
       </div>
     </div>
   );
@@ -351,7 +351,7 @@ export function RuleDialog({ root, dir, label, onClose, onDone }: { root: number
             <h3>Auto-save</h3>
             <span className="dlg-sub">{label}</span>
           </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+          <button className="icon sm" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
         </div>
         <button className={mode === 'next3' ? 'opt on' : 'opt'} onClick={() => setMode('next3')}><span><b>Keep the next 3 unwatched episodes</b><small>As you watch, the following episodes are saved to this laptop</small></span></button>
         <button className={mode === 'new' ? 'opt on' : 'opt'} onClick={() => setMode('new')}><span><b>Save new episodes</b><small>Anything added to this folder from now on</small></span></button>

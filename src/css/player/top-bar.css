@@ -91,3 +91,5 @@
 .skipintro { right: 14px; bottom: 110px; font-size: 12.5px; padding: 8px 13px; }
 .skipintro { bottom: 120px; }
 .theatre:not(.float) .spin { transform: scale(var(--ui, 1)); }
+/* belongs in player/top-bar (moved here from shell/download-tray) */
+.ttl strong { font: 500 18px var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

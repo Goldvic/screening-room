@@ -32,10 +32,6 @@ html[data-eco="1"] .menu { background: rgba(14,14,20,.96); }
 /* belongs in overlays/command-palette (kept here so the look stays identical) */
 .pal-list button.on { background: color-mix(in srgb, var(--lamp) 22%, transparent); }
 .swatches { display: flex; gap: 8px; }
-/* belongs in components/stars-tags (kept here so the look stays identical) */
-.stars button.on { color: #f2b84b; }
-/* belongs in components/stars-tags (kept here so the look stays identical) */
-.stars button:hover { color: #f2b84b; }
 /* belongs in pages/library (kept here so the look stays identical) */
 .season-tabs button.on { background: var(--lamp); color: #111; font-weight: 600; }
 .chlist { display: grid; gap: 4px; }

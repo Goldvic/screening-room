@@ -38,8 +38,6 @@
 .sheet-grid span { color: var(--mute); font-size: 12.5px; }
 .sumline { margin: 10px 2px 2px; font-size: 13.5px; }
 .sumline b { font-size: 15px; }
-/* belongs in components/stars-tags (kept here so the look stays identical) */
-.stars button { font-size: 22px; line-height: 1; color: var(--line); padding: 2px; }
 /* belongs in pages/library (kept here so the look stays identical) */
 .season-tabs button { padding: 6px 14px; border-radius: 999px; background: var(--raise); color: var(--mute); font-weight: 500; }
 /* belongs in components/shared (kept here so the look stays identical) */
@@ -112,12 +110,6 @@
   .menu-tabs button { padding: 6px 10px !important; font-size: 11.5px !important; }
 }
 
-/* belongs in shell/download-tray (kept here so the look stays identical) */
-.dl-top b {
-  font: 650 14px var(--sans);
-  font-variant-numeric: tabular-nums;
-  color: var(--lamp);
-}
 .budget .bar > i.enc { background: #f0a090; }
 /* belongs in settings/auto-save-rules (kept here so the look stays identical) */
 .sched-row b { display: block; font: 550 13px var(--sans); }
@@ -154,15 +146,6 @@
   gap: 8px;
   font: 600 14px var(--sans);
 }
-/* belongs in components/stars-tags (kept here so the look stays identical) */
-.stars button {
-  background: none;
-  border: 0;
-  color: rgba(255,255,255,.25);
-  font-size: 18px;
-  padding: 0 2px;
-  transition: color .12s, transform .12s;
-}
 /* belongs in pages/library (kept here so the look stays identical) */
 .lib-sort-menu button,
 .lib-bar.c3 .lib-menu button,
@@ -179,24 +162,6 @@
   font: 500 13px var(--sans);
   text-align: left;
   text-decoration: none;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.mag-prog b {
-  display: block;
-  height: 100%;
-  background: var(--lamp);
-  border-radius: 99px;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.mag-side-bar b {
-  display: block;
-  height: 100%;
-  background: var(--lamp);
-  border-radius: 99px;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.stat-pill b {
-  font-weight: 600;
 }
 /* belongs in overlays/data-panel (kept here so the look stays identical) */
 .dp-pick button {

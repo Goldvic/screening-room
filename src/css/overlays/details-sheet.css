@@ -37,13 +37,6 @@
 }
 
 /* belongs in components/shared (kept here so the look stays identical) */
-.rail-h h2 {
-  font: 650 15px/1.2 var(--sans);
-  margin: 0;
-  letter-spacing: -.015em;
-  color: var(--text);
-}
-/* belongs in components/shared (kept here so the look stays identical) */
 .empty h2 {
   font: 700 20px var(--sans);
   margin: 4px 0 0;
@@ -57,10 +50,4 @@
   background: rgba(255,255,255,.08);
   margin-top: 6px;
   overflow: hidden;
-}
-/* belongs in components/shared (kept here so the look stays identical) */
-.rail-h h2 {
-  font: 650 15px/1.2 var(--sans);
-  letter-spacing: -.015em;
-  color: var(--text);
 }

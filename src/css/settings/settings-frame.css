@@ -6,8 +6,6 @@
 .toggle { padding: 2px; }
 /* belongs in components/shared (kept here so the look stays identical) */
 .test { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
-/* belongs in shell/download-tray (kept here so the look stays identical) */
-.tray { position: fixed; right: 18px; bottom: 18px; width: min(360px, 92vw); display: grid; gap: 8px; z-index: 35; }
 /* belongs in player/top-bar (kept here so the look stays identical) */
 .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 99px; background: rgba(255,255,255,.1); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* belongs in components/shared (kept here so the look stays identical) */
@@ -420,8 +418,6 @@
   .field-c { width: 100%; justify-content: flex-start; }
 }
 
-/* belongs in shell/download-tray (kept here so the look stays identical) */
-.dl-top small { color: var(--mute); }
 /* belongs in components/shared (kept here so the look stays identical) */
 .budget {
   padding: 10px 16px;
@@ -606,34 +602,6 @@
   background: rgba(255,255,255,.03);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
   border: none;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.hc-list input[type="checkbox"] {
-  flex: none;
-  width: 15px;
-  height: 15px;
-  accent-color: var(--lamp, #3b82f6);
-  cursor: pointer;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.dialog.hc-dialog .dlg-head {
-  padding: 16px 18px 12px;
-  flex: none;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.mag-feature-art .art,
-.mag-feature-art img,
-.mag-feature-art video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-.mag-side-art .art,
-.mag-side-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 /* belongs in overlays/data-panel (kept here so the look stays identical) */
 .dp-hero-top {

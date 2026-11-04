@@ -54,8 +54,6 @@
 .selmark.inrow { top: 50%; left: 14px; transform: translateY(-50%); }
 .row.picked, .poster.picked .frame { outline: 2px solid var(--lamp); outline-offset: -2px; }
 .row .selmark + .open { padding-left: 34px; }
-/* belongs in components/shared (kept here so the look stays identical) */
-.tilecard .go { opacity: 0; }
 .series-head { display: flex; gap: 18px; align-items: center; padding: 14px; margin-bottom: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
 .series-art { position: relative; flex: 0 0 150px; aspect-ratio: 16/10; border-radius: 10px; overflow: hidden; display: block; }
 .series-head h1 { font: 800 22px/1.15 var(--sans); letter-spacing: -.02em; margin: 0 0 2px; }
@@ -180,27 +178,6 @@ html.pop .seldock, html.pop .lib-bar { display: none !important; }
   flex: none;
   opacity: 0;
   transition: opacity .15s ease;
-}
-/* belongs in components/shared (kept here so the look stays identical) */
-.tilecard .go {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(0,0,0,.35);
-  opacity: 0;
-  transition: opacity .15s;
-  color: #fff;
-}
-/* belongs in components/shared (kept here so the look stays identical) */
-.tilecard .go svg {
-  width: 40px;
-  height: 40px;
-  padding: 10px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.92);
-  color: #111;
-  box-shadow: 0 6px 20px rgba(0,0,0,.35);
 }
 /* belongs in components/shared (kept here so the look stays identical) */
 .empty p {

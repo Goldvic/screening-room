@@ -1,22 +1,106 @@
-/* Styles for components/stars-tags */
+/* components/stars-tags
+   Used by Extras.tsx: Stars (rating) and TagsEditor (tag chips + input).
+   Classes: stars, stars-btn, tagbox, tagbox-list, tagbox-chip (.is-suggest) */
 
-/* stars and tags */
-.stars { display: inline-flex; gap: 2px; }
-.tagbox { display: grid; gap: 6px; }
-.taglist { display: flex; flex-wrap: wrap; gap: 5px; }
-.stars button:hover { transform: scale(1.1); }
-.tagbox .tag {
-  border-radius: 99px;
+/* ---------- Layout ---------- */
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.stars-btn {
+  padding: 2px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.tagbox {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.tagbox-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tagbox-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
   padding: 4px 10px;
-  font: 500 12px var(--sans);
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font: 500 var(--fs-sm)/1.4 var(--sans);
+}
+
+/* ---------- Colors ---------- */
+.stars-btn {
+  color: color-mix(in srgb, var(--mute) 45%, transparent);
+}
+.stars-btn.on {
+  color: var(--warn);
+}
+
+.tagbox-chip {
+  background: var(--wash-2);
   color: var(--text);
 }
-.tagbox .tag.ghost {
+.tagbox-chip.is-suggest {
+  border-style: dashed;
   background: transparent;
   color: var(--mute);
 }
-.tagbox .tag:hover {
-  background: rgba(255,255,255,.1);
+
+/* ---------- States ---------- */
+.stars-btn {
+  transition: color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+/* Hover previews the rating: fills up to the hovered star. */
+.stars:hover .stars-btn {
+  color: var(--warn);
+}
+.stars:hover .stars-btn:hover ~ .stars-btn {
+  color: color-mix(in srgb, var(--mute) 45%, transparent);
+}
+.stars-btn:hover {
+  transform: scale(1.12);
+}
+.stars-btn:active {
+  transform: scale(.95);
+}
+
+.tagbox-chip {
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.tagbox-chip:hover {
+  background: var(--wash-3);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.tagbox-chip.is-suggest:hover {
+  background: var(--lamp-soft);
+  border-color: var(--lamp-line);
+  color: var(--lamp);
+}
+.tagbox-chip:active {
+  background: var(--wash-4);
+}
+
+.stars-btn:disabled,
+.tagbox-chip:disabled {
+  opacity: .4;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ---------- Compact mode ---------- */
+html[data-compact="1"] .stars-btn {
+  font-size: 18px;
+}
+html[data-compact="1"] .tagbox-chip {
+  padding: 2px 8px;
+  font-size: var(--fs-xs);
 }

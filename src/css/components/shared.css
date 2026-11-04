@@ -171,32 +171,8 @@
 /* ================= PARKED: belongs in other files, kept so nothing breaks =================
    Do not add to this section. Remove each block when its file is redesigned. */
 
-/* -> components/rails-tiles */
-.rail { display: grid; gap: 0; }
-.rail-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.rail-h h2 { display: flex; align-items: center; gap: 10px; margin: 0; font: 700 18px var(--sans); letter-spacing: -.01em; }
-.rail-h h2 i { display: none; }
-.rail-row { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: var(--wash-3) transparent; }
-.rail .rail-row { gap: 16px; }
-.tilecard { flex: 0 0 168px; display: grid; align-content: start; gap: 6px; padding: 0; border: 0; background: transparent; color: var(--text); text-align: left; scroll-snap-align: start; cursor: pointer; }
-.tilecard-art { position: relative; display: block; aspect-ratio: 16/10; border-radius: var(--r); overflow: hidden; background: linear-gradient(145deg, hsl(var(--h, 220) 28% 20%), var(--panel)); box-shadow: var(--shadow-2); transition: transform var(--t-med), box-shadow var(--t-med); }
-.tilecard:hover .tilecard-art { transform: translateY(-3px); box-shadow: var(--shadow-3); }
-.tilecard:hover .go, .tilecard:focus-visible .go { opacity: 1; }
-.tilecard-t { overflow: hidden; font: 600 13px/1.25 var(--sans); letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
-.tilecard .small.muted { color: var(--mute); font-size: 11.5px; }
+/* -> pages/library */
 .go { position: absolute; top: 12px; right: 12px; z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--lamp); color: var(--on-lamp); }
-.rail .tilecard, .rail .tilewrap { flex: 0 0 236px; }
-.rail .tilecard-art { border-radius: var(--r-lg); }
-.rail .tilecard-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--shade-1), transparent 45%); pointer-events: none; }
-.rail .tilecard .go { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; }
-.rail .tilecard .go svg { width: 44px; height: 44px; padding: 13px; border-radius: 50%; background: var(--lamp); color: var(--on-lamp); box-shadow: var(--shadow-2); }
-.rail .tilecard-t { margin-top: 4px; font-size: 13.5px; }
-@media (max-width: 640px) { .tilecard { flex-basis: 148px; } }
-
-/* -> pages/home */
-.resume h2 { margin: 0 0 var(--sp-2); color: var(--mute); font: 600 var(--fs-sm) var(--sans); letter-spacing: .08em; text-transform: uppercase; }
-html[data-compact="1"] .home { gap: 16px; }
-.shell.tn .home { gap: 28px; }
 
 /* -> shell/topnav and shell/app-frame */
 .tn-back { position: fixed; inset: 0; z-index: 29; }

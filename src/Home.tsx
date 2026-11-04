@@ -1,5 +1,6 @@
 import { CSSProperties, useRef } from 'react';
 import { Icon, Prog, SavedList, bytes, clock, hue, pct } from './lib';
+import './css/pages/home.css';
 
 export type HomeCard = { k: string; rid: number; dir: string; name: string; p?: Prog; offlineRel?: string };
 export type SavedFile = { rel: string; name: string; size: number; mtime: number };
@@ -33,10 +34,10 @@ export function Tile({ name, sub, progress, onClick, art, badge }: {
 }) {
   return (
     <button className="tilecard" style={{ '--h': hue(name) } as CSSProperties} onClick={onClick}>
-      <span className="tilecard-art">{art}{badge && <span className="badge-s">{badge}</span>}<span className="go"><Icon n="play" s={18} /></span>
-        {progress ? <i className="prog"><b style={{ width: `${progress}%` }} /></i> : null}</span>
+      <span className="tilecard-art">{art}{badge && <span className="tile-badge">{badge}</span>}<span className="tile-go"><Icon n="play" s={18} /></span>
+        {progress ? <i className="tile-prog"><b style={{ width: `${progress}%` }} /></i> : null}</span>
       <span className="tilecard-t" title={name}>{name.replace(/\.[^.]+$/, '')}</span>
-      {sub && <span className="small muted">{sub}</span>}
+      {sub && <span className="tilecard-sub">{sub}</span>}
     </button>
   );
 }
@@ -59,8 +60,8 @@ export function Hero({ title, line, eyebrow, art, onPlay, onMore, label, progres
         {line && <p>{line}{left ? ` · ${left}` : ''}</p>}
         {progress ? <i className="mag-prog"><b style={{ width: `${progress}%` }} /></i> : null}
         <div className="mag-actions">
-          <button className="btn big" onClick={onPlay}><Icon n="play" s={18} /> {label}</button>
-          {onMore && <button className="btn ghost big" onClick={onMore}><Icon n="info" s={16} /> Details</button>}
+          <button className="mag-play" onClick={onPlay}><Icon n="play" s={18} /> {label}</button>
+          {onMore && <button className="mag-more" onClick={onMore}><Icon n="info" s={16} /> Details</button>}
         </div>
       </div>
     </div>
@@ -90,17 +91,17 @@ export function Today({ minutes, goal, onGoal, facts }: { minutes: number; goal:
   const f = Math.min(1, minutes / Math.max(1, goal));
   const C = 2 * Math.PI * 9;
   return (
-    <section className="today pills">
-      <button className="stat-pill ring-pill" onClick={onGoal} title="Change your daily goal">
+    <section className="home-stats">
+      <button className="home-stat is-link" onClick={onGoal} title="Change your daily goal">
         <svg viewBox="0 0 24 24" width="22" height="22">
-          <circle cx="12" cy="12" r="9" className="ring-bg" />
-          <circle cx="12" cy="12" r="9" className="ring-fg" strokeDasharray={`${C * f} ${C}`} transform="rotate(-90 12 12)" />
+          <circle cx="12" cy="12" r="9" className="home-ring-bg" />
+          <circle cx="12" cy="12" r="9" className="home-ring-fg" strokeDasharray={`${C * f} ${C}`} transform="rotate(-90 12 12)" />
         </svg>
         <span><b>{minutes}</b> <em>of {goal} min today</em></span>
       </button>
       {facts.map((x) => (x.onClick
-        ? <button key={x.label} className="stat-pill" onClick={x.onClick}><b>{x.value}</b> <em>{x.label}</em></button>
-        : <span key={x.label} className="stat-pill"><b>{x.value}</b> <em>{x.label}</em></span>))}
+        ? <button key={x.label} className="home-stat is-link" onClick={x.onClick}><b>{x.value}</b> <em>{x.label}</em></button>
+        : <span key={x.label} className="home-stat"><b>{x.value}</b> <em>{x.label}</em></span>))}
     </section>
   );
 }

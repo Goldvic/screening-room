@@ -91,8 +91,6 @@
   transform: scale(1.2);
   box-shadow: 0 0 8px color-mix(in srgb, var(--lamp) 40%, transparent);
 }
-/* belongs in components/stars-tags (kept here so the look stays identical) */
-.stars button.on { color: #f2b84b; }
 /* belongs in pages/library (kept here so the look stays identical) */
 .lib-sort-menu button:hover,
 .lib-bar.c3 .lib-menu button:hover,
@@ -102,10 +100,6 @@
 /* belongs in pages/library (kept here so the look stays identical) */
 .lib-sort-menu button.on {
   background: color-mix(in srgb, var(--lamp) 14%, transparent);
-}
-/* belongs in pages/home (kept here so the look stays identical) */
-button.stat-pill:hover {
-  background: rgba(255,255,255,.06);
 }
 /* ── Data panel: Budget First (laptop) ──────────────────────────────── */
 .dpanel.dp-budget-first {

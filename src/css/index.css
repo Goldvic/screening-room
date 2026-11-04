@@ -3,7 +3,6 @@
 @import './core/base.css';
 @import './pages/discover.css';
 @import './player/top-bar.css';
-@import './pages/collections.css';
 @import './components/shared.css';
 @import './player/player-frame.css';
 @import './player/seek-bar.css';
@@ -15,7 +14,6 @@
 @import './pages/library.css';
 @import './shell/net-meter.css';
 @import './shell/download-tray.css';
-@import './components/stars-tags.css';
 @import './player/next-card.css';
 @import './player/menu.css';
 @import './settings/auto-save-rules.css';
@@ -24,7 +22,6 @@
 @import './shell/app-frame.css';
 @import './overlays/tour.css';
 @import './overlays/details-sheet.css';
-@import './pages/home.css';
 @import './overlays/data-panel.css';
 @import './pages/insights.css';
 @import './components/rails-tiles.css';
