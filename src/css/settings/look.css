@@ -12,7 +12,6 @@
   gap: var(--sp-4);
 }
 
-/* A block in this tab is a compact .s-block with the same internals. */
 .look-block {
   padding: var(--sp-5);
   border: 1px solid var(--line);
@@ -228,7 +227,7 @@
 }
 .look-preset[aria-label="Paper (light)"] svg { color: #000; filter: none; }
 
-/* ---------- Display (uses .s-toggle-row) ---------- */
+/* ---------- Display (FIXED LAYOUT) ---------- */
 
 .look-toggles {
   display: flex;
@@ -236,7 +235,39 @@
   gap: 0;
 }
 
-/* ---------- Library & Metadata (uses .s-field) ---------- */
+.look-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.look-toggle-row:first-child { padding-top: 0; }
+.look-toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+/* Forces the text container to take up space and stack vertically */
+.look-toggle-row > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.look-toggle-row b {
+  display: block;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+}
+.look-toggle-row small {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  line-height: 1.35;
+}
+
+/* ---------- Library & Metadata ---------- */
 
 .look-icon-title {
   display: flex;
@@ -266,6 +297,8 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 .look-field-info b { font-size: var(--fs-md); font-weight: 600; }
 .look-field-info small { font-size: var(--fs-sm); }
@@ -273,6 +306,7 @@
 .look-field-input {
   display: flex;
   gap: var(--sp-2);
+  align-items: stretch;
 }
 .input-with-icon {
   flex: 1;
@@ -348,8 +382,6 @@
   font-weight: 600;
   margin-top: 2px;
 }
-
-/* ================= RESPONSIVE ================= */
 
 @media (max-width: 720px) {
   .look-grid { grid-template-columns: 1fr; }

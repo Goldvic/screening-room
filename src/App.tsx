@@ -171,6 +171,36 @@ function Shell() {
     const f = await bridge?.selectFiles([{ name: 'Videos', extensions: VIDEO_EXTS }]);
     if (f?.length) openLocal(f);
   };
+
+  // Global Zoom handling (Ctrl + / Ctrl - / Ctrl 0)
+  useEffect(() => {
+    if (!bridge) return;
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      
+      // Catch '=', '+', 'Add' (numpad)
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        bridge!.zoomIn();
+      } 
+      // Catch '-', '_', 'Subtract' (numpad)
+      else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        bridge!.zoomOut();
+      } 
+      // Catch '0' to reset
+      else if (e.key === '0') {
+        e.preventDefault();
+        bridge!.zoomReset();
+      }
+    };
+    
+    // Use capture phase so it intercepts the key before the player does
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+
   useEffect(() => {
     if (!bridge) return;
     bridge.takePendingOpen().then((f) => { if (f) openRef.current([f]); }).catch(() => {});
@@ -381,11 +411,15 @@ function Shell() {
     const r = roots.find((x) => x.name === k.slice(0, i));
     return r ? { k, p, rid: r.id, dir: parts.slice(0, -1).join('/'), name: parts[parts.length - 1] } : null;
   };
-  const resumable = useMemo(() =>
-    Object.entries(prog)
+  const resumable = useMemo(() => {
+    const seenNames = new Set<string>();
+    return Object.entries(prog)
       .filter(([, p]) => !p.watched && p.pos > 30 && p.dur > 0 && p.pos / p.dur < 0.9)
-      .sort((a, b) => b[1].updated - a[1].updated).slice(0, 10)
-      .map(([k, p]) => cardOf(k, p)).filter((x): x is Card => !!x), [prog, roots]); // eslint-disable-line react-hooks/exhaustive-deps
+      .sort((a, b) => b[1].updated - a[1].updated)
+      .map(([k, p]) => cardOf(k, p)).filter((x): x is Card => !!x)
+      .filter((x) => { const n = x.name.toLowerCase(); if (seenNames.has(n)) return false; seenNames.add(n); return true; })
+      .slice(0, 10);
+  }, [prog, roots]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (view !== 'home' || resumable.length < 2) return;
     const t = setInterval(() => setHeroI((i) => i + 1), 9000);
@@ -521,6 +555,9 @@ function Shell() {
           const t = hero ? parseTitle(hero.name, hero.dir) : first ? parseTitle(first.name) : null;
           const recent = [...items].sort((a, b) => b.mtime - a.mtime).slice(0, 14);
           const cardArt = (x: { rid: number; dir: string; name: string }) => <Art root={x.rid} path={join(x.dir, x.name)} v={0} name={x.name} />;
+          const sides = resumable.filter((x) => !hero || x.k !== hero.k).slice(0, 4);
+          const onTop = new Set([hero?.k, ...sides.map((x) => x.k)]);
+          const moreResumable = resumable.filter((x) => !onTop.has(x.k));
           const goal = prefs.goal ?? 30;
           const hh = new Date().getHours();
           const hello = hh < 5 ? 'Late night' : hh < 12 ? 'Good morning' : hh < 18 ? 'Good afternoon' : 'Good evening';
@@ -535,9 +572,9 @@ function Shell() {
           const saved = prefs.homeRows ?? [];
           const order: HomeRow[] = [...saved.filter((x) => DEFAULT_ROWS.some((d) => d.id === x.id)).map((x) => ({ ...DEFAULT_ROWS.find((d) => d.id === x.id)!, on: x.on })), ...DEFAULT_ROWS.filter((d) => !saved.some((x) => x.id === d.id))];
           const rowsJsx: Record<string, React.ReactNode> = {
-            continue: resumable.length > 1 ? (
+            continue: moreResumable.length > 0 ? (
               <Rail key="continue" title="Continue watching">
-                {resumable.slice(1).map((x) => <Tile key={x.k} name={x.name} sub={x.p ? `${clock(x.p.pos)} of ${clock(x.p.dur)}` : ''} progress={progPct(x.p)} art={cardArt(x)} onClick={() => startPlay(x.name, x.rid, x.dir)} />)}
+                {moreResumable.map((x) => <Tile key={x.k} name={x.name} sub={x.p ? `${clock(x.p.pos)} of ${clock(x.p.dur)}` : ''} progress={progPct(x.p)} art={cardArt(x)} onClick={() => startPlay(x.name, x.rid, x.dir)} />)}
               </Rail>
             ) : null,
             because: because ? (
@@ -574,7 +611,6 @@ function Shell() {
               </Rail>
             ) : null,
           };
-          const sides = resumable.filter((x) => !hero || x.k !== hero.k).slice(0, 4);
           return (
             <div className="home mag-home">
               <div className="home-head">
@@ -583,20 +619,20 @@ function Shell() {
               </div>
 
               {hero && t ? (
-                <div className="mag">
+                <div className={'mag' + (sides.length ? '' : ' mag-alone')}>
                   <Hero key={hero.k} eyebrow="Continue watching"
                     title={t.title + (t.season ? ` · S${String(t.season).padStart(2, '0')}E${String(t.episode).padStart(2, '0')}` : '')}
                     line={hero.p ? `${clock(hero.p.pos)} watched of ${clock(hero.p.dur)}` : ''} left={hero.p && hero.p.dur > hero.p.pos ? `${clock(hero.p.dur - hero.p.pos)} left` : ''}
                     progress={progPct(hero.p)} label="Resume" art={cardArt(hero)}
                     onPlay={() => startPlay(hero.name, hero.rid, hero.dir)} onMore={() => { setRoot(hero.rid); setDir(hero.dir); setDetail(hero.name); }} />
-                  {sides.map((x) => {
+                  {sides.length > 0 && <div className="mag-sides">{sides.map((x) => {
                     const pt = parseTitle(x.name, x.dir);
                     const sub = x.p ? `${pt.season ? `S${String(pt.season).padStart(2, '0')}E${String(pt.episode).padStart(2, '0')} · ` : ''}${clock(Math.max(0, (x.p.dur || 0) - (x.p.pos || 0)))} left` : pt.season ? `S${String(pt.season).padStart(2, '0')}E${String(pt.episode).padStart(2, '0')}` : undefined;
                     return (
                       <MagSide key={x.k} title={pt.title} sub={sub} progress={progPct(x.p)} art={cardArt(x)}
                         onClick={() => startPlay(x.name, x.rid, x.dir)} />
                     );
-                  })}
+                  })}</div>}
                 </div>
               ) : first && t ? (
                 <div className="mag mag-solo">

@@ -8,7 +8,7 @@
 
 /* Tile width is set once per rail so the arrows can centre on the artwork. */
 .rail {
-  --tile-w: 236px;
+  --tile-w: 184px;
   display: grid;
 }
 

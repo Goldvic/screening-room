@@ -1,68 +1,123 @@
-/* Settings/Offline: Storage, while watching, download behaviour, compression, space. */
+/* Settings/Offline: Storage, space management, download behaviour, compression. */
 
 .off-panel {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  padding-bottom: var(--sp-2);
 }
 
-.off-block {
-  padding: var(--sp-4);
+/* Automatically switches to a single column if the dialog gets too narrow */
+.off-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.off-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0; /* Prevents grid blowout */
+}
+
+/* Modern Card Design */
+.off-card {
+  padding: var(--sp-5);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  background: var(--wash-1);
+  background: var(--panel);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02), 0 4px 20px rgba(0,0,0,.1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
 }
-.off-block-h { margin-bottom: var(--sp-4); }
-.off-block-h h4 {
+
+.off-card-h {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+.off-card-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--lamp-soft);
+  color: var(--lamp);
+  flex: none;
+}
+.off-card-h h4 {
   margin: 0 0 2px;
-  font: 650 var(--fs-sm)/1.2 var(--sans);
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  font: 650 var(--fs-lg)/1.2 var(--sans);
+  color: var(--text);
+  letter-spacing: -.01em;
+}
+.off-card-h p {
+  margin: 0;
+  line-height: 1.35;
+  font-size: var(--fs-sm);
   color: var(--mute);
 }
-.off-block-h p {
-  margin: 0;
-  line-height: 1.4;
-  word-break: break-all;
+
+/* Storage Path */
+.off-path {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--wash-2);
+  border: 1px solid var(--line);
+  font: 500 var(--fs-sm) var(--mono);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .off-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-2);
+  gap: 8px;
 }
 
-/* Toggle rows. */
-.off-toggles { display: flex; flex-direction: column; gap: 2px; }
+/* Fields & Toggles inside cards */
+.off-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.off-field:last-child { border-bottom: none; padding-bottom: 0; }
+.off-field-label b { display: block; font-size: var(--fs-md); font-weight: 600; }
+.off-field-label small { display: block; font-size: var(--fs-sm); color: var(--mute); margin-top: 2px; }
+
+.off-toggles { display: flex; flex-direction: column; gap: 0; }
 .off-toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-1);
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
-.off-toggle-row:last-child { border-bottom: none; padding-bottom: 2px; }
-.off-toggle-row b { display: block; font-size: var(--fs-md); font-weight: 600; }
-.off-toggle-row small { display: block; font-size: var(--fs-sm); color: var(--mute); margin-top: 2px; line-height: 1.35; }
-
-/* Fields. */
-.off-field {
+.off-toggle-row:first-child { padding-top: 0; }
+.off-toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.off-toggle-row > div {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-1);
-  border-bottom: 1px solid var(--line);
+  gap: 2px;
 }
-.off-field:last-child { border-bottom: none; }
-.off-field-label b { display: block; font-size: var(--fs-md); font-weight: 600; }
-.off-field-label small { display: block; font-size: var(--fs-sm); color: var(--mute); margin-top: 2px; }
+.off-toggle-row b { display: block; font-size: var(--fs-md); font-weight: 600; }
+.off-toggle-row small { display: block; font-size: var(--fs-xs); color: var(--mute); }
 
-/* Chips (match .s-chips / .s-chip). */
-.off-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+/* Chips (match .play-chips) */
+.off-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .off-chip {
-  padding: 7px 12px;
+  padding: 6px 12px;
   border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--wash-2);
@@ -80,14 +135,15 @@
   color: var(--lamp);
 }
 
-/* Segmented control (match .s-seg). */
+/* Segmented Control */
 .off-seg {
   display: flex;
-  padding: 3px;
-  gap: 2px;
+  padding: 4px;
+  gap: 4px;
   background: var(--wash-2);
-  border-radius: var(--r);
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
+  width: 100%;
 }
 .off-seg button {
   flex: 1;
@@ -95,32 +151,40 @@
   background: transparent;
   color: var(--mute);
   font: 500 var(--fs-sm) var(--sans);
-  padding: 6px 12px;
-  border-radius: var(--r-sm);
+  padding: 8px 4px;
+  border-radius: var(--r-pill);
   cursor: pointer;
   transition: all var(--t-fast);
   text-align: center;
+  white-space: nowrap;
 }
+.off-seg button:hover { color: var(--text); }
 .off-seg button.on {
   background: var(--lamp);
   color: var(--on-lamp);
   font-weight: 600;
+  box-shadow: var(--shadow-1);
 }
 
-/* Time inputs. */
+/* Time Inputs */
 .off-time-row {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 8px;
   flex-wrap: wrap;
-  padding: var(--sp-2) var(--sp-1) var(--sp-3);
+  padding: 8px 0;
 }
 .off-time-row input[type="time"],
 .off-time-row input[type="number"] {
-  padding: 7px 10px;
+  padding: 6px 10px;
   border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--wash-2);
   color: var(--text);
   font: 500 var(--fs-sm) var(--sans);
+}
+.off-time-row input:focus {
+  outline: none;
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 3px var(--lamp-soft);
 }

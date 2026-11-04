@@ -127,7 +127,7 @@
   gap: var(--sp-4);
   scrollbar-width: thin;
   scrollbar-color: var(--wash-3) transparent;
-  min-width: 0;                    /* prevent long <code> from blowing the panel out */
+  min-width: 0;
 }
 .set-content::-webkit-scrollbar { width: 8px; }
 .set-content::-webkit-scrollbar-thumb { background: var(--wash-3); border-radius: var(--r-pill); }
@@ -182,18 +182,21 @@
   box-shadow: 0 0 0 3px var(--lamp-soft);
 }
 
+/* ================= FIXED TOGGLE SWITCH ================= */
+
 .toggle {
   width: 44px;
   height: 26px;
   border-radius: var(--r-pill);
-  background: var(--wash-3);
+  background: var(--line); /* FIX: Solid background for the track */
   border: 0;
   position: relative;
   transition: background var(--t-fast);
   padding: 0;
-  flex: none;
+  flex: none; /* FIX: Prevents the button from squishing */
   cursor: pointer;
 }
+
 .toggle .sw {
   position: absolute;
   top: 3px;
@@ -208,6 +211,7 @@
   margin: 0;
   padding: 0;
 }
+
 .toggle .sw::after { content: none; }
 .toggle .sw.on { transform: translateX(18px); }
 .toggle[aria-checked="true"],
@@ -249,8 +253,6 @@
     height: 90vh;
   }
 
-  /* Sidebar becomes a horizontal header: title + close on one line,
-     search on a second line, tabs on a third horizontal scroll strip. */
   .set-sidebar {
     flex-direction: column;
     align-items: stretch;

@@ -1,7 +1,7 @@
 /* pages/home
    Home.tsx (Hero, MagSide, Today, Welcome), App.tsx (home view), Extras.tsx (HomeCustomize).
    Page: home, mag-home, home-head, home-greet
-   Hero grid: mag (.mag-solo), mag-feature, mag-feature-art, mag-feature-shade, mag-feature-body,
+   Hero grid: mag (.mag-solo, .mag-alone), mag-sides, mag-feature, mag-feature-art, mag-feature-shade, mag-feature-body,
               mag-tag, mag-prog, mag-actions, mag-play, mag-more,
               mag-side, mag-side-art, mag-side-shade, mag-side-tag, mag-side-body,
               mag-side-title, mag-side-sub, mag-side-bar
@@ -14,11 +14,11 @@
 .home {
   display: grid;
   align-content: start;
-  gap: 22px;
-  padding-bottom: 28px;
+  gap: 18px;
+  padding-bottom: 24px;
 }
 .home.mag-home {
-  max-width: 1280px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
@@ -29,17 +29,17 @@
   gap: var(--sp-3);
 }
 
-/* ----- hero grid: 12 columns, hero spans 8, sides fill 4 (2 + 2) ----- */
+/* ----- hero grid: feature card (8 columns) next to a column of small cards (4 columns) ----- */
 .mag {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-auto-rows: minmax(160px, auto);
+  align-items: stretch;
   gap: var(--sp-3);
   min-height: 0;
 }
-.mag.mag-solo {
+.mag.mag-solo,
+.mag.mag-alone {
   grid-template-columns: 1fr;
-  grid-auto-rows: auto;
 }
 
 .mag-feature,
@@ -53,22 +53,29 @@
 
 .mag-feature {
   grid-column: 1 / span 8;
-  grid-row: 1 / span 2;
-  min-height: 0;
-  aspect-ratio: 16 / 9;
+  min-height: 250px;
+  max-height: 340px;
 }
-.mag.mag-solo .mag-feature {
+.mag.mag-solo .mag-feature,
+.mag.mag-alone .mag-feature {
   grid-column: 1 / -1;
-  grid-row: auto;
-  aspect-ratio: 21 / 9;
-  min-height: 0;
+  min-height: 220px;
+  max-height: 300px;
 }
 
-/* Sides: the four cells live in a nested 4-col subgrid. */
-.mag > .mag-side:nth-of-type(1) { grid-column: 9 / span 4; grid-row: 1; }
-.mag > .mag-side:nth-of-type(2) { grid-column: 9 / span 4; grid-row: 2; }
-.mag > .mag-side:nth-of-type(3) { grid-column: 9 / span 4; grid-row: 3; }
-.mag > .mag-side:nth-of-type(4) { grid-column: 9 / span 4; grid-row: 4; }
+/* The small cards stack in one column and share the feature's height. */
+.mag-sides {
+  grid-column: 9 / span 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 0;
+}
+.mag-side {
+  flex: 1 1 72px;
+  min-height: 72px;
+  max-height: 104px;
+}
 
 .mag-feature-art,
 .mag-feature-shade,
@@ -95,8 +102,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  max-width: 560px;
-  padding: 22px var(--sp-6);
+  max-width: 520px;
+  padding: 16px var(--sp-5);
 }
 .mag-feature-body h1 { margin: 0; }
 .mag-feature-body p { margin: 0; }
@@ -134,15 +141,15 @@
   align-items: center;
   justify-content: center;
   gap: var(--sp-2);
-  padding: 10px 18px;
+  padding: 8px 16px;
 }
 
 .mag-side-tag {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
   z-index: 2;
-  padding: 3px 7px;
+  padding: 2px 6px;
 }
 .mag-side-body {
   position: relative;
@@ -150,7 +157,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 14px var(--sp-4);
+  padding: 10px var(--sp-3);
 }
 .mag-side-title,
 .mag-side-sub {
@@ -280,7 +287,7 @@
 }
 .mag-feature-body h1 {
   color: var(--on-media);
-  font: 600 clamp(22px, 3.2vw, 32px)/1.1 var(--serif);
+  font: 600 clamp(20px, 2.4vw, 26px)/1.1 var(--serif);
   letter-spacing: -.01em;
 }
 .mag-feature-body p {
@@ -320,7 +327,7 @@
   letter-spacing: .06em;
   text-transform: uppercase;
 }
-.mag-side-title { font: 600 var(--fs-md) var(--sans); }
+.mag-side-title { font: 600 var(--fs-sm) var(--sans); }
 .mag-side-sub { color: var(--on-media-mute); font: 400 var(--fs-xs) var(--sans); }
 
 .home-stat {
@@ -385,42 +392,35 @@
 
 /* ================= COMPACT MODE ================= */
 
-html[data-compact="1"] .home { gap: var(--sp-4); }
-html[data-compact="1"] .mag-feature { aspect-ratio: 21 / 9; }
+html[data-compact="1"] .home { gap: var(--sp-3); }
+html[data-compact="1"] .mag-feature { min-height: 210px; max-height: 280px; }
 
 
 /* ================= RESPONSIVE ================= */
 
-/* 1100px: hero on top, four side cards in a 2×2 grid underneath. */
+/* 1100px: feature on top, the small cards in a 2-column grid underneath. */
 @media (max-width: 1100px) {
-  .mag {
+  .mag { grid-template-columns: 1fr; }
+  .mag-feature,
+  .mag.mag-solo .mag-feature,
+  .mag.mag-alone .mag-feature {
+    grid-column: 1;
+    min-height: 220px;
+    max-height: 300px;
+  }
+  .mag-sides {
+    grid-column: 1;
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(150px, auto);
   }
-  .mag-feature {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    aspect-ratio: 16 / 9;
-  }
-  .mag > .mag-side:nth-of-type(1) { grid-column: 1; grid-row: 2; }
-  .mag > .mag-side:nth-of-type(2) { grid-column: 2; grid-row: 2; }
-  .mag > .mag-side:nth-of-type(3) { grid-column: 1; grid-row: 3; }
-  .mag > .mag-side:nth-of-type(4) { grid-column: 2; grid-row: 3; }
-  .mag.mag-solo .mag-feature { aspect-ratio: 16 / 9; }
+  .mag-side { min-height: 84px; max-height: none; }
 }
 
-/* 640px: single column, hero then one card per row. */
+/* 640px: single column, feature then one card per row. */
 @media (max-width: 640px) {
-  .mag { grid-template-columns: 1fr; }
-  .mag > .mag-side:nth-of-type(1),
-  .mag > .mag-side:nth-of-type(2),
-  .mag > .mag-side:nth-of-type(3),
-  .mag > .mag-side:nth-of-type(4) {
-    grid-column: 1;
-    grid-row: auto;
-  }
-  .mag-feature { aspect-ratio: 16 / 10; }
+  .mag-feature { min-height: 200px; }
   .mag-feature-body { padding: var(--sp-4); }
+  .mag-sides { grid-template-columns: 1fr; }
 
   .hc-cols { grid-template-columns: 1fr; overflow-y: auto; }
   .hc-col + .hc-col { border-left: 0; border-top: 1px solid var(--line); }

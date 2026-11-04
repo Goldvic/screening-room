@@ -29,4 +29,8 @@ contextBridge.exposeInMainWorld('cinema', {
   reveal: (file) => ipcRenderer.invoke('reveal', file),
   openFolder: (dir) => ipcRenderer.invoke('open-folder', dir),
   openTrailer: (key, title) => ipcRenderer.invoke('open-trailer', String(key), String(title || '')),
+  // zoom controls
+  zoomIn: () => ipcRenderer.send('zoom-in'),
+  zoomOut: () => ipcRenderer.send('zoom-out'),
+  zoomReset: () => ipcRenderer.send('zoom-reset'),
 });

@@ -51,6 +51,9 @@ export type Bridge = {
   onUpdate(cb: (s: UpdateState) => void): () => void;
   openFolder(dir: string): Promise<void>;
   openTrailer(key: string, title?: string): Promise<string>;
+  zoomIn(): void;
+  zoomOut(): void;
+  zoomReset(): void;
   version: string;
 };
 export const bridge: Bridge | undefined = typeof window !== 'undefined' ? (window as any).cinema : undefined;

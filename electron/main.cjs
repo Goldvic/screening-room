@@ -271,7 +271,16 @@ function buildMenu() {
     { label: 'Cinema', submenu: [{ role: 'reload' }, { role: 'togglefullscreen' }, { type: 'separator' }, { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => { quitting = true; app.quit(); } }] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'togglefullscreen' }] },
-    { label: 'View', submenu: [{ role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'resetZoom' }, { type: 'separator' }, { role: 'toggleDevTools' }] },
+    { label: 'View', submenu: [
+      { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: (item, focusedWindow) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(focusedWindow.webContents.getZoomLevel() + 0.5); } },
+      { label: 'Zoom In (Shift)', accelerator: 'CmdOrCtrl+Shift+=', click: (item, focusedWindow) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(focusedWindow.webContents.getZoomLevel() + 0.5); } },
+      { label: 'Zoom In (Numpad)', accelerator: 'CmdOrCtrl+numadd', click: (item, focusedWindow) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(focusedWindow.webContents.getZoomLevel() + 0.5); } },
+      { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: (item, focusedWindow) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(focusedWindow.webContents.getZoomLevel() - 0.5); } },
+      { label: 'Zoom Out (Numpad)', accelerator: 'CmdOrCtrl+numsub', click: (item, focusedWindow) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(focusedWindow.webContents.getZoomLevel() - 0.5); } },
+      { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', click: (item, focusedWindow) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(0); } },
+      { type: 'separator' },
+      { role: 'toggleDevTools' }
+    ] },
   ]));
 }
 
@@ -419,6 +428,11 @@ function registerMediaKeys() {
 }
 ipcMain.handle('reveal', (_e, file) => { if (str(file)) shell.showItemInFolder(file); });
 ipcMain.handle('open-folder', (_e, dir) => { if (str(dir)) return shell.openPath(dir); });
+
+// --- ZOOM CONTROLS ---
+ipcMain.on('zoom-in', (e) => { const w = e.sender; w.setZoomLevel(w.getZoomLevel() + 0.5); });
+ipcMain.on('zoom-out', (e) => { const w = e.sender; w.setZoomLevel(w.getZoomLevel() - 0.5); });
+ipcMain.on('zoom-reset', (e) => { e.sender.setZoomLevel(0); });
 
 app.on('second-instance', (_e, argv, cwd) => {
   showWin();
