@@ -1,43 +1,47 @@
-/* Settings/Play: Playback, Smart features, Sound, Other players. */
+/* Settings/Play: Premium Layout for Playback, Smart features, Sound, and Other players. */
 
 .play-panel {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  padding-bottom: var(--sp-2);
 }
 
 .play-block {
-  padding: var(--sp-4);
+  padding: var(--sp-5);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--wash-1);
+  display: flex;
+  flex-direction: column;
 }
 
 .play-block-h {
-  margin-bottom: var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
 .play-block-h h4 {
-  margin: 0 0 2px;
-  font: 650 var(--fs-sm)/1.2 var(--sans);
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--mute);
+  margin: 0 0 4px;
+  font: 650 var(--fs-md)/1.2 var(--sans);
+  letter-spacing: .02em;
+  color: var(--text);
 }
 .play-block-h p {
   margin: 0;
+  line-height: 1.4;
+  font-size: var(--fs-sm);
 }
 
 .play-field {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-1);
+  padding: var(--sp-4) 0;
   border-bottom: 1px solid var(--line);
 }
-.play-field:last-child {
+.play-field:first-of-type {
+  padding-top: 0;
+}
+.play-field:last-of-type {
   border-bottom: none;
-  padding-bottom: 0;
 }
 
 .play-field-label b {
@@ -52,17 +56,17 @@
   margin-top: 2px;
 }
 
-/* Chips */
+/* Chips (Quality, Max Volume) */
 .play-chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
 }
 .play-chip {
-  padding: 7px 13px;
+  padding: 8px 16px;
   border-radius: var(--r-pill);
   border: 1px solid var(--line);
-  background: var(--wash-2);
+  background: var(--raise);
   color: var(--text);
   font: 500 var(--fs-sm) var(--sans);
   cursor: pointer;
@@ -74,15 +78,15 @@
 .play-chip.on {
   border-color: var(--lamp-line);
   background: var(--lamp-soft);
-  box-shadow: 0 0 0 1px var(--lamp-soft);
-  font-weight: 600;
   color: var(--lamp);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--lamp-soft);
 }
 
-/* Aspect ratio cards */
+/* Aspect Ratio Cards */
 .play-aspects {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   gap: var(--sp-2);
 }
 .play-aspect {
@@ -90,10 +94,10 @@
   flex-direction: column;
   align-items: center;
   gap: var(--sp-2);
-  padding: 10px 6px 9px;
+  padding: 12px 8px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: var(--wash-2);
+  background: var(--raise);
   color: var(--text);
   font: 500 var(--fs-sm) var(--sans);
   cursor: pointer;
@@ -106,15 +110,21 @@
   border-color: var(--lamp-line);
   background: var(--lamp-soft);
   box-shadow: 0 0 0 1px var(--lamp-soft);
-  font-weight: 600;
 }
 .play-aspect-preview {
   width: 100%;
-  max-width: 52px;
+  max-width: 48px;
   border-radius: var(--r-xs);
   background: var(--wash-3);
   border: 1px solid var(--wash-4);
+  transition: all var(--t-fast);
 }
+.play-aspect.on .play-aspect-preview {
+  border-color: var(--lamp-line);
+  background: var(--lamp);
+  box-shadow: 0 0 8px var(--lamp-soft);
+}
+
 .play-aspect-preview.a-fit     { aspect-ratio: 16/10; }
 .play-aspect-preview.a-fill    { aspect-ratio: 16/9; background: linear-gradient(135deg, var(--wash-3), var(--wash-1)); }
 .play-aspect-preview.a-stretch { aspect-ratio: 16/9; }
@@ -122,19 +132,22 @@
 .play-aspect-preview.a-219     { aspect-ratio: 21/9; }
 .play-aspect-preview.a-43      { aspect-ratio: 4/3; }
 .play-aspect-preview.a-11      { aspect-ratio: 1/1; }
-.play-aspect.on .play-aspect-preview {
-  border-color: var(--lamp-line);
-  background: var(--lamp-soft);
+
+.play-aspect-label {
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* Segmented controls */
+/* Segmented Control (Power saving) */
 .play-seg {
   display: flex;
-  padding: 3px;
-  gap: 2px;
+  padding: 4px;
+  gap: 4px;
   background: var(--wash-2);
-  border-radius: var(--r);
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
+  width: 100%;
+  max-width: 320px;
 }
 .play-seg button {
   flex: 1;
@@ -142,31 +155,38 @@
   background: transparent;
   color: var(--mute);
   font: 500 var(--fs-sm) var(--sans);
-  padding: 6px 12px;
-  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  border-radius: var(--r-pill);
   cursor: pointer;
   transition: all var(--t-fast);
   text-align: center;
+}
+.play-seg button:hover {
+  color: var(--text);
 }
 .play-seg button.on {
   background: var(--lamp);
   color: var(--on-lamp);
   font-weight: 600;
+  box-shadow: var(--shadow-1);
 }
 
 /* Toggles */
 .play-toggles {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 .play-toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-1);
+  padding: var(--sp-4) 0;
   border-bottom: 1px solid var(--line);
+}
+.play-toggle-row:first-child {
+  padding-top: 0;
 }
 .play-toggle-row:last-child {
   border-bottom: none;
@@ -184,15 +204,15 @@
   margin-top: 2px;
 }
 
-/* Volume preview */
+/* Volume Preview */
 .play-vol-preview {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  margin-top: 2px;
-  padding: 10px 12px;
+  margin-top: var(--sp-2);
+  padding: 12px 16px;
   background: var(--wash-2);
-  border-radius: var(--r-sm);
+  border-radius: var(--r);
   border: 1px solid var(--line);
 }
 .play-vol-bar {
@@ -212,30 +232,31 @@
 }
 .play-vol-boost {
   position: absolute;
-  left: 50%;
+  left: 20%; /* 100% is 20% of 500% */
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--wash-4);
+  background: var(--text);
+  opacity: 0.5;
 }
 .play-vol-label {
-  font: 600 var(--fs-sm) var(--sans);
+  font: 600 var(--fs-md) var(--sans);
   color: var(--lamp);
-  min-width: 42px;
+  min-width: 48px;
   text-align: right;
 }
 
-/* Equalizer chips */
+/* Equalizer */
 .play-eq {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: var(--sp-2);
 }
 .play-eq-chip {
-  padding: 10px 8px;
+  padding: 10px 12px;
   border-radius: var(--r-sm);
   border: 1px solid var(--line);
-  background: var(--wash-2);
+  background: var(--raise);
   color: var(--text);
   font: 500 var(--fs-sm) var(--sans);
   text-align: center;
@@ -248,11 +269,37 @@
 .play-eq-chip.on {
   border-color: var(--lamp-line);
   background: var(--lamp-soft);
-  box-shadow: 0 0 0 1px var(--lamp-soft);
+  color: var(--lamp);
   font-weight: 600;
+  box-shadow: 0 0 0 1px var(--lamp-soft);
 }
 
+/* Other players */
+.play-field .inline {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: stretch;
+}
+.play-field .inline input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--wash-2);
+  color: var(--text);
+  font: 500 var(--fs-sm) var(--sans);
+}
+.play-field .inline input:focus {
+  outline: none;
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 3px var(--lamp-soft);
+}
+
+/* ================= RESPONSIVE ================= */
 @media (max-width: 520px) {
-  .play-aspects { grid-template-columns: repeat(2, 1fr); }
+  .play-aspects { grid-template-columns: repeat(3, 1fr); }
   .play-eq { grid-template-columns: repeat(2, 1fr); }
+  .play-field .inline { flex-direction: column; }
+  .play-field .inline .btn { padding: 12px; }
 }

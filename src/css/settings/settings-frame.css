@@ -1,17 +1,17 @@
-/* Settings frame: the dialog layout, the hub (card grid), the search bar, and the basic form fields. */
+/* Settings frame: the dialog layout, the left sidebar, the right content area, and basic form fields. */
 
 /* ================= 1. DIALOG LAYOUT ================= */
 
 .dialog.settings,
 .dialog.de-settings {
-  display: flex;
-  flex-direction: column;
-  width: min(880px, 96vw);
-  max-height: min(90vh, 800px);
+  display: grid;
+  grid-template-columns: 260px 1fr; /* Sidebar width */
+  width: min(940px, 96vw);
+  height: min(740px, 90vh);
   padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
-  background: linear-gradient(180deg, var(--panel), var(--ink));
+  background: var(--panel);
   box-shadow: var(--shadow-3);
   overflow: hidden;
   animation: set-in var(--t-med) var(--ease);
@@ -22,42 +22,34 @@
   to { transform: none; opacity: 1; }
 }
 
-.set-accent {
-  flex: none;
-  height: 1.5px;
-  background: linear-gradient(90deg, var(--lamp) 0%, var(--info) 40%, transparent 85%);
-}
+/* ================= 2. LEFT SIDEBAR ================= */
 
-/* ================= 2. HEADER & SEARCH ================= */
-
-.dlg-head {
+.set-sidebar {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex: none;
-  gap: var(--sp-3);
-  padding: var(--sp-4) var(--sp-5) var(--sp-3);
-  border-bottom: 1px solid var(--wash-1);
+  flex-direction: column;
+  background: var(--ink);
+  border-right: 1px solid var(--line);
+  overflow: hidden;
 }
 
-.dlg-head h3 {
+.set-side-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-5) var(--sp-5) var(--sp-3);
+  flex: none;
+}
+.set-side-top h3 {
   margin: 0;
   font: 600 var(--fs-xl)/1.2 var(--serif);
-}
-
-.dlg-sub {
-  display: block;
-  margin-top: 3px;
-  color: var(--mute);
-  font: 400 var(--fs-sm) var(--sans);
 }
 
 .set-close {
   flex: none;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--wash-2);
   color: var(--mute);
@@ -70,19 +62,18 @@
 }
 
 .set-search-bar {
-  padding: var(--sp-3) var(--sp-5);
+  padding: 0 var(--sp-4) var(--sp-5);
   flex: none;
 }
-
 .set-search {
   width: 100%;
   display: block;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-radius: var(--r);
   border: 1px solid var(--line);
   background: var(--raise);
   color: var(--text);
-  font: 500 var(--fs-md) var(--sans);
+  font: 500 var(--fs-sm) var(--sans);
 }
 .set-search:focus {
   outline: none;
@@ -93,141 +84,100 @@
   color: var(--mute);
 }
 
-/* ================= 3. HUB (CARD GRID) ================= */
-
-.set-hub {
-  padding: var(--sp-2) var(--sp-5) var(--sp-5);
-  overflow: auto;
+/* 👇 THIS IS THE CONTAINER FOR THE NAV ITEMS 👇 */
+.set-nav {
   flex: 1;
-  min-height: 0;
-}
-
-.set-hub-lead {
-  margin: 0 0 var(--sp-3);
-  font-size: var(--fs-md);
-  color: var(--mute);
-}
-
-.set-hub-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--sp-3);
-}
-
-.set-hub-card {
+  overflow-y: auto;
+  padding: 0 var(--sp-3) var(--sp-6);
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  
+  /* GAP BETWEEN EACH BUTTON (12px) */
+  gap: 12px; 
+  
+  scrollbar-width: thin;
+  scrollbar-color: var(--wash-3) transparent;
+}
+.set-nav::-webkit-scrollbar { width: 6px; }
+.set-nav::-webkit-scrollbar-thumb { background: var(--wash-3); border-radius: var(--r-pill); }
+
+/* 👇 THIS IS THE INDIVIDUAL BUTTON 👇 */
+.set-nav-b {
+  display: flex;
+  align-items: center;
   gap: var(--sp-3);
+  
+  /* PADDING INSIDE THE BUTTON (16px top/bottom) */
+  padding: 16px 16px; 
+  
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--mute);
+  font: 500 var(--fs-md) var(--sans);
   text-align: left;
-  padding: var(--sp-4);
-  border-radius: var(--r-lg);
-  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.set-nav-b:hover {
   background: var(--wash-1);
   color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
 }
-.set-hub-card:hover {
+.set-nav-b.on {
   background: var(--wash-2);
-  border-color: var(--lamp-line);
-  transform: translateY(-1px);
+  border-color: var(--line);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--lamp);
 }
-
-.set-hub-ico {
-  display: grid;
-  place-items: center;
+.set-nav-b svg {
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r-sm);
-  background: var(--lamp-soft);
+  opacity: .6;
+  transition: opacity var(--t-fast);
+}
+.set-nav-b:hover svg,
+.set-nav-b.on svg {
+  opacity: 1;
   color: var(--lamp);
 }
 
-.set-hub-text {
-  flex: 1;
-  min-width: 0;
+/* ================= 3. RIGHT CONTENT AREA ================= */
+
+.set-content {
+  overflow-y: auto;
+  padding: var(--sp-6) var(--sp-7) var(--sp-7);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--wash-3) transparent;
 }
-.set-hub-text b {
-  font-size: var(--fs-md);
-  font-weight: 600;
-}
-.set-hub-text small {
-  font-size: var(--fs-sm);
-  color: var(--mute);
-  line-height: 1.35;
-}
+.set-content::-webkit-scrollbar { width: 8px; }
+.set-content::-webkit-scrollbar-thumb { background: var(--wash-3); border-radius: var(--r-pill); }
 
-.set-hub-chev {
-  color: var(--mute);
-  font-size: var(--fs-xl);
-  line-height: 1;
-  margin-top: 6px;
-}
-
-/* ================= 4. SECTION VIEW ================= */
-
-.set-body-card {
-  padding: var(--sp-4) var(--sp-5) var(--sp-5);
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-.set-section-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
+.set-content section {
   margin-bottom: var(--sp-4);
-  padding-bottom: var(--sp-3);
-  border-bottom: 1px solid var(--line);
 }
-
-.set-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--mute);
-  font: 500 var(--fs-sm) var(--sans);
-  padding: 6px 10px;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
-}
-.set-back:hover {
+.set-content h4 {
+  margin: 0 0 var(--sp-4);
+  font: 650 var(--fs-md)/1.2 var(--sans);
   color: var(--text);
-  background: var(--wash-2);
 }
 
-.set-section-bar strong {
-  font-size: var(--fs-lg);
-  font-weight: 600;
-}
-
-/* ================= 5. FORM FIELDS ================= */
+/* ================= 4. FORM FIELDS ================= */
 
 .field {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-4) 0;
   border-bottom: 1px solid var(--wash-1);
   transition: background var(--t-fast);
 }
 .field:last-child {
   border-bottom: none;
 }
-.field:hover {
-  background: var(--wash-1);
-}
-
 .field > div:first-child {
   flex: 1;
   min-width: 0;
@@ -256,7 +206,6 @@
   max-width: 100%;
 }
 
-/* Settings specific inputs */
 .dialog.settings select,
 .dialog.settings input[type="text"],
 .dialog.settings input[type="number"],
@@ -265,7 +214,7 @@
   border: 1px solid var(--line);
   background: var(--wash-2);
   color: var(--text);
-  padding: 7px 10px;
+  padding: 8px 12px;
   font: 500 var(--fs-sm) var(--sans);
 }
 .dialog.settings select:focus,
@@ -275,10 +224,9 @@
   box-shadow: 0 0 0 3px var(--lamp-soft);
 }
 
-/* Toggles */
 .toggle {
-  width: 42px;
-  height: 24px;
+  width: 44px;
+  height: 26px;
   border-radius: var(--r-pill);
   background: var(--wash-3);
   border: 0;
@@ -292,8 +240,8 @@
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--on-media);
   transition: transform var(--t-fast) var(--ease);
@@ -313,14 +261,14 @@
   background: var(--lamp);
 }
 
-/* ================= 6. SEARCH RESULTS ================= */
+/* ================= 5. SEARCH RESULTS ================= */
 
 .sres {
   display: grid;
   gap: 4px;
 }
 .sres h4 {
-  margin: var(--sp-2) var(--sp-4) var(--sp-1);
+  margin: var(--sp-2) 0 var(--sp-3);
   font: 600 var(--fs-xs) var(--sans);
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -331,15 +279,17 @@
   align-items: center;
   width: 100%;
   text-align: left;
-  padding: 11px var(--sp-4);
-  border: 0;
-  border-bottom: 1px solid var(--wash-1);
-  background: transparent;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: var(--wash-1);
   color: var(--text);
-  border-radius: 0;
+  cursor: pointer;
+  transition: all var(--t-fast);
 }
 .sres .opt:hover {
-  background: var(--wash-1);
+  background: var(--wash-2);
+  border-color: var(--line);
 }
 .sres .opt b {
   display: block;
@@ -350,17 +300,40 @@
   font-size: var(--fs-sm);
 }
 
-/* ================= 7. RESPONSIVE ================= */
+/* ================= 6. RESPONSIVE ================= */
 
-@media (max-width: 560px) {
-  .set-hub-grid {
+@media (max-width: 800px) {
+  .dialog.settings, .dialog.de-settings {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: 90vh;
   }
-}
-
-@media (max-width: 720px) {
-  .set-search {
-    flex: 1 1 100%;
+  .set-sidebar {
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: var(--sp-2);
+    overflow-x: auto;
+  }
+  .set-side-top, .set-search-bar {
+    display: none;
+  }
+  .set-nav {
+    flex-direction: row;
+    padding: 0;
+    gap: var(--sp-1);
+  }
+  .set-nav-b {
+    padding: 10px 14px;
+    white-space: nowrap;
+    box-shadow: none !important;
+  }
+  .set-nav-b.on {
+    box-shadow: inset 0 -3px 0 var(--lamp) !important;
+  }
+  .set-content {
+    padding: var(--sp-4);
   }
   .dialog.settings .field {
     flex-direction: column;

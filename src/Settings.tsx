@@ -157,12 +157,12 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
   onClose: () => void; mode: string; prog: Record<string, Prog>; onStorage: () => void; onServers: () => void; onSaved: () => void; onTidy: () => void;
 }) {
   const { s, set } = useContext(SettingsCtx);
-  const [tab, setTab] = useState<Tab | null>(null);
+  const [tab, setTab] = useState<Tab>('look');
   const [moveMsg, setMoveMsg] = useState('');
   const [q, setQ] = useState('');
   const [login, setLogin] = useState(false);
   useEffect(() => { bridge?.loginItemGet?.().then(setLogin).catch(() => {}); }, []);
-  const cur = q ? '' : (tab ?? '');
+  const cur = q ? '' : tab;
   const [kd, setKd] = useState({ tmdb: '', os: '', user: '' });
   const [kMsg, setKMsg] = useState<Record<string, { ok: boolean; text: string } | undefined>>({});
   const [kBusy, setKBusy] = useState('');
@@ -172,7 +172,6 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
   const [t, setT] = useState<{ running: boolean; live: number; res?: { avg: number; peak: number; bytes: number }; err?: string }>({ running: false, live: 0 });
   const ctl = useRef<AbortController>();
   
-  // Bot API Test state
   const [botTest, setBotTest] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
   const [botErr, setBotErr] = useState('');
 
@@ -202,11 +201,6 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
     if (kind === 'tmdb') { setKd((x) => ({ ...x, tmdb: '' })); await post<Srv>('settings', { tmdbKey: '' }).then(setSrv); }
     else { setKd((x) => ({ ...x, os: '', user: '' })); setOsPass(''); await post<Srv>('settings', { osKey: '', osUser: '', osPass: '' }).then(setSrv); }
     setKMsg((m) => ({ ...m, [kind]: { ok: true, text: 'Removed.' } })); onSaved();
-  };
-  const kline = (kind: string, has: boolean) => {
-    const m = kMsg[kind];
-    return m ? <span className={'kstat ' + (m.ok ? 'ok' : 'bad')}>{m.ok ? '✓' : '✕'} {m.text}</span>
-      : <span className={'kstat ' + (has ? 'ok' : 'idle')}>{has ? '✓ Saved. Press “Save & test” to check it works.' : 'Not set yet'}</span>;
   };
   const local = (p: Partial<Srv>) => setSrv((x) => (x ? { ...x, ...p } : x));
   const run = async () => {
@@ -253,1073 +247,531 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="dialog wide settings de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
-        <div className="set-accent" aria-hidden="true" />
-        <div className="dlg-head">
-          <div>
-            <h3>Settings</h3>
-            <span className="dlg-sub">{tab ? (TABS.find((x) => x.id === tab)?.hint ?? 'Preferences') : 'Choose a section or search'}</span>
-          </div>
-          <button className="icon set-close" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button>
-        </div>
-        <div className="set-search-bar">
-          <input className="set-search" type="search" placeholder="Search settings…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
-        </div>
-
-        {!q && tab === null && (
-          <div className="set-hub">
-            <p className="set-hub-lead muted">Choose a section</p>
-            <div className="set-hub-grid">
-              {TABS.map((x) => (
-                <button key={x.id} type="button" className="set-hub-card" onClick={() => setTab(x.id)}>
-                  <span className="set-hub-ico"><Icon n={x.icon} s={18} /></span>
-                  <span className="set-hub-text">
-                    <b>{x.label}</b>
-                    <small>{x.hint}</small>
-                  </span>
-                  <span className="set-hub-chev" aria-hidden="true">›</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(q || tab !== null) && (
-        <div className="set-body set-body-card">
-        {!q && tab !== null && (
-          <div className="set-section-bar">
-            <button type="button" className="set-back" onClick={() => setTab(null)} aria-label="Back to all settings">
-              <Icon n="back" s={16} /> All settings
-            </button>
-            <strong>{TABS.find((x) => x.id === tab)?.label}</strong>
-          </div>
-        )}
-        {q && <SearchResults q={q} onPick={(t) => { setTab(t); setQ(''); }} />}
-
-        {cur === 'look' && (
-        <section className="look-panel">
-          <div className="look-block">
-            <div className="look-block-h">
-              <h4>Theme</h4>
-              <p className="muted small">Overall chrome for the app</p>
-            </div>
-            <div className="look-theme" role="group" aria-label="Theme">
-              <button type="button" className={s.theme === 'dark' ? 'look-theme-card on' : 'look-theme-card'} onClick={() => set({ theme: 'dark' })}>
-                <span className="look-theme-preview dark" aria-hidden="true" />
-                <span className="look-theme-meta"><b>Dark</b><small>Easy on the eyes at night</small></span>
-              </button>
-              <button type="button" className={s.theme === 'light' ? 'look-theme-card on' : 'look-theme-card'} onClick={() => set({ theme: 'light' })}>
-                <span className="look-theme-preview light" aria-hidden="true" />
-                <span className="look-theme-meta"><b>Light</b><small>Bright panels and text</small></span>
-              </button>
-            </div>
-          </div>
-
-          <div className="look-block">
-            <div className="look-block-h">
-              <h4>Accent</h4>
-              <p className="muted small">Highlights, buttons and focus rings</p>
-            </div>
-            <div className="look-accents">
-              {Object.entries(ACCENTS).map(([name, c]) => (
-                <button
-                  key={name}
-                  type="button"
-                  className={s.accent === name && !s.accentCustom ? 'look-accent on' : 'look-accent'}
-                  onClick={() => set({ accent: name, accentCustom: '' })}
-                  title={name}
-                  aria-label={name}
-                >
-                  <i style={{ background: c }} />
-                  <span>{name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="look-custom">
-              <div className="look-custom-left">
-                <b>Custom colour</b>
-                <small className="muted">Overrides the preset above</small>
-              </div>
-              <div className="look-custom-right">
-                <label className="look-color-pick">
-                  <input
-                    type="color"
-                    value={/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542')}
-                    onChange={(e) => set({ accentCustom: e.target.value })}
-                    aria-label="Custom accent colour"
-                  />
-                  <span className="look-color-chip" style={{ background: /^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542') }} />
-                  <span className="look-color-hex">{(/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542')).toUpperCase()}</span>
-                </label>
-                {!!s.accentCustom && (
-                  <button type="button" className="btn ghost sm" onClick={() => set({ accentCustom: '' })}>Use preset</button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="look-block">
-            <div className="look-block-h">
-              <h4>Colour style</h4>
-              <p className="muted small">Tint behind panels and surfaces</p>
-            </div>
-            <div className="look-presets">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={s.themePreset === p.id ? 'look-preset on' : 'look-preset'}
-                  onClick={() => set({ themePreset: p.id })}
-                  aria-label={p.name}
-                >
-                  <i style={{ background: p.c }} />
-                  <span>{p.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="look-block">
-            <div className="look-block-h">
-              <h4>Display</h4>
-              <p className="muted small">Density and previews</p>
-            </div>
-            <div className="look-toggles">
-              <div className="look-toggle-row">
-                <div>
-                  <b>Compact mode</b>
-                  <small className="muted">Tighter spacing, good for small screens</small>
-                </div>
-                <Toggle on={s.compact} label="Compact" onClick={() => set({ compact: !s.compact })} />
-              </div>
-              <div className="look-toggle-row">
-                <div>
-                  <b>Video thumbnails</b>
-                  <small className="muted">Made once on the server, then cached</small>
-                </div>
-                <Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} />
-              </div>
-            </div>
-          </div>
-        </section>
-        )}
-
-        {cur === 'data' && (
-        <section className="data-panel">
-
-          {/* Data Saver */}
-          <div className="data-block">
-            <div className="data-block-h">
-              <h4>Data Saver</h4>
-              <p className="muted small">Caps the quality Auto may pick and squeezes bitrate. Does not change Original playback or downloads.</p>
-            </div>
-
-            <div className="data-saver-grid" role="group" aria-label="Data Saver level">
-              {SAVER.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  className={'data-saver-card' + (s.saver === o.id ? ' on' : '')}
-                  onClick={() => set({ saver: o.id })}
-                >
-                  <b>{o.label}</b>
-                  <small>{o.hint}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Budget */}
-          <div className="data-block">
-            <div className="data-block-h">
-              <h4>Monthly budget</h4>
-              <p className="muted small">Counts streaming and downloads. 0 = no limit</p>
-            </div>
-
-            <div className="data-budget">
-              <div className="data-budget-input">
-                <input
-                  type="number"
-                  min={0}
-                  value={srv?.budgetGB ?? 0}
-                  onChange={(e) => local({ budgetGB: +e.target.value })}
-                  onBlur={() => patch({ budgetGB: srv?.budgetGB ?? 0 })}
-                />
-                <span>GB</span>
-              </div>
-              <div className="data-budget-presets">
-                {[0, 5, 10, 25, 50, 100].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={'data-chip' + ((srv?.budgetGB ?? 0) === n ? ' on' : '')}
-                    onClick={() => { local({ budgetGB: n }); patch({ budgetGB: n }); }}
-                  >
-                    {n === 0 ? 'No limit' : `${n} GB`}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="data-toggles" style={{ marginTop: 12 }}>
-              <div className="data-toggle-row">
-                <div>
-                  <b>Switch to Low at 80% of budget</b>
-                  <small className="muted">Automatically, until the month ends</small>
-                </div>
-                <Toggle on={s.saverAuto} label="Auto Data Saver" onClick={() => set({ saverAuto: !s.saverAuto })} />
-              </div>
-            </div>
-          </div>
-
-          {/* Speed test */}
-          <div className="data-block">
-            <div className="data-block-h">
-              <h4>Speed test</h4>
-              <p className="muted small">
-                How fast your server can send data to this laptop. Real limit for streaming and downloads.
-                {mode === 'local' ? ' Path: direct (fastest).' : mode && mode !== 'none' ? ' Path: through SSH.' : ''}
-              </p>
-            </div>
-
-            <div className="data-test">
-              <button className="btn" disabled={t.running} onClick={run}>
-                <Icon n="bolt" s={15} /> {t.running ? 'Testing…' : 'Run speed test'}
-              </button>
-              {t.running && (
-                <button className="btn ghost" onClick={() => ctl.current?.abort()}>Stop</button>
-              )}
-              {t.running && (
-                <strong className="data-live">{rate(t.live)} <small>{mbps(t.live)}</small></strong>
-              )}
-            </div>
-
-            {t.res && (
-              <div className="data-result">
-                <div className="data-result-row">
-                  <span>Average</span>
-                  <b>{rate(t.res.avg)} <small>({mbps(t.res.avg)})</small></b>
-                </div>
-                <div className="data-result-row">
-                  <span>Peak</span>
-                  <b>{mbps(t.res.peak)}</b>
-                </div>
-                <div className="data-result-row">
-                  <span>Transferred</span>
-                  <b>{bytes(t.res.bytes)}</b>
-                </div>
-              </div>
-            )}
-            {t.err && <p className="err-t">{t.err}</p>}
-          </div>
-
-        </section>
-        )}
-
-        {cur === 'play' && (
-        <section className="play-panel">
-
-          {/* Playback defaults */}
-          <div className="play-block">
-            <div className="play-block-h">
-              <h4>Playback</h4>
-              <p className="muted small">Defaults for every new video</p>
-            </div>
-
-            <div className="play-field">
-              <div className="play-field-label">
-                <b>Default quality</b>
-                <small className="muted">Auto respects Data Saver</small>
-              </div>
-              <div className="play-chips" role="group" aria-label="Default quality">
-                {QUALITIES.filter((q) => q.id !== 'audio').map((q) => (
-                  <button
-                    key={q.id}
-                    type="button"
-                    className={'play-chip' + (s.quality === q.id ? ' on' : '')}
-                    onClick={() => set({ quality: q.id })}
-                  >
-                    {q.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="play-field">
-              <div className="play-field-label">
-                <b>Default screen shape</b>
-              </div>
-              <div className="play-aspects" role="group" aria-label="Default screen shape">
-                {ASPECTS.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className={'play-aspect' + (s.aspect === a.id ? ' on' : '')}
-                    onClick={() => set({ aspect: a.id })}
-                  >
-                    <span className={'play-aspect-preview a-' + a.id.replace(':', '')} />
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="play-field">
-              <div className="play-field-label">
-                <b>Power saving</b>
-                <small className="muted">Lowers quality cap and turns off blur / animations</small>
-              </div>
-              <div className="play-seg" role="group" aria-label="Power saving">
-                {([
-                  { id: 'off' as const, label: 'Off' },
-                  { id: 'battery' as const, label: 'Battery' },
-                  { id: 'on' as const, label: 'Always' },
-                ]).map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    className={s.eco === o.id ? 'on' : ''}
-                    onClick={() => set({ eco: o.id })}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Smart features */}
-          <div className="play-block">
-            <div className="play-block-h">
-              <h4>Smart features</h4>
-              <p className="muted small">Intros, autoplay and background save</p>
-            </div>
-
-            <div className="play-toggles">
-              <div className="play-toggle-row">
-                <div>
-                  <b>Detect intros automatically</b>
-                  <small className="muted">Compares ~7 min of 3 episodes once. Uses a little server data.</small>
-                </div>
-                <Toggle on={s.autoIntro} label="Detect intros" onClick={() => set({ autoIntro: !s.autoIntro })} />
-              </div>
-
-              <div className="play-toggle-row">
-                <div>
-                  <b>Show “Skip intro”</b>
-                  <small className="muted">Only on files that already have an intro / recap chapter</small>
-                </div>
-                <Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} />
-              </div>
-
-              <div className="play-toggle-row">
-                <div>
-                  <b>Play next episode automatically</b>
-                </div>
-                <Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} />
-              </div>
-
-              <div className="play-toggle-row">
-                <div>
-                  <b>Download next episode while I watch</b>
-                  <small className="muted">Saves a full-quality copy in the background for offline</small>
-                </div>
-                <Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} />
-              </div>
-            </div>
-          </div>
-
-          {/* Sound */}
-          <div className="play-block">
-            <div className="play-block-h">
-              <h4>Sound</h4>
-              <p className="muted small">Volume, boost and equalizer</p>
-            </div>
-
-            <div className="play-field">
-              <div className="play-field-label">
-                <b>Maximum volume</b>
-                <small className="muted">Above 100% a limiter keeps it clean</small>
-              </div>
-              <div className="play-chips" role="group" aria-label="Maximum volume">
-                {MAX_VOLS.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    className={'play-chip' + (s.maxVol === v ? ' on' : '')}
-                    onClick={() => set({ maxVol: v })}
-                  >
-                    {v}%
-                  </button>
-                ))}
-              </div>
-              <div className="play-vol-preview" aria-hidden="true">
-                <div className="play-vol-bar">
-                  <i style={{ width: `${Math.min(100, (s.maxVol / 500) * 100)}%` }} />
-                  <span className="play-vol-boost" />
-                </div>
-                <span className="play-vol-label">{s.maxVol}%</span>
-              </div>
-            </div>
-
-            <div className="play-toggles" style={{ marginTop: 4 }}>
-              <div className="play-toggle-row">
-                <div>
-                  <b>Remember boost above 100%</b>
-                  <small className="muted">Off: volume resets to ≤100% every time the app starts</small>
-                </div>
-                <Toggle on={s.rememberBoost} label="Remember boost" onClick={() => set({ rememberBoost: !s.rememberBoost })} />
-              </div>
-            </div>
-
-            <div className="play-field" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-              <div className="play-field-label">
-                <b>Default equalizer</b>
-              </div>
-              <div className="play-eq" role="group" aria-label="Default equalizer">
-                {Object.keys(EQ_PRESETS).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={'play-eq-chip' + (s.eqPreset === n ? ' on' : '')}
-                    onClick={() => set({ eqPreset: n })}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Other players (desktop only) */}
-          {bridge && (
-            <div className="play-block">
-              <div className="play-block-h">
-                <h4>Other players</h4>
-                <p className="muted small">Desktop only</p>
-              </div>
-              <div className="play-field" style={{ borderBottom: 'none', paddingTop: 0 }}>
-                <div className="play-field-label">
-                  <b>Open in another player</b>
-                  <small className="muted">e.g. VLC. Leave empty for system default</small>
-                </div>
-                <span className="inline">
-                  <input
-                    value={s.externalPlayer}
-                    onChange={(e) => set({ externalPlayer: e.target.value })}
-                    placeholder="C:\Program Files\VideoLAN\VLC\vlc.exe"
-                  />
-                  <button className="btn ghost" onClick={() => browse('player')}>Browse…</button>
-                </span>
-              </div>
-            </div>
-          )}
-
-        </section>
-        )}
-
-        {cur === 'subs' && (
-        <section className="subs-panel">
-
-          {/* Behaviour */}
-          <div className="subs-block">
-            <div className="subs-block-h">
-              <h4>Behaviour</h4>
-              <p className="muted small">When and which subtitles appear</p>
-            </div>
-
-            <div className="subs-toggles">
-              <div className="subs-toggle-row">
-                <div>
-                  <b>Turn on subtitles automatically</b>
-                  <small className="muted">Picks a track in your language, inside the video or next to it</small>
-                </div>
-                <Toggle on={s.autoSub} label="Auto subtitles" onClick={() => set({ autoSub: !s.autoSub })} />
-              </div>
-
-              <div className="subs-toggle-row">
-                <div>
-                  <b>Skip if audio is already in that language</b>
-                  <small className="muted">Don’t show subtitles when the spoken language matches</small>
-                </div>
-                <Toggle on={s.subSmart} label="Skip when audio matches" onClick={() => set({ subSmart: !s.subSmart })} />
-              </div>
-            </div>
-
-            <div className="subs-field" style={{ borderBottom: 'none', paddingTop: 12 }}>
-              <div className="subs-field-label">
-                <b>Your language</b>
-              </div>
-              <div className="subs-langs" role="group" aria-label="Subtitle language">
-                {LANGS.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    className={'subs-lang' + (s.subLang === l.code ? ' on' : '')}
-                    onClick={() => set({ subLang: l.code })}
-                  >
-                    {l.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Appearance */}
-          <div className="subs-block">
-            <div className="subs-block-h">
-              <h4>Appearance</h4>
-              <p className="muted small">How the text looks on screen</p>
-            </div>
-
-            <div className="subs-slider">
-              <div className="subs-slider-top">
-                <b>Size</b>
-                <span className="subs-slider-val">{s.subSize}</span>
-              </div>
-              <input
-                type="range"
-                min={16}
-                max={60}
-                value={s.subSize}
-                onChange={(e) => set({ subSize: +e.target.value })}
-              />
-            </div>
-
-            <div className="subs-color-row">
-              <b>Colour</b>
-              <div className="subs-swatches">
-                {['#ffffff', '#fbbf24', '#60a5fa', '#4ade80', '#f472b6', '#a78bfa'].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={'subs-swatch' + (s.subColor.toLowerCase() === c ? ' on' : '')}
-                    style={{ background: c }}
-                    onClick={() => set({ subColor: c })}
-                    aria-label={c}
-                  />
-                ))}
-                <label className="subs-custom-color" title="Custom colour">
-                  <input
-                    type="color"
-                    value={s.subColor}
-                    onChange={(e) => set({ subColor: e.target.value })}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="subs-slider">
-              <div className="subs-slider-top">
-                <b>Background darkness</b>
-                <span className="subs-slider-val">{s.subBg}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={s.subBg}
-                onChange={(e) => set({ subBg: +e.target.value })}
-              />
-            </div>
-
-            <div className="subs-toggles">
-              <div className="subs-toggle-row">
-                <div>
-                  <b>Outline</b>
-                  <small className="muted">Black stroke around the letters for better contrast</small>
-                </div>
-                <Toggle on={s.subOutline} label="Outline" onClick={() => set({ subOutline: !s.subOutline })} />
-              </div>
-            </div>
-
-            <div className="subs-slider">
-              <div className="subs-slider-top">
-                <b>Position from bottom</b>
-                <span className="subs-slider-val">{s.subPos}%</span>
-              </div>
-              <input
-                type="range"
-                min={2}
-                max={30}
-                value={s.subPos}
-                onChange={(e) => set({ subPos: +e.target.value })}
-              />
-            </div>
-
-            <div className="subs-preview">
-              <span
-                style={{
-                  fontSize: Math.min(s.subSize, 40),
-                  color: s.subColor,
-                  background: `rgba(0,0,0,${s.subBg / 100})`,
-                  textShadow: s.subOutline
-                    ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000'
-                    : undefined,
-                }}
-              >
-                This is how your subtitles will look.
-              </span>
-            </div>
-          </div>
-
-          {/* OpenSubtitles */}
-          <div className="subs-block">
-            <div className="subs-block-h">
-              <h4>OpenSubtitles</h4>
-              <p className="muted small">Free key at opensubtitles.com · stored encrypted on this computer</p>
-            </div>
-
-            <div className="subs-keybox">
-              <input
-                value={kd.os}
-                onChange={(e) => setKd({ ...kd, os: e.target.value })}
-                placeholder="API key"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <div className="subs-key-row">
-                <input
-                  value={kd.user}
-                  onChange={(e) => setKd({ ...kd, user: e.target.value })}
-                  placeholder="Username"
-                  autoComplete="off"
-                />
-                <input
-                  type="password"
-                  value={osPass}
-                  onChange={(e) => setOsPass(e.target.value)}
-                  placeholder={srv?.hasOsPass ? 'Password saved (type to change)' : 'Password'}
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="subs-key-status">{kline('os', !!(srv?.osKey || srv?.hasOsPass))}</div>
-              <div className="subs-key-actions">
-                <button
-                  className="btn"
-                  disabled={kBusy === 'os' || !kd.os.trim()}
-                  onClick={() => saveTest('os')}
-                >
-                  {kBusy === 'os' ? 'Checking…' : 'Save & test'}
-                </button>
-                <button className="btn ghost" disabled={kBusy === 'os'} onClick={() => clearKeys('os')}>
-                  Remove
-                </button>
-              </div>
-            </div>
-          </div>
-
-        </section>
-        )}
-
-        {cur === 'look' && (
-        <section className="look-panel">
-          <div className="look-block">
-            <div className="look-block-h">
-              <h4>Library</h4>
-              <p className="muted small">Posters and watch stats</p>
-            </div>
-            <div className="look-tmdb">
-              <div className="look-tmdb-label">
-                <b>TMDB key</b>
-                <small className="muted">Free at themoviedb.org — posters, ratings and descriptions</small>
-              </div>
-              <div className="look-tmdb-row">
-                <input value={kd.tmdb} onChange={(e) => setKd({ ...kd, tmdb: e.target.value })} placeholder="API key or read token" autoComplete="off" spellCheck={false} />
-                <button type="button" className="btn" disabled={kBusy === 'tmdb' || !kd.tmdb.trim()} onClick={() => saveTest('tmdb')}>{kBusy === 'tmdb' ? 'Checking…' : 'Save & test'}</button>
-                <button type="button" className="btn ghost" disabled={kBusy === 'tmdb'} onClick={() => clearKeys('tmdb')}>Remove</button>
-              </div>
-              <div className="look-tmdb-status">{kline('tmdb', !!srv?.tmdbKey)}</div>
-            </div>
-            <div className="look-toggles">
-              <div className="look-toggle-row">
-                <div>
-                  <b>Show posters instead of thumbnails</b>
-                  <small className="muted">Needs the TMDB key</small>
-                </div>
-                <Toggle on={s.posters} label="Posters" onClick={() => set({ posters: !s.posters })} />
-              </div>
-            </div>
-            <div className="look-stat">
-              <span className="muted">Watching so far</span>
-              <b>{hours.toFixed(1)} hours · {finished} finished</b>
-            </div>
-          </div>
-        </section>
-        )}
-
-        {cur === 'offline' && (
-        <section className="off-panel">
-
-          {/* Storage location */}
-          <div className="off-block">
-            <div className="off-block-h">
-              <h4>Storage</h4>
-              <p className="muted small">{moveMsg || (srv?.downloadDir ? srv.downloadDir : 'Choose where downloads are saved')}</p>
-            </div>
-            <div className="off-actions">
-              {bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change folder…</button>}
-              <button className="btn ghost" onClick={async () => { setMoveMsg('Moving…'); const e = await moveDownloads('vault', setMoveMsg); setMoveMsg(e ?? 'Done. Saved videos now live in a hidden folder inside the app’s own data.'); patch({}); }} title="Hidden, app-private folder">Private storage</button>
-              <button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button>
-              <button className="btn ghost" onClick={onTidy}>Tidy saved videos</button>
-            </div>
-          </div>
-
-          {/* While watching */}
-          <div className="off-block">
-            <div className="off-block-h">
-              <h4>While watching</h4>
-              <p className="muted small">Background saving for offline</p>
-            </div>
-            <div className="off-toggles">
-              <div className="off-toggle-row">
-                <div>
-                  <b>Save while I watch</b>
-                  <small className="muted">Keeps a full-quality copy so next time it plays offline</small>
-                </div>
-                <Toggle on={s.autoCache} label="Save while watching" onClick={() => set({ autoCache: !s.autoCache })} />
-              </div>
-            </div>
-          </div>
-
-          {/* Download behaviour */}
-          <div className="off-block">
-            <div className="off-block-h">
-              <h4>Download behaviour</h4>
-              <p className="muted small">Speed, parallel files and schedule</p>
-            </div>
-
-            <div className="off-field">
-              <div className="off-field-label">
-                <b>Files at the same time</b>
-              </div>
-              <div className="off-chips" role="group">
-                {[1, 2, 3, 4, 6].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={'off-chip' + ((srv?.maxParallel ?? 2) === n ? ' on' : '')}
-                    onClick={() => patch({ maxParallel: n })}
-                  >{n}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className="off-field">
-              <div className="off-field-label">
-                <b>Speed limit</b>
-                <small className="muted">Keeps some bandwidth for other things</small>
-              </div>
-              <div className="off-chips" role="group">
-                {LIMITS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={'off-chip' + ((srv?.limitKBps ?? 0) === n ? ' on' : '')}
-                    onClick={() => patch({ limitKBps: n })}
-                  >{n ? rate(n * 1024) : 'No limit'}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className="off-toggles">
-              <div className="off-toggle-row">
-                <div>
-                  <b>Only download at night</b>
-                  <small className="muted">Downloads wait until the time window opens</small>
-                </div>
-                <Toggle on={!!srv?.schedule.on} label="Schedule" onClick={() => patch({ schedule: { ...srv!.schedule, on: !srv?.schedule.on } })} />
-              </div>
-            </div>
-            {srv?.schedule.on && (
-              <div className="off-time-row">
-                <span className="muted">Between</span>
-                <input type="time" value={srv.schedule.from} onChange={(e) => patch({ schedule: { ...srv.schedule, from: e.target.value } })} />
-                <span className="muted">and</span>
-                <input type="time" value={srv.schedule.to} onChange={(e) => patch({ schedule: { ...srv.schedule, to: e.target.value } })} />
-              </div>
-            )}
-
-            <div className="off-toggles">
-              <div className="off-toggle-row">
-                <div>
-                  <b>Pause on battery</b>
-                  <small className="muted">Downloads wait until the laptop is plugged in</small>
-                </div>
-                <Toggle on={!!srv?.pauseOnBattery} label="Pause on battery" onClick={() => patch({ pauseOnBattery: !srv?.pauseOnBattery })} />
-              </div>
-              <div className="off-toggle-row">
-                <div>
-                  <b>Pause on metered connection</b>
-                  <small className="muted">If Windows marks Wi-Fi as metered</small>
-                </div>
-                <Toggle on={!!srv?.pauseOnMetered} label="Pause on metered" onClick={() => patch({ pauseOnMetered: !srv?.pauseOnMetered })} />
-              </div>
-              <div className="off-toggle-row">
-                <div>
-                  <b>Slow down at certain hours</b>
-                  <small className="muted">Limit speed between two times</small>
-                </div>
-                <Toggle on={!!srv?.limitWin?.on} label="Slow down" onClick={() => patch({ limitWin: { ...(srv?.limitWin ?? { from: '18:00', to: '23:00', kbps: 2000 }), on: !srv?.limitWin?.on } })} />
-              </div>
-            </div>
-            {srv?.limitWin?.on && (
-              <div className="off-time-row">
-                <input type="time" value={srv?.limitWin?.from ?? '18:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, to: '23:00', kbps: 2000 }), from: e.target.value } })} />
-                <span className="muted">–</span>
-                <input type="time" value={srv?.limitWin?.to ?? '23:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', kbps: 2000 }), to: e.target.value } })} />
-                <input type="number" min={0} step={100} style={{ width: 80 }} value={srv?.limitWin?.kbps ?? 2000} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', to: '23:00' }), kbps: +e.target.value } })} />
-                <span className="muted">KB/s</span>
-              </div>
-            )}
-          </div>
-
-          {/* Compression */}
-          <div className="off-block">
-            <div className="off-block-h">
-              <h4>Compression</h4>
-              <p className="muted small">Where and how files are made smaller</p>
-            </div>
-
-            <div className="off-field">
-              <div className="off-field-label">
-                <b>Compress on</b>
-                <small className="muted">Laptop GPU is usually much faster. Auto picks the quickest</small>
-              </div>
-              <div className="off-seg" role="group">
-                {([
-                  { id: 'auto', label: 'Auto' },
-                  { id: 'laptop', label: 'This laptop' },
-                  { id: 'server', label: 'Server' },
-                ] as const).map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    className={(srv?.encodeWhere ?? 'auto') === o.id ? 'on' : ''}
-                    onClick={() => patch({ encodeWhere: o.id })}
-                  >{o.label}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className="off-field">
-              <div className="off-field-label">
-                <b>Compression speed</b>
-                <small className="muted">Fastest = bigger files. Smallest = takes longer</small>
-              </div>
-              <div className="off-seg" role="group">
-                {([
-                  { id: 'fast', label: 'Fastest' },
-                  { id: 'balanced', label: 'Balanced' },
-                  { id: 'small', label: 'Smallest' },
-                ] as const).map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    className={(srv?.encodeSpeed ?? 'fast') === o.id ? 'on' : ''}
-                    onClick={() => patch({ encodeSpeed: o.id })}
-                  >{o.label}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Space management */}
-          <div className="off-block">
-            <div className="off-block-h">
-              <h4>Space management</h4>
-              <p className="muted small">Your copies on the server are never deleted</p>
-            </div>
-
-            <div className="off-field">
-              <div className="off-field-label">
-                <b>Space limit for saved videos</b>
-                <small className="muted">When full, watched videos are removed first, then oldest</small>
-              </div>
-              <div className="off-chips" role="group">
-                {[0, 2, 5, 10, 20, 50].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={'off-chip' + ((srv?.quotaGB ?? 0) === n ? ' on' : '')}
-                    onClick={() => patch({ quotaGB: n })}
-                  >{n === 0 ? 'No limit' : `${n} GB`}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className="off-field">
-              <div className="off-field-label">
-                <b>Delete watched downloads after</b>
-                <small className="muted">Frees space automatically</small>
-              </div>
-              <div className="off-chips" role="group">
-                {[0, 1, 3, 7, 14, 30].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={'off-chip' + ((srv?.autoDeleteDays ?? 0) === n ? ' on' : '')}
-                    onClick={() => patch({ autoDeleteDays: n })}
-                  >{n === 0 ? 'Never' : `${n} day${n > 1 ? 's' : ''}`}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Browser turbo (web only) */}
-          {!bridge && (
-            <div className="off-block">
-              <div className="off-block-h">
-                <h4>Browser download</h4>
-                <p className="muted small">{turboOk() ? 'Splits big files across several connections' : 'Needs Chrome, Edge or Opera over HTTPS (or localhost)'}</p>
-              </div>
-              <div className="off-toggles">
-                <div className="off-toggle-row">
-                  <div>
-                    <b>Turbo download</b>
-                  </div>
-                  <Toggle on={s.turbo} label="Turbo download" onClick={() => set({ turbo: !s.turbo })} />
-                </div>
-              </div>
-              <div className="off-field">
-                <div className="off-field-label">
-                  <b>Connections per file</b>
-                </div>
-                <div className="off-chips" role="group">
-                  {[2, 4, 8, 12, 16].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={'off-chip' + (s.conns === n ? ' on' : '')}
-                      onClick={() => set({ conns: n })}
-                    >{n}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-        </section>
-        )}
-
+      <div className="dialog settings de-settings" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
         
-
-        {cur === 'app' && (
-          <section>
-            <h4>Start with Windows</h4>
-            {bridge ? <Field label="Open Cinema when I sign in" hint="It starts quietly in the tray and closes itself again unless a scheduled download or auto-save rule needs it"><Toggle on={login} label="Start with Windows" onClick={() => bridge?.loginItemSet?.(!login).then(setLogin)} /></Field> : <p className="muted small">Available in the installed app.</p>}
-          </section>
-        )}
-        {cur === 'app' && <section><h4>Phone and TV remote</h4><Field label="Control playback from your phone" hint="Also lets a phone or smart TV browser watch what is playing"><RemoteBlock /></Field></section>}
-        {cur === 'app' && <section><h4>Profiles</h4><ProfilesBlock /></section>}
-        {cur === 'app' && <section><h4>Backup</h4><BackupBlock clientSettings={s} restoreClient={() => {}} /></section>}
-        {cur === 'app' && <ServerTools />}
-        {cur === 'app' && <Updates />}
-
-        {cur === 'app' && (
-        <section>
-          <h4>Servers</h4>
-          <Field label="Where your movies are stored"><button className="btn ghost" onClick={onServers}><Icon n="server" s={15} /> Manage servers</button></Field>
-        </section>
-        )}
-
-        {cur === 'bot' && (
-          <section className="look-panel">
-            <div className="look-block">
-              <div className="look-block-h">
-                <h4>Connection</h4>
-                <p className="muted small">Point the app to your Telegram bot</p>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 4px' }}>
-                
-                {/* API URL */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>
-                    API URL
-                  </label>
-                  <input 
-                    value={s.botApiUrl} 
-                    onChange={(e) => { set({ botApiUrl: e.target.value }); setBotTest('idle'); }} 
-                    placeholder="http://ip:port" 
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }}
-                  />
-                  <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>
-                    e.g. http://51.21.221.236:8080
-                  </p>
-                </div>
-                
-                {/* API Key */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>
-                    API Key
-                  </label>
-                  <input 
-                    type="password" 
-                    value={s.botApiKey} 
-                    onChange={(e) => { set({ botApiKey: e.target.value }); setBotTest('idle'); }} 
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }}
-                  />
-                  <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>
-                    From BOT_API_KEY in your .env
-                  </p>
-                </div>
-                
-                {/* Telegram ID */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>
-                    Telegram User ID
-                  </label>
-                  <input 
-                    value={s.telegramId} 
-                    onChange={(e) => { set({ telegramId: e.target.value }); setBotTest('idle'); }} 
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }}
-                  />
-                  <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>
-                    Your numeric Telegram ID
-                  </p>
-                </div>
-
-              </div>
-
-              {/* Test Connection Box */}
-              <div style={{ marginTop: '28px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--line)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <b style={{ fontSize: '13.5px' }}>Test connection</b>
-                    <p className="muted small" style={{ margin: '4px 0 0', fontSize: '12px' }}>
-                      Ensure the bot is running and the key is correct.
-                    </p>
-                  </div>
-                  <button 
-                    type="button" 
-                    className="btn" 
-                    onClick={testBot} 
-                    disabled={botTest === 'testing'}
-                    style={{ padding: '10px 16px', borderRadius: '10px' }}
-                  >
-                    {botTest === 'testing' ? 'Testing…' : 'Test Now'}
-                  </button>
-                </div>
-                
-                {botTest === 'ok' && (
-                  <div style={{ marginTop: 14, background: 'rgba(74,222,128,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#86efac', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icon n="check" s={16} /> Connection successful!
-                  </div>
-                )}
-                {botTest === 'error' && (
-                  <div style={{ marginTop: 14, background: 'rgba(240,98,79,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#f0a090', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icon n="close" s={16} /> {botErr}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {cur === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
+        <div className="set-sidebar">
+          <div className="set-side-top">
+            <h3>Settings</h3>
+            <button className="icon sm set-close" onClick={onClose} aria-label="Close settings"><Icon n="close" /></button>
+          </div>
+          <div className="set-search-bar">
+            <input className="set-search" type="search" placeholder="Search settings…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
+          </div>
+          <nav className="set-nav">
+            {TABS.map((x) => (
+              <button key={x.id} type="button" className={tab === x.id && !q ? 'set-nav-b on' : 'set-nav-b'} onClick={() => { setTab(x.id); setQ(''); }}>
+                <Icon n={x.icon} s={16} />
+                <span>{x.label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
-        )}
+
+        <div className="set-content">
+          {q && <SearchResults q={q} onPick={(t) => { setTab(t); setQ(''); }} />}
+
+          {cur === 'look' && (
+            <section className="look-panel">
+              <div className="look-grid">
+                {/* Theme */}
+                <div className="look-block">
+                  <div className="look-block-h">
+                    <h4>Theme</h4>
+                    <p className="muted small">Choose how Cinema looks.</p>
+                  </div>
+                  <div className="look-theme" role="group" aria-label="Theme">
+                    <button type="button" className={s.theme === 'dark' ? 'look-theme-card on' : 'look-theme-card'} onClick={() => set({ theme: 'dark' })}>
+                      <span className="look-theme-preview dark" aria-hidden="true">
+                        <span className="mock-sidebar" />
+                        <span className="mock-content" />
+                      </span>
+                      <span className="look-theme-meta"><b>Dark</b><small>Easy on the eyes at night</small></span>
+                    </button>
+                    <button type="button" className={s.theme === 'light' ? 'look-theme-card on' : 'look-theme-card'} onClick={() => set({ theme: 'light' })}>
+                      <span className="look-theme-preview light" aria-hidden="true">
+                        <span className="mock-sidebar" />
+                        <span className="mock-content" />
+                      </span>
+                      <span className="look-theme-meta"><b>Light</b><small>Bright panels and text</small></span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Accent Colors */}
+                <div className="look-block">
+                  <div className="look-block-h">
+                    <h4>Accent</h4>
+                    <p className="muted small">Highlights, buttons and focus rings.</p>
+                  </div>
+                  <div className="look-accents">
+                    {Object.entries(ACCENTS).map(([name, c]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={s.accent === name && !s.accentCustom ? 'look-accent on' : 'look-accent'}
+                        onClick={() => set({ accent: name, accentCustom: '' })}
+                        title={name}
+                        aria-label={name}
+                      >
+                        <i style={{ background: c }} />
+                        {s.accent === name && !s.accentCustom && <Icon n="check" s={14} />}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="look-custom-row">
+                    <label className="look-color-pick">
+                      <input
+                        type="color"
+                        value={/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542')}
+                        onChange={(e) => set({ accentCustom: e.target.value })}
+                        aria-label="Custom accent colour"
+                      />
+                      <span className="look-color-chip" style={{ background: /^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542') }} />
+                      <span className="look-color-hex">{(/^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom : (ACCENTS[s.accent] ?? '#f5c542')).toUpperCase()}</span>
+                    </label>
+                    {!!s.accentCustom && (
+                      <button type="button" className="btn ghost sm" onClick={() => set({ accentCustom: '' })}>Use preset</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Colour Style */}
+                <div className="look-block">
+                  <div className="look-block-h">
+                    <h4>Colour Style</h4>
+                    <p className="muted small">Tint behind panels and surfaces.</p>
+                  </div>
+                  <div className="look-presets">
+                    {PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={s.themePreset === p.id ? 'look-preset on' : 'look-preset'}
+                        onClick={() => set({ themePreset: p.id })}
+                        aria-label={p.name}
+                        title={p.name}
+                      >
+                        <i style={{ background: p.c }} />
+                        {s.themePreset === p.id && <Icon n="check" s={16} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Display */}
+                <div className="look-block">
+                  <div className="look-block-h">
+                    <h4>Display</h4>
+                    <p className="muted small">Density and previews.</p>
+                  </div>
+                  <div className="look-toggles">
+                    <div className="look-toggle-row">
+                      <div>
+                        <b>Compact mode</b>
+                        <small className="muted">Tighter spacing, good for small screens</small>
+                      </div>
+                      <Toggle on={s.compact} label="Compact" onClick={() => set({ compact: !s.compact })} />
+                    </div>
+                    <div className="look-toggle-row">
+                      <div>
+                        <b>Video thumbnails</b>
+                        <small className="muted">Made once on the server, then cached</small>
+                      </div>
+                      <Toggle on={s.thumbs} label="Video thumbnails" onClick={() => set({ thumbs: !s.thumbs })} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Library block spans full width */}
+              <div className="look-block" style={{ marginTop: 'var(--sp-4)' }}>
+                <div className="look-block-h">
+                  <div className="look-icon-title">
+                    <span className="look-ico"><Icon n="film" s={16} /></span>
+                    <div>
+                      <h4>Library & Metadata</h4>
+                      <p className="muted small">Posters, descriptions, and watch stats</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="look-field">
+                  <div className="look-field-info">
+                    <b>TMDB key</b>
+                    <small className="muted">Free at themoviedb.org — adds posters, ratings and descriptions</small>
+                  </div>
+                  <div className="look-field-input">
+                    <div className="input-with-icon">
+                      <Icon n="info" s={16} />
+                      <input value={kd.tmdb} onChange={(e) => setKd({ ...kd, tmdb: e.target.value })} placeholder="API key or read token" autoComplete="off" spellCheck={false} />
+                    </div>
+                    <button type="button" className="btn" disabled={kBusy === 'tmdb' || !kd.tmdb.trim()} onClick={() => saveTest('tmdb')}>
+                      {kBusy === 'tmdb' ? 'Checking…' : 'Save & test'}
+                    </button>
+                    {!!srv?.tmdbKey && (
+                      <button type="button" className="btn ghost" disabled={kBusy === 'tmdb'} onClick={() => clearKeys('tmdb')} title="Remove key">Remove</button>
+                    )}
+                  </div>
+                  
+                  {kMsg['tmdb'] && (
+                    <div className={'look-status ' + (kMsg['tmdb'].ok ? 'ok' : 'bad')}>
+                      <Icon n={kMsg['tmdb'].ok ? 'check' : 'info'} s={14} />
+                      <span>{kMsg['tmdb'].text}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="look-divider" />
+
+                <div className="look-toggle-row">
+                  <div>
+                    <b>Show posters instead of thumbnails</b>
+                    <small className="muted">Replaces the default video frame with a beautiful poster from TMDB</small>
+                  </div>
+                  <Toggle on={s.posters} label="Posters" onClick={() => set({ posters: !s.posters })} />
+                </div>
+
+                <div className="look-divider" />
+
+                <div className="look-stat">
+                  <div className="look-stat-ico"><Icon n="activity" s={18} /></div>
+                  <div className="look-stat-text">
+                    <span className="muted small">Watching so far</span>
+                    <b>{hours.toFixed(1)} hours · {finished} finished</b>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {cur === 'play' && (
+            <section className="play-panel">
+              {/* --- Playback Defaults --- */}
+              <div className="play-block">
+                <div className="play-block-h"><h4>Playback Defaults</h4><p className="muted small">Applied to every video you start.</p></div>
+
+                <div className="play-field">
+                  <div className="play-field-label">
+                    <b>Default quality</b>
+                    <small className="muted">Auto respects your Data Saver settings</small>
+                  </div>
+                  <div className="play-chips" role="group" aria-label="Default quality">
+                    {QUALITIES.filter((q) => q.id !== 'audio').map((q) => (
+                      <button key={q.id} type="button" className={'play-chip' + (s.quality === q.id ? ' on' : '')} onClick={() => set({ quality: q.id })}>{q.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="play-field">
+                  <div className="play-field-label">
+                    <b>Default screen shape</b>
+                    <small className="muted">How the picture fits your window</small>
+                  </div>
+                  <div className="play-aspects" role="group" aria-label="Default screen shape">
+                    {ASPECTS.map((a) => (
+                      <button key={a.id} type="button" className={'play-aspect' + (s.aspect === a.id ? ' on' : '')} onClick={() => set({ aspect: a.id })}>
+                        <span className={'play-aspect-preview a-' + a.id.replace(':', '')} />
+                        <span className="play-aspect-label">{a.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="play-field" style={{ borderBottom: 'none' }}>
+                  <div className="play-field-label">
+                    <b>Power saving</b>
+                    <small className="muted">Lowers the quality cap and turns off blur</small>
+                  </div>
+                  <div className="play-seg" role="group" aria-label="Power saving">
+                    {([{ id: 'off' as const, label: 'Off' },{ id: 'battery' as const, label: 'On battery' },{ id: 'on' as const, label: 'Always' }]).map((o) => (
+                      <button key={o.id} type="button" className={s.eco === o.id ? 'on' : ''} onClick={() => set({ eco: o.id })}>{o.label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* --- Smart Features --- */}
+              <div className="play-block">
+                <div className="play-block-h"><h4>Smart Features</h4><p className="muted small">Intros, autoplay and background saving</p></div>
+                <div className="play-toggles">
+                  <div className="play-toggle-row"><div><b>Detect intros automatically</b><small className="muted">Compares ~7 min of 3 episodes once. Uses a little server data.</small></div><Toggle on={s.autoIntro} label="Detect intros" onClick={() => set({ autoIntro: !s.autoIntro })} /></div>
+                  <div className="play-toggle-row"><div><b>Show “Skip intro”</b><small className="muted">Only on files that already have an intro / recap chapter</small></div><Toggle on={s.skipIntro} label="Skip intro button" onClick={() => set({ skipIntro: !s.skipIntro })} /></div>
+                  <div className="play-toggle-row"><div><b>Play next episode automatically</b></div><Toggle on={s.autoNext} label="Autoplay next" onClick={() => set({ autoNext: !s.autoNext })} /></div>
+                  <div className="play-toggle-row" style={{ borderBottom: 'none' }}><div><b>Download next episode while I watch</b><small className="muted">Saves a full-quality copy in the background for offline</small></div><Toggle on={s.predownload} label="Pre-download next" onClick={() => set({ predownload: !s.predownload })} /></div>
+                </div>
+              </div>
+
+              {/* --- Sound --- */}
+              <div className="play-block">
+                <div className="play-block-h"><h4>Sound</h4><p className="muted small">Volume, boost and equalizer</p></div>
+                
+                <div className="play-field">
+                  <div className="play-field-label">
+                    <b>Maximum volume</b>
+                    <small className="muted">Above 100% a limiter keeps it clean</small>
+                  </div>
+                  <div className="play-chips" role="group" aria-label="Maximum volume">
+                    {MAX_VOLS.map((v) => (<button key={v} type="button" className={'play-chip' + (s.maxVol === v ? ' on' : '')} onClick={() => set({ maxVol: v })}>{v}%</button>))}
+                  </div>
+                  <div className="play-vol-preview" aria-hidden="true">
+                    <div className="play-vol-bar">
+                      <i style={{ width: `${Math.min(100, (s.maxVol / 500) * 100)}%` }} />
+                      <span className="play-vol-boost" />
+                    </div>
+                    <span className="play-vol-label">{s.maxVol}%</span>
+                  </div>
+                </div>
+
+                <div className="play-toggles">
+                  <div className="play-toggle-row" style={{ borderBottom: 'none' }}>
+                    <div><b>Remember boost above 100%</b><small className="muted">Off: volume resets to 100% every time the app starts</small></div>
+                    <Toggle on={s.rememberBoost} label="Remember boost" onClick={() => set({ rememberBoost: !s.rememberBoost })} />
+                  </div>
+                </div>
+
+                <div className="play-field" style={{ borderBottom: 'none', paddingTop: 0 }}>
+                  <div className="play-field-label"><b>Default equalizer</b></div>
+                  <div className="play-eq" role="group" aria-label="Default equalizer">
+                    {Object.keys(EQ_PRESETS).map((n) => (<button key={n} type="button" className={'play-eq-chip' + (s.eqPreset === n ? ' on' : '')} onClick={() => set({ eqPreset: n })}>{n}</button>))}
+                  </div>
+                </div>
+              </div>
+
+              {/* --- Other Players --- */}
+              {bridge && (
+                <div className="play-block">
+                  <div className="play-block-h"><h4>Other Players</h4><p className="muted small">Desktop only</p></div>
+                  <div className="play-field" style={{ borderBottom: 'none', paddingTop: 0 }}>
+                    <div className="play-field-label"><b>Open in another player</b><small className="muted">e.g. VLC. Leave empty for system default</small></div>
+                    <span className="inline">
+                      <input value={s.externalPlayer} onChange={(e) => set({ externalPlayer: e.target.value })} placeholder="C:\Program Files\VideoLAN\VLC\vlc.exe" />
+                      <button className="btn ghost" onClick={() => browse('player')}>Browse…</button>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {cur === 'subs' && (
+            <section className="subs-panel">
+              <div className="subs-block">
+                <div className="subs-block-h"><h4>Behaviour</h4><p className="muted small">When and which subtitles appear</p></div>
+                <div className="subs-toggles">
+                  <div className="subs-toggle-row"><div><b>Turn on subtitles automatically</b><small className="muted">Picks a track in your language, inside the video or next to it</small></div><Toggle on={s.autoSub} label="Auto subtitles" onClick={() => set({ autoSub: !s.autoSub })} /></div>
+                  <div className="subs-toggle-row"><div><b>Skip if audio is already in that language</b><small className="muted">Don’t show subtitles when the spoken language matches</small></div><Toggle on={s.subSmart} label="Skip when audio matches" onClick={() => set({ subSmart: !s.subSmart })} /></div>
+                </div>
+                <div className="subs-field" style={{ borderBottom: 'none', paddingTop: 12 }}>
+                  <div className="subs-field-label"><b>Your language</b></div>
+                  <div className="subs-langs" role="group" aria-label="Subtitle language">
+                    {LANGS.map((l) => (<button key={l.code} type="button" className={'subs-lang' + (s.subLang === l.code ? ' on' : '')} onClick={() => set({ subLang: l.code })}>{l.name}</button>))}
+                  </div>
+                </div>
+              </div>
+              <div className="subs-block">
+                <div className="subs-block-h"><h4>Appearance</h4><p className="muted small">How the text looks on screen</p></div>
+                <div className="subs-slider">
+                  <div className="subs-slider-top"><b>Size</b><span className="subs-slider-val">{s.subSize}</span></div>
+                  <input type="range" min={16} max={60} value={s.subSize} onChange={(e) => set({ subSize: +e.target.value })} />
+                </div>
+                <div className="subs-color-row">
+                  <b>Colour</b>
+                  <div className="subs-swatches">
+                    {['#ffffff', '#fbbf24', '#60a5fa', '#4ade80', '#f472b6', '#a78bfa'].map((c) => (
+                      <button key={c} type="button" className={'subs-swatch' + (s.subColor.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ subColor: c })} aria-label={c} />
+                    ))}
+                    <label className="subs-custom-color" title="Custom colour">
+                      <input type="color" value={s.subColor} onChange={(e) => set({ subColor: e.target.value })} />
+                    </label>
+                  </div>
+                </div>
+                <div className="subs-slider">
+                  <div className="subs-slider-top"><b>Background darkness</b><span className="subs-slider-val">{s.subBg}%</span></div>
+                  <input type="range" min={0} max={100} value={s.subBg} onChange={(e) => set({ subBg: +e.target.value })} />
+                </div>
+                <div className="subs-toggles">
+                  <div className="subs-toggle-row"><div><b>Outline</b><small className="muted">Black stroke around the letters for better contrast</small></div><Toggle on={s.subOutline} label="Outline" onClick={() => set({ subOutline: !s.subOutline })} /></div>
+                </div>
+                <div className="subs-slider">
+                  <div className="subs-slider-top"><b>Position from bottom</b><span className="subs-slider-val">{s.subPos}%</span></div>
+                  <input type="range" min={2} max={30} value={s.subPos} onChange={(e) => set({ subPos: +e.target.value })} />
+                </div>
+                <div className="subs-preview">
+                  <span style={{ fontSize: Math.min(s.subSize, 40), color: s.subColor, background: `rgba(0,0,0,${s.subBg / 100})`, textShadow: s.subOutline ? '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000' : undefined }}>
+                    This is how your subtitles will look.
+                  </span>
+                </div>
+              </div>
+              <div className="subs-block">
+                <div className="subs-block-h"><h4>OpenSubtitles</h4><p className="muted small">Free key at opensubtitles.com · stored encrypted on this computer</p></div>
+                <div className="subs-keybox">
+                  <input value={kd.os} onChange={(e) => setKd({ ...kd, os: e.target.value })} placeholder="API key" autoComplete="off" spellCheck={false} />
+                  <div className="subs-key-row">
+                    <input value={kd.user} onChange={(e) => setKd({ ...kd, user: e.target.value })} placeholder="Username" autoComplete="off" />
+                    <input type="password" value={osPass} onChange={(e) => setOsPass(e.target.value)} placeholder={srv?.hasOsPass ? 'Password saved (type to change)' : 'Password'} autoComplete="new-password" />
+                  </div>
+                  <div className="subs-key-status">{kMsg['os'] ? <span className={'look-status ' + (kMsg['os'].ok ? 'ok' : 'bad')}><Icon n={kMsg['os'].ok ? 'check' : 'info'} s={14} /> <span>{kMsg['os'].text}</span></span> : <span className={'kstat ' + ((srv?.osKey || srv?.hasOsPass) ? 'ok' : 'idle')}>{((srv?.osKey || srv?.hasOsPass) ? '✓ Saved. Press “Save & test” to check it works.' : 'Not set yet')}</span>}</div>
+                  <div className="subs-key-actions">
+                    <button className="btn" disabled={kBusy === 'os' || !kd.os.trim()} onClick={() => saveTest('os')}>{kBusy === 'os' ? 'Checking…' : 'Save & test'}</button>
+                    <button className="btn ghost" disabled={kBusy === 'os'} onClick={() => clearKeys('os')}>Remove</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {cur === 'offline' && (
+            <section className="off-panel">
+              <div className="off-block">
+                <div className="off-block-h"><h4>Storage</h4><p className="muted small">{moveMsg || (srv?.downloadDir ? srv.downloadDir : 'Choose where downloads are saved')}</p></div>
+                <div className="off-actions">
+                  {bridge && <button className="btn ghost" onClick={() => browse('folder')}>Change folder…</button>}
+                  <button className="btn ghost" onClick={async () => { setMoveMsg('Moving…'); const e = await moveDownloads('vault', setMoveMsg); setMoveMsg(e ?? 'Done. Saved videos now live in a hidden folder inside the app’s own data.'); patch({}); }} title="Hidden, app-private folder">Private storage</button>
+                  <button className="btn ghost" onClick={onStorage}><Icon n="hdd" s={15} /> Storage</button>
+                  <button className="btn ghost" onClick={onTidy}>Tidy saved videos</button>
+                </div>
+              </div>
+              <div className="off-block">
+                <div className="off-block-h"><h4>While watching</h4><p className="muted small">Background saving for offline</p></div>
+                <div className="off-toggles">
+                  <div className="off-toggle-row"><div><b>Save while I watch</b><small className="muted">Keeps a full-quality copy so next time it plays offline</small></div><Toggle on={s.autoCache} label="Save while watching" onClick={() => set({ autoCache: !s.autoCache })} /></div>
+                </div>
+              </div>
+              <div className="off-block">
+                <div className="off-block-h"><h4>Download behaviour</h4><p className="muted small">Speed, parallel files and schedule</p></div>
+                <div className="off-field">
+                  <div className="off-field-label"><b>Files at the same time</b></div>
+                  <div className="off-chips" role="group">
+                    {[1, 2, 3, 4, 6].map((n) => (<button key={n} type="button" className={'off-chip' + ((srv?.maxParallel ?? 2) === n ? ' on' : '')} onClick={() => patch({ maxParallel: n })}>{n}</button>))}
+                  </div>
+                </div>
+                <div className="off-field">
+                  <div className="off-field-label"><b>Speed limit</b><small className="muted">Keeps some bandwidth for other things</small></div>
+                  <div className="off-chips" role="group">
+                    {LIMITS.map((n) => (<button key={n} type="button" className={'off-chip' + ((srv?.limitKBps ?? 0) === n ? ' on' : '')} onClick={() => patch({ limitKBps: n })}>{n ? rate(n * 1024) : 'No limit'}</button>))}
+                  </div>
+                </div>
+                <div className="off-toggles">
+                  <div className="off-toggle-row"><div><b>Only download at night</b><small className="muted">Downloads wait until the time window opens</small></div><Toggle on={!!srv?.schedule.on} label="Schedule" onClick={() => patch({ schedule: { ...srv!.schedule, on: !srv?.schedule.on } })} /></div>
+                </div>
+                {srv?.schedule.on && (
+                  <div className="off-time-row">
+                    <span className="muted">Between</span>
+                    <input type="time" value={srv.schedule.from} onChange={(e) => patch({ schedule: { ...srv.schedule, from: e.target.value } })} />
+                    <span className="muted">and</span>
+                    <input type="time" value={srv.schedule.to} onChange={(e) => patch({ schedule: { ...srv.schedule, to: e.target.value } })} />
+                  </div>
+                )}
+                <div className="off-toggles">
+                  <div className="off-toggle-row"><div><b>Pause on battery</b><small className="muted">Downloads wait until the laptop is plugged in</small></div><Toggle on={!!srv?.pauseOnBattery} label="Pause on battery" onClick={() => patch({ pauseOnBattery: !srv?.pauseOnBattery })} /></div>
+                  <div className="off-toggle-row"><div><b>Pause on metered connection</b><small className="muted">If Windows marks Wi-Fi as metered</small></div><Toggle on={!!srv?.pauseOnMetered} label="Pause on metered" onClick={() => patch({ pauseOnMetered: !srv?.pauseOnMetered })} /></div>
+                  <div className="off-toggle-row"><div><b>Slow down at certain hours</b><small className="muted">Limit speed between two times</small></div><Toggle on={!!srv?.limitWin?.on} label="Slow down" onClick={() => patch({ limitWin: { ...(srv?.limitWin ?? { from: '18:00', to: '23:00', kbps: 2000 }), on: !srv?.limitWin?.on } })} /></div>
+                </div>
+                {srv?.limitWin?.on && (
+                  <div className="off-time-row">
+                    <input type="time" value={srv?.limitWin?.from ?? '18:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, to: '23:00', kbps: 2000 }), from: e.target.value } })} />
+                    <span className="muted">–</span>
+                    <input type="time" value={srv?.limitWin?.to ?? '23:00'} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', kbps: 2000 }), to: e.target.value } })} />
+                    <input type="number" min={0} step={100} style={{ width: 80 }} value={srv?.limitWin?.kbps ?? 2000} onChange={(e) => patch({ limitWin: { ...(srv?.limitWin ?? { on: false, from: '18:00', to: '23:00' }), kbps: +e.target.value } })} />
+                    <span className="muted">KB/s</span>
+                  </div>
+                )}
+              </div>
+              <div className="off-block">
+                <div className="off-block-h"><h4>Compression</h4><p className="muted small">Where and how files are made smaller</p></div>
+                <div className="off-field">
+                  <div className="off-field-label"><b>Compress on</b><small className="muted">Laptop GPU is usually much faster. Auto picks the quickest</small></div>
+                  <div className="off-seg" role="group">
+                    {([{ id: 'auto', label: 'Auto' },{ id: 'laptop', label: 'This laptop' },{ id: 'server', label: 'Server' }] as const).map((o) => (
+                      <button key={o.id} type="button" className={(srv?.encodeWhere ?? 'auto') === o.id ? 'on' : ''} onClick={() => patch({ encodeWhere: o.id })}>{o.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="off-field">
+                  <div className="off-field-label"><b>Compression speed</b><small className="muted">Fastest = bigger files. Smallest = takes longer</small></div>
+                  <div className="off-seg" role="group">
+                    {([{ id: 'fast', label: 'Fastest' },{ id: 'balanced', label: 'Balanced' },{ id: 'small', label: 'Smallest' }] as const).map((o) => (
+                      <button key={o.id} type="button" className={(srv?.encodeSpeed ?? 'fast') === o.id ? 'on' : ''} onClick={() => patch({ encodeSpeed: o.id })}>{o.label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="off-block">
+                <div className="off-block-h"><h4>Space management</h4><p className="muted small">Your copies on the server are never deleted</p></div>
+                <div className="off-field">
+                  <div className="off-field-label"><b>Space limit for saved videos</b><small className="muted">When full, watched videos are removed first, then oldest</small></div>
+                  <div className="off-chips" role="group">
+                    {[0, 2, 5, 10, 20, 50].map((n) => (<button key={n} type="button" className={'off-chip' + ((srv?.quotaGB ?? 0) === n ? ' on' : '')} onClick={() => patch({ quotaGB: n })}>{n === 0 ? 'No limit' : `${n} GB`}</button>))}
+                  </div>
+                </div>
+                <div className="off-field">
+                  <div className="off-field-label"><b>Delete watched downloads after</b><small className="muted">Frees space automatically</small></div>
+                  <div className="off-chips" role="group">
+                    {[0, 1, 3, 7, 14, 30].map((n) => (<button key={n} type="button" className={'off-chip' + ((srv?.autoDeleteDays ?? 0) === n ? ' on' : '')} onClick={() => patch({ autoDeleteDays: n })}>{n === 0 ? 'Never' : `${n} day${n > 1 ? 's' : ''}`}</button>))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {cur === 'app' && (
+            <section>
+              <h4>Start with Windows</h4>
+              {bridge ? <Field label="Open Cinema when I sign in" hint="It starts quietly in the tray and closes itself again unless a scheduled download or auto-save rule needs it"><Toggle on={login} label="Start with Windows" onClick={() => bridge?.loginItemSet?.(!login).then(setLogin)} /></Field> : <p className="muted small">Available in the installed app.</p>}
+            </section>
+          )}
+          {cur === 'app' && <section><h4>Phone and TV remote</h4><Field label="Control playback from your phone" hint="Also lets a phone or smart TV browser watch what is playing"><RemoteBlock /></Field></section>}
+          {cur === 'app' && <section><h4>Profiles</h4><ProfilesBlock /></section>}
+          {cur === 'app' && <section><h4>Backup</h4><BackupBlock clientSettings={s} restoreClient={() => {}} /></section>}
+          {cur === 'app' && <ServerTools />}
+          {cur === 'app' && <Updates />}
+          {cur === 'app' && (
+            <section>
+              <h4>Servers</h4>
+              <Field label="Where your movies are stored"><button className="btn ghost" onClick={onServers}><Icon n="server" s={15} /> Manage servers</button></Field>
+            </section>
+          )}
+
+          {cur === 'bot' && (
+            <section className="look-panel">
+              <div className="look-block">
+                <div className="look-block-h"><h4>Connection</h4><p className="muted small">Point the app to your Telegram bot</p></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 4px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>API URL</label>
+                    <input value={s.botApiUrl} onChange={(e) => { set({ botApiUrl: e.target.value }); setBotTest('idle'); }} placeholder="http://ip:port" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }} />
+                    <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>e.g. http://51.21.221.236:8080</p>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>API Key</label>
+                    <input type="password" value={s.botApiKey} onChange={(e) => { set({ botApiKey: e.target.value }); setBotTest('idle'); }} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }} />
+                    <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>From BOT_API_KEY in your .env</p>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>Telegram User ID</label>
+                    <input value={s.telegramId} onChange={(e) => { set({ telegramId: e.target.value }); setBotTest('idle'); }} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }} />
+                    <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>Your numeric Telegram ID</p>
+                  </div>
+                </div>
+                <div style={{ marginTop: '28px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--line)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <b style={{ fontSize: '13.5px' }}>Test connection</b>
+                      <p className="muted small" style={{ margin: '4px 0 0', fontSize: '12px' }}>Ensure the bot is running and the key is correct.</p>
+                    </div>
+                    <button type="button" className="btn" onClick={testBot} disabled={botTest === 'testing'} style={{ padding: '10px 16px', borderRadius: '10px' }}>
+                      {botTest === 'testing' ? 'Testing…' : 'Test Now'}
+                    </button>
+                  </div>
+                  {botTest === 'ok' && <div style={{ marginTop: 14, background: 'rgba(74,222,128,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#86efac', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}><Icon n="check" s={16} /> Connection successful!</div>}
+                  {botTest === 'error' && <div style={{ marginTop: 14, background: 'rgba(240,98,79,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#f0a090', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}><Icon n="close" s={16} /> {botErr}</div>}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {cur === 'app' && <p className="muted small">{APP_NAME}{bridge ? ` ${bridge.version}` : ''}</p>}
+        </div>
       </div>
     </div>
   );
