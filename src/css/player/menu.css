@@ -25,22 +25,17 @@
 }
 
 /* belongs in pages/library (kept here so the look stays identical) */
-.amenu button:hover { background: rgba(255,255,255,.1); }
 html[data-eco="1"] .menu { background: rgba(14,14,20,.96); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.chips button:hover { color: var(--text); background: color-mix(in srgb, var(--lamp) 16%, var(--raise)); }
 /* belongs in overlays/command-palette (kept here so the look stays identical) */
 .pal-list button.on { background: color-mix(in srgb, var(--lamp) 22%, transparent); }
 .swatches { display: flex; gap: 8px; }
 /* belongs in pages/library (kept here so the look stays identical) */
-.season-tabs button.on { background: var(--lamp); color: #111; font-weight: 600; }
 .chlist { display: grid; gap: 4px; }
 /* belongs in shell/topnav (kept here so the look stays identical) */
 .tn-menu button:hover { background: var(--raise); }
 /* belongs in components/shared (kept here so the look stays identical) */
 .dp-chips button:hover, .dp-seg button:hover { color: var(--text); }
 /* belongs in components/shared (kept here so the look stays identical) */
-.lib-bar .seg button.on { background: var(--lamp); color: #111; }
 .menu.sheet-up,
 .theatre .menu,
 .menu.de-panel {
@@ -287,21 +282,4 @@ html[data-eco="1"] .menu { background: rgba(14,14,20,.96); }
   font-size: 12px;
   color: var(--mute);
   line-height: 1.4;
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-bar.c2 .lib-sort-menu button,
-.lib-bar.c2 .lib-menu button,
-.lib-bar.c2 .lib-menu a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 9px 11px;
-  border-radius: 9px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: 500 13px var(--sans);
-  text-align: left;
-  text-decoration: none;
 }

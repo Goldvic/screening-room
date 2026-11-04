@@ -28,8 +28,6 @@
 .sched-row span { display: grid; min-width: 0; }
 /* belongs in overlays/details-sheet (kept here so the look stays identical) */
 .cand span { display: grid; min-width: 0; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.chips span, .chips button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--raise); color: var(--mute); font-size: 12.5px; }
 /* belongs in overlays/command-palette (kept here so the look stays identical) */
 .palette input { width: 100%; padding: 16px 18px; font-size: 15px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; outline: none; color: var(--text); }
 /* belongs in overlays/command-palette (kept here so the look stays identical) */
@@ -38,8 +36,6 @@
 .sheet-grid span { color: var(--mute); font-size: 12.5px; }
 .sumline { margin: 10px 2px 2px; font-size: 13.5px; }
 .sumline b { font-size: 15px; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.season-tabs button { padding: 6px 14px; border-radius: 999px; background: var(--raise); color: var(--mute); font-weight: 500; }
 /* belongs in components/shared (kept here so the look stays identical) */
 .topnav .netmini small { font-size: 11px; }
 /* belongs in shell/topnav (kept here so the look stays identical) */
@@ -69,12 +65,6 @@
   .topnav .netmini span, .topnav .netmini small { display: none; }
 }
 
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); font-size: 13.5px; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-menu button, .lib-menu a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font: 500 13.5px var(--sans); color: var(--text); text-align: left; text-decoration: none; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.sd-n b { color: var(--lamp); font-size: 15px; }
 /* belongs in overlays/details-sheet (kept here so the look stays identical) */
 .dt-chips span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; background: color-mix(in srgb, var(--text) 9%, transparent); color: var(--mute); font: 600 12px var(--sans); }
 /* belongs in player/menu (kept here so the look stays identical) */
@@ -145,23 +135,6 @@
   align-items: center;
   gap: 8px;
   font: 600 14px var(--sans);
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-sort-menu button,
-.lib-bar.c3 .lib-menu button,
-.lib-bar.c3 .lib-menu a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 9px 11px;
-  border-radius: 9px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: 500 13px var(--sans);
-  text-align: left;
-  text-decoration: none;
 }
 /* belongs in overlays/data-panel (kept here so the look stays identical) */
 .dp-pick button {

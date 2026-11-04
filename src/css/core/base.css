@@ -1,7 +1,6 @@
 /* Base: resets and element defaults. Nothing here is specific to a page.
    Colors, fonts, radius and sizes all come from core/tokens.css. */
 
-
 /* ---------- 1. Layout reset ---------- */
 
 * { box-sizing: border-box; }
@@ -15,7 +14,6 @@ h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; line-height: 1.25; text-wr
 p { margin: 0; }
 
 [hidden] { display: none !important; }
-
 
 /* ---------- 2. Page, text and links ---------- */
 
@@ -56,7 +54,6 @@ dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0; f
 dt { color: var(--mute); }
 dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 
-
 /* ---------- 3. Form elements: neutral starting point (shared.css adds the real look) ---------- */
 
 button, select, input, textarea { font: inherit; color: inherit; }
@@ -76,7 +73,6 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
 /* belongs in components/shared (kept here until that file is redesigned) */
 :where(textarea) { width: 100%; resize: vertical; font: 400 var(--fs-sm)/1.45 var(--mono); }
 
-
 /* ---------- 4. Focus ---------- */
 
 :focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
@@ -88,7 +84,6 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
   border-color: var(--lamp);
   box-shadow: 0 0 0 3px var(--lamp-soft);
 }
-
 
 /* ---------- 5. Scrollbars ---------- */
 
@@ -104,9 +99,9 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--mute) padding-box; }
 
-
 /* ---------- 6. Reduced motion ---------- */
-
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+html[data-eco="1"] *, html[data-eco="1"] *::before, html[data-eco="1"] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; animation: none !important; transition: none !important; box-shadow: none !important; }

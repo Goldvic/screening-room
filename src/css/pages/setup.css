@@ -44,7 +44,6 @@
 
 /* belongs in components/shared (kept here so the look stays identical) */
 .keybox input { flex: 1; min-width: 0; }
-.lib-bar .seg { margin-left: 0; height: 38px; border-radius: 10px; background: var(--panel); border-color: var(--line); padding: 3px; gap: 2px; }
 /* Segments */
 .dialog.settings .seg {
   display: inline-flex;
@@ -126,4 +125,32 @@
 @media (max-width: 820px) {
   .setup-wrap.login { grid-template-columns: 1fr; }
   .login .setup-card { padding: 28px 20px; }
+}
+
+.login-hero h1 {
+  font: 750 40px/1.08 var(--sans);
+  letter-spacing: -.03em;
+  margin: 0;
+}
+
+.login-hero li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-hero li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lamp);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--lamp) 40%, transparent);
+  flex: none;
+}
+
+.note.good {
+  background: rgba(74,222,128,.08);
+  box-shadow: inset 0 0 0 1px rgba(74,222,128,.15);
+  color: #b8f0c8;
 }

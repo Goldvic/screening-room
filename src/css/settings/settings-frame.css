@@ -15,7 +15,6 @@
 /* belongs in components/shared (kept here so the look stays identical) */
 .inline { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .field-c input:not([type=range]):not([type=checkbox]) { width: 240px; max-width: 100%; }
-/* belongs in pages/setup (kept here so the look stays identical) */
 /* server screen */
 .setup-wrap { min-height: 100%; display: grid; place-items: center; padding: 30px 16px; overflow: auto; height: 100%; }
 /* belongs in pages/setup (kept here so the look stays identical) */
@@ -48,13 +47,6 @@
 .search { border-radius: 8px; }
 /* belongs in components/shared (kept here so the look stays identical) */
 .note { padding: 10px 14px; border-radius: var(--r); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.tile { border-radius: var(--r); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.posters { grid-template-columns: repeat(auto-fill, minmax(var(--pw, 138px), 1fr)) !important; gap: 14px 12px !important; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.selmark { position: absolute; top: 8px; left: 8px; z-index: 3; width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
-  background: rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.7); color: transparent; pointer-events: none; }
 /* belongs in components/shared (kept here so the look stays identical) */
 .dialog { border-radius: 14px; padding: 18px 20px; }
 .field { padding: 9px 0; }
@@ -83,21 +75,8 @@
 .cbtn { border-radius: 10px; }
 /* belongs in player/next-card (kept here so the look stays identical) */
 .nextcard small { color: var(--lamp); font: 600 11px var(--sans); letter-spacing: .12em; text-transform: uppercase; }
-/* belongs in pages/library (kept here so the look stays identical) */
-/* hover actions on posters: one glass pill, bottom of the poster, delete kept apart */
-.p-act { position: absolute; left: 8px; right: 8px; bottom: 44px; z-index: 4; display: flex; justify-content: center; gap: 2px; padding: 4px;
-  border-radius: 12px; background: rgba(12,12,16,.62); backdrop-filter: blur(14px) saturate(1.4); border: 1px solid rgba(255,255,255,.12);
-  opacity: 0; transform: translateY(6px); transition: opacity .16s, transform .16s; pointer-events: none; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.r-act { display: flex; gap: 1px; margin-right: 6px; padding: 3px; border-radius: 10px; background: var(--raise); opacity: 0; transition: opacity .15s; }
 /* belongs in settings/auto-save-rules (kept here so the look stays identical) */
 .sched-row small { color: var(--mute); }
-/* belongs in pages/library (kept here so the look stays identical) */
-/* v4: quick actions are small; everything else lives in a labelled menu */
-.p-act { top: 8px; right: 8px; left: auto; bottom: auto; width: auto; justify-content: flex-end; padding: 3px; gap: 0; background: rgba(12,12,16,.7); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.amenu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 31; min-width: 200px; display: grid; gap: 1px; padding: 5px; border-radius: 12px;
-  background: rgba(22,22,29,.94); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid var(--line); box-shadow: 0 16px 44px rgba(0,0,0,.5); animation: slidein .12s ease-out; }
 /* belongs in components/shared (kept here so the look stays identical) */
 .kstat { font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
 /* belongs in overlays/details-sheet (kept here so the look stays identical) */
@@ -106,9 +85,6 @@
 .cand img, .cand-ph { width: 38px; height: 56px; border-radius: 6px; object-fit: cover; flex: none; display: grid; place-items: center; background: var(--panel); }
 /* belongs in overlays/details-sheet (kept here so the look stays identical) */
 .cand small { color: var(--mute); }
-/* belongs in pages/library (kept here so the look stays identical) */
-/* NEW badge */
-.new-b { position: absolute; top: 8px; left: 8px; z-index: 3; padding: 3px 8px; border-radius: 6px; background: var(--lamp); color: #111; font: 800 10px var(--sans); letter-spacing: .1em; pointer-events: none; }
 /* belongs in components/shared (kept here so the look stays identical) */
 .tag { padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--lamp) 22%, var(--raise)); font-size: 12px; }
 /* belongs in overlays/tour (kept here so the look stays identical) */
@@ -141,42 +117,6 @@
 .dp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--mute); }
 /* belongs in overlays/data-panel (kept here so the look stays identical) */
 .dp-foot { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--line); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-src { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 4px; width: fit-content; max-width: 100%; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-src-b { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 9px; color: var(--mute); font: 600 13px var(--sans); transition: background .15s, color .15s; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-back { width: 34px; height: 34px; margin-right: 8px; display: grid; place-items: center; border-radius: 50%; background: var(--raise); border: 1px solid var(--line); color: var(--text); transition: border-color .15s; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-search { flex: 0 1 380px; min-width: 190px; display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--mute); transition: border-color .15s, box-shadow .15s; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-sel { height: 38px; padding: 0 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); font-size: 13px; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-menu { position: absolute; right: 0; top: 46px; z-index: 30; min-width: 230px; padding: 6px; display: grid; gap: 2px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0,0,0,.5); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.chipf { padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--mute); font: 600 12.5px var(--sans); transition: all .15s; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.tile { min-height: 0; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); transition: transform .15s, border-color .15s, background .15s; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.tile-ic { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: hsl(var(--h) 45% 30% / .55); color: hsl(var(--h) 75% 78%); }
-/* belongs in pages/library (kept here so the look stays identical) */
-.tile-act { top: 50%; right: 6px; transform: translateY(-50%); background: var(--panel); border-radius: 10px; }
-/* belongs in pages/library (kept here so the look stays identical) */
-/* posters */
-.posters { gap: 24px 16px !important; }
-/* belongs in pages/library (kept here so the look stays identical) */
-/* list rows */
-.rows { gap: 1px; border: 1px solid var(--line); border-radius: 14px; background: var(--line); overflow: hidden; }
-/* belongs in pages/library (kept here so the look stays identical) */
-/* selection dock */
-.seldock { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 4px; max-width: calc(100vw - 24px); overflow-x: auto; padding: 8px; border-radius: 18px; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(16px); border: 1px solid var(--line); box-shadow: 0 22px 60px rgba(0,0,0,.6); animation: dockin .2s ease-out; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.sd-b { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 10px; color: var(--text); font: 600 12.5px var(--sans); white-space: nowrap; }
-@media (max-width: 760px) {
-  /* belongs in pages/library (kept here so the look stays identical) */
-  .lib-search { flex-basis: 100%; }
-}
-
 /* belongs in overlays/details-sheet (kept here so the look stays identical) */
 .dt { position: relative; isolation: isolate; width: min(820px, 100%); max-height: calc(100vh - 40px); overflow: auto; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.65); padding: 34px; display: grid; gap: 26px; animation: dtin .22s ease-out; }
 /* belongs in overlays/details-sheet (kept here so the look stays identical) */
@@ -202,7 +142,6 @@
   font: 700 10.5px var(--sans);
   letter-spacing: .14em; text-transform: uppercase;
 }
-/* belongs in components/shared (kept here so the look stays identical) */
 /* Empty / welcome */
 .empty {
   display: grid;
@@ -458,7 +397,6 @@
   border-color: color-mix(in srgb, var(--lamp) 45%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--lamp) 12%, transparent);
 }
-/* belongs in components/shared (kept here so the look stays identical) */
 /* server list rows */
 .srv {
   display: flex;
@@ -531,70 +469,6 @@
 .dialog.de-settings .opt.on {
   border-left-color: var(--lamp) !important;
   background: rgba(0,0,0,.18) !important;
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-src {
-  padding: 3px;
-  border-radius: 99px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-src-b {
-  padding: 6px 13px;
-  border-radius: 99px;
-  font: 500 12.5px var(--sans);
-  font-weight: 500;
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-sort-menu, .lib-bar.c3 .lib-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 30;
-  min-width: 180px;
-  padding: 6px;
-  border-radius: 14px;
-  background: rgba(22,24,32,.97);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,.1);
-  box-shadow: 0 18px 48px rgba(0,0,0,.5);
-  display: grid;
-  gap: 2px;
-}
-/* belongs in components/shared (kept here so the look stays identical) */
-.lib-search.mini input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: 500 12.5px var(--sans);
-  outline: none;
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-quiet-b {
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 9px;
-  border: 0;
-  background: transparent;
-  color: var(--mute);
-  font: 500 12.5px var(--sans);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: background .15s, color .15s;
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.lib-search.c2 input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: 500 14px var(--sans);
-  outline: none;
 }
 /* belongs in components/shared (kept here so the look stays identical) */
 .empty {
@@ -840,7 +714,6 @@
     }
 }
 
-/* belongs in components/shared (kept here so the look stays identical) */
 /* ── Appearance panel (premium) ─────────────────────────────────────── */
 .look-panel {
   display: flex;
@@ -859,14 +732,4 @@
   letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--mute);
-}
-/* belongs in pages/library (kept here so the look stays identical) */
-.tile-poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-  z-index: 1;
 }

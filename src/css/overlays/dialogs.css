@@ -43,3 +43,9 @@
 .dialog.name-dialog .dlg-head {
   padding: 16px 18px 8px;
 }
+
+.dialog.de-settings .dlg-actions {
+  padding: 14px 16px 16px;
+  border-top: 0.5px solid rgba(255,255,255,.06);
+  margin-top: 8px;
+}

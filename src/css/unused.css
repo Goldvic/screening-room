@@ -196,12 +196,6 @@ html[data-compact="1"] .hero { min-height: 220px; }
 }
 
 .greet-top .page-h { margin: 0; }
-.lib-btn { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); font: 600 13px var(--sans); transition: border-color .15s; }
-.lib-btn:hover { border-color: color-mix(in srgb, var(--lamp) 55%, var(--line)); }
-.lib-btn.on { background: color-mix(in srgb, var(--lamp) 18%, var(--panel)); border-color: var(--lamp); color: var(--lamp); }
-.lib-ic { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--mute); }
-.lib-ic:hover, .lib-ic.on { color: var(--text); border-color: color-mix(in srgb, var(--lamp) 55%, var(--line)); }
-.lib-count { color: var(--mute); font: 500 12px var(--sans); font-variant-numeric: tabular-nums; }
 .menu-handle { display: none !important; }
 /* Hero */
 .hero.v2 {
@@ -669,114 +663,7 @@ html[data-compact="1"] .hero { min-height: 220px; }
     inset 0 1px 0 rgba(255,255,255,.06),
     0 28px 80px rgba(0,0,0,.55);
 }
-.lib-bar.c3 {
-  display: grid;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-.lib-c3-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.lib-c3-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-  flex: 1;
-}
-.lib-c3-h {
-  font: 700 26px/1.1 var(--sans);
-  letter-spacing: -.03em;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lib-c3-sub {
-  margin: 4px 0 0;
-  font: 500 12.5px var(--sans);
-  color: var(--mute);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lib-bar.c3 .lib-back {
-  margin-top: 4px;
-  margin-right: 0;
-}
-/* icon cluster */
-.lib-cluster {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
-  flex: none;
-}
-.lib-cluster-seg {
-  display: flex;
-  gap: 1px;
-  padding: 0 2px;
-  border-left: 1px solid rgba(255,255,255,.06);
-  border-right: 1px solid rgba(255,255,255,.06);
-  margin: 0 2px;
-}
-.lib-cluster-b {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 0;
-  background: transparent;
-  color: var(--mute);
-  display: grid;
-  place-items: center;
-  transition: background .15s, color .15s;
-}
-.lib-cluster-b:hover {
-  background: rgba(255,255,255,.07);
-  color: var(--text);
-}
-.lib-cluster-b.on {
-  background: rgba(255,255,255,.1);
-  color: var(--text);
-}
 /* chips + mini search */
-.lib-bar.c3 .lib-chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.lib-bar.c3 .chips { flex: 1; min-width: 0; }
-.lib-bar.c3 .chipf {
-  padding: 6px 12px;
-  border-radius: 99px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
-  color: var(--mute);
-  font: 500 12.5px var(--sans);
-  transition: background .15s, color .15s, border-color .15s;
-}
-.lib-bar.c3 .chipf:hover {
-  color: var(--text);
-  border-color: rgba(255,255,255,.12);
-}
-.lib-bar.c3 .chipf.on {
-  background: #fff;
-  color: #0a0c10;
-  border-color: #fff;
-  font-weight: 600;
-}
-@media (max-width: 720px) {
-  .lib-c3-h { font-size: 22px; }
-  .lib-cluster { width: 100%; justify-content: flex-end; }
-}
 
 .hero.v2 {
   min-height: 320px;

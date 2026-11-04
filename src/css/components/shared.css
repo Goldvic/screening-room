@@ -6,7 +6,6 @@
    to other files. Each one keeps working until its own file is redesigned, then moves out and
    is deleted from here. */
 
-
 /* ================= 1. TEXT AND LAYOUT HELPERS ================= */
 
 .muted { color: var(--mute); }
@@ -22,7 +21,6 @@
 .top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 
 .page-h { margin: 0 0 var(--sp-2); font: 600 var(--fs-3xl)/1.1 var(--serif); letter-spacing: -.01em; }
-
 
 /* ================= 2. INDICATORS: lamp, live dot, bars ================= */
 
@@ -40,9 +38,6 @@
 
 .prog { display: block; height: 3px; margin-top: 8px; border-radius: var(--r-pill); background: var(--on-media-line); overflow: hidden; }
 .prog b { display: block; height: 100%; background: var(--lamp); }
-
-
-/* ================= 3. BUTTONS ================= */
 
 /* Primary button. Variants: .ghost, .danger, .ghost.danger, .sm, .big */
 .btn {
@@ -82,7 +77,6 @@
 .cbtn.lit { color: var(--lamp); }
 .cbtn.sm { width: 28px; height: 28px; }
 
-
 /* ================= 4. PILLS, NOTES, SEGMENTS, CHIPS ================= */
 
 .tag { display: inline-flex; align-items: center; flex: none; gap: 4px; padding: 2px 10px; border: 1px solid var(--lamp-line); border-radius: var(--r-pill); background: var(--lamp-soft); color: var(--lamp); font: 500 var(--fs-xs)/1.5 var(--sans); }
@@ -117,7 +111,6 @@
 .dp-chips button:hover, .dp-seg button:hover { color: var(--text); }
 .dp-chips button.on, .dp-seg button.on { border-color: var(--lamp-line); background: var(--lamp-soft); color: var(--lamp); }
 
-
 /* ================= 5. TOGGLE ================= */
 
 .sw { position: relative; display: inline-block; flex: none; width: 38px; height: 22px; border-radius: var(--r-pill); background: var(--line); transition: background var(--t-med); }
@@ -125,13 +118,11 @@
 .sw.on { background: var(--lamp); }
 .sw.on::after { transform: translateX(16px); }
 
-
 /* ================= 6. SEARCH FIELD ================= */
 
 .search { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 200px; max-width: 420px; height: 36px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--r); background: var(--raise); color: var(--mute); transition: border-color var(--t-fast), box-shadow var(--t-fast); }
 .search:focus-within { border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-soft); color: var(--text); }
 .search input { flex: 1; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; color: var(--text); }
-
 
 /* ================= 7. DIALOGS ================= */
 
@@ -147,7 +138,6 @@
 
 .dlg-actions { display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-5); }
 .dlg-actions.spread { align-items: center; flex-wrap: wrap; justify-content: space-between; }
-
 
 /* ================= 8. MENU OPTIONS AND EMPTY STATES ================= */
 
@@ -167,10 +157,6 @@
 .empty h2 { margin: 4px 0 0; font: 600 var(--fs-2xl)/1.2 var(--serif); }
 .empty p { max-width: 420px; margin: 0; color: var(--mute); }
 
-
-/* ================= PARKED: belongs in other files, kept so nothing breaks =================
-   Do not add to this section. Remove each block when its file is redesigned. */
-
 /* -> pages/library */
 .go { position: absolute; top: 12px; right: 12px; z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--lamp); color: var(--on-lamp); }
 
@@ -178,17 +164,15 @@
 .tn-back { position: fixed; inset: 0; z-index: 29; }
 html.pop .side, html.pop .main, html.pop .selbar { display: none !important; }
 
-/* -> pages/library */
-.lib-search.mini { display: flex; align-items: center; flex: none; gap: 6px; width: min(200px, 100%); height: 34px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--wash-1); color: var(--mute); }
-.lib-search.mini:focus-within { border-color: var(--lamp-line); box-shadow: 0 0 0 3px var(--lamp-soft); }
-@media (max-width: 720px) { .lib-search.mini { order: 10; width: 100%; } }
-
 /* -> overlays/tour and pages/setup */
 .keybox { display: grid; gap: var(--sp-2); width: 100%; }
 .keybox .inline { gap: var(--sp-2); }
 .sheet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; margin-top: 10px; }
 .sheet-grid kbd { min-width: 96px; text-align: center; }
-@media (max-width: 720px) { .sheet-grid { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+ .sheet-grid { grid-template-columns: 1fr; } 
+}
+
 .bars { display: grid; gap: var(--sp-2); }
 @keyframes slidein { from { transform: translateX(30px); opacity: 0; } }
 @keyframes de-in { from { transform: translate(-50%, -46%) scale(.97); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
@@ -225,3 +209,36 @@ html.pop .side, html.pop .main, html.pop .selbar { display: none !important; }
 .dl-row:hover, .st-row:hover { background: var(--wash-1); }
 .drawer .pad, .muted.pad { padding: 20px 16px; color: var(--mute); font-size: var(--fs-md); }
 .srv.on { border-color: var(--lamp); }
+
+.menu .opt svg,
+.menu .opt .icon {
+  color: var(--lamp);
+  flex: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.empty p {
+  max-width: 400px;
+  margin: 0;
+  color: var(--mute);
+  font-size: 13.5px;
+}
+
+.srv:hover { background: rgba(255,255,255,.03); }
+
+.srv.on {
+  border-left-color: var(--lamp);
+  background: rgba(0,0,0,.15);
+}
+
+.note.err {
+  background: rgba(240,98,79,.08);
+  box-shadow: inset 0 0 0 1px rgba(240,98,79,.15);
+  color: #f8c4bc;
+}
+
+.dialog.de-settings .sform,
+.dialog.de-settings .srv {
+  margin: 0;
+}
