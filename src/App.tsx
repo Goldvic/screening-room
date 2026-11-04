@@ -1,20 +1,24 @@
 import { CSSProperties, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Player from './Player';
 import Setup from './Setup';
-import SettingsDialog, { Toggle } from './Settings';
-import { AddToCollection, CollectionsPage, Collection, HomeCustomize, HomeRow, RuleDialog, Stars, TagsEditor, Tidy, Tour, ItemMeta } from './Extras';
+import SettingsDialog from './Settings';
+import { AddToCollection, CollectionsPage, Collection, HomeCustomize, HomeRow, RuleDialog, Tidy, Tour, ItemMeta } from './Extras';
 import { Hero, MagSide, Playlists, Rail, SavedFile, Tile, Today, Welcome, progPct, savedSub } from './Home';
 import { DownloadDialog, DownloadsPanel, StoragePanel } from './Downloads';
 import { Discover } from './Discover';
+import { Art, folderPosterUrl, Thumb } from './components/Art';
+import { Details } from './components/Details';
+import { Confirm, Ask } from './components/Confirm';
+import { NameDialog, NameAsk } from './components/NameDialog';
+import { Palette, Sheet } from './components/Palette';
+import { DataPanel, NetMini } from './components/DataPanel';
+import { Tray, DL } from './components/Tray';
 import {
-  ACCENTS, APP_NAME, Caps, SavedList, dayKey, DEFAULTS, Entry, Icon, Net, OFFLINE_ID, OPENED_ID, Prefs, PrefsCtx, Prog, Root, SAVER, SettingsCtx, VIDEO, VIDEO_EXTS,
+  ACCENTS, APP_NAME, Caps, SavedList, dayKey, DEFAULTS, Entry, Icon, OFFLINE_ID, OPENED_ID, Prefs, PrefsCtx, Prog, Root, SAVER, SettingsCtx, VIDEO, VIDEO_EXTS,
   api, bridge, bytes, clock, hue, join, loadSettings, mbps, parseTitle, pct, post, qs, rate, turboDownload, turboOk, useNet, useUpdates, Settings,
 } from './lib';
 
-type Ask = { title: string; body: string; label: string; go: () => Promise<void> };
-type DL = { id: string; name: string; done: number; total: number; speed: number; state: 'run' | 'done' | 'error' | 'cancel'; error?: string; ctl: AbortController };
 type RootsRes = { host: string; mode: string; error: string; hasServer: boolean; roots: Root[] };
-type Meta = { found: boolean; title?: string; year?: number; overview?: string; rating?: number; genres?: string[]; poster?: boolean };
 type Target = { root: number; paths: string[]; names: string[]; sizes: number };
 type Card = { k: string; p?: Prog; rid: number; dir: string; name: string };
 
@@ -51,140 +55,6 @@ export default function App() {
     <SettingsCtx.Provider value={{ s: settings, set }}>
       <PrefsCtx.Provider value={{ prefs, setPref }}><Library /></PrefsCtx.Provider>
     </SettingsCtx.Provider>
-  );
-}
-
-// ---------- posters and descriptions (TMDB), fetched a few at a time ----------
-let gateN = 0;
-const gateQ: (() => void)[] = [];
-const gate = async <T,>(fn: () => Promise<T>): Promise<T> => {
-  while (gateN >= 3) await new Promise<void>((r) => gateQ.push(r));
-  gateN++;
-  try { return await fn(); } finally { gateN--; gateQ.shift()?.(); }
-};
-const metaCache = new Map<string, Promise<Meta | null>>();
-const getMeta = (name: string, folder = ''): Promise<Meta | null> => {
-  const t = parseTitle(name, folder), key = `${t.title}|${t.year}`;
-  let p = metaCache.get(key);
-  if (!p) { p = gate(() => api<Meta>('meta', { q: t.title, year: t.year })).catch(() => null); metaCache.set(key, p); }
-  return p;
-};
-const posterUrl = (name: string, folder = '') => { const t = parseTitle(name, folder); return `/api/poster?${qs({ q: t.title, year: t.year })}`; };
-const folderPosterUrl = (root: number, folder: string) => `/api/folder-poster?${qs({ root, path: folder })}`;
-
-function Thumb({ root, path, v, icon }: { root: number; path: string; v: number; icon: string }) {
-  const { s } = useContext(SettingsCtx);
-  const [ok, setOk] = useState(true);
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <>
-      <span className="ph"><Icon n={icon} s={28} /></span>
-      {s.thumbs && ok && (
-        <img className={loaded ? 'on' : ''} loading="lazy" decoding="async" alt="" src={`/api/thumb?${qs({ root, path, v })}`}
-          onLoad={() => setLoaded(true)} onError={() => setOk(false)} />
-      )}
-    </>
-  );
-}
-function Art({ root, path, v, name }: { root: number; path: string; v: number; name: string }) {
-  const { s } = useContext(SettingsCtx);
-  const ref = useRef<HTMLSpanElement>(null);
-  const [state, setState] = useState<'idle' | 'ok' | 'none'>('idle');
-  useEffect(() => {
-    if (!s.posters || state !== 'idle' || !ref.current) return;
-    const io = new IntersectionObserver((es) => {
-      if (!es.some((e) => e.isIntersecting)) return;
-      io.disconnect();
-      getMeta(name, path.split('/').slice(0, -1).join('/')).then((m) => setState(m?.poster ? 'ok' : 'none'));
-    }, { rootMargin: '200px' });
-    io.observe(ref.current);
-    return () => io.disconnect();
-  }, [s.posters, state, name]);
-  return (
-    <span className="art" ref={ref}>
-      <Thumb root={root} path={path} v={v} icon="film" />
-      {s.posters && state === 'ok' && <img className="poster-img on" alt="" loading="lazy" src={posterUrl(name, path.split('/').slice(0, -1).join('/'))} onError={() => setState('none')} />}
-    </span>
-  );
-}
-
-function Details({ name, folder, meta, allTags, onMeta, remote, onClose, onPlay, onSave, size, prog }: { size?: number; prog?: Prog; name: string; folder: string; meta: ItemMeta; allTags: string[]; onMeta: (p: Partial<ItemMeta>) => void; remote: boolean; onClose: () => void; onPlay: () => void; onSave: () => void }) {
-  const [m, setM] = useState<Meta | null | undefined>(undefined);
-  const [err, setErr] = useState('');
-  const t = parseTitle(name, folder);
-  const [fix, setFix] = useState(false);
-  const [fq, setFq] = useState('');
-  const [cands, setCands] = useState<{ id: number; kind: string; title: string; year: number; poster: string; overview: string }[]>([]);
-  const [fbusy, setFbusy] = useState(false);
-  const search = async () => { setFbusy(true); try { setCands((await api<{ items: typeof cands }>('meta/search', { q: fq || t.title })).items); } catch (e: any) { setErr(e.message); } setFbusy(false); };
-  const choose = async (c: (typeof cands)[number]) => {
-    setFbusy(true);
-    try { const nm = await post<Meta>('meta/choose', { q: t.title, year: t.year, id: c.id, kind: c.kind }); metaCache.delete(`${t.title}|${t.year}`); setM(nm); setFix(false); setErr(''); setPv((x) => x + 1); } catch (e: any) { setErr(e.message); }
-    setFbusy(false);
-  };
-  const [pv, setPv] = useState(0);
-  useEffect(() => {
-    api<Meta>('meta', { q: t.title, year: t.year }).then(setM).catch((e) => { setErr(e.message); setM(null); });
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
-  const title = m?.title ?? t.title;
-  const yr = m?.year ?? t.year;
-  const part = !!prog && !prog.watched && prog.pos > 30;
-  const label = part ? 'Resume' : prog?.watched ? 'Watch again' : 'Play';
-  return (
-    <div className="scrim dt-scrim" onClick={onClose}>
-      <div className="dt" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="About this video">
-        {m?.poster && <div className="dt-bg" aria-hidden="true" style={{ backgroundImage: `url(${posterUrl(name, folder)}&r=${pv})` }} />}
-        <button className="dt-close" onClick={onClose} aria-label="Close"><Icon n="close" s={18} /></button>
-        <div className="dt-main">
-          <div className="dt-poster">{m?.poster ? <img alt="" src={`${posterUrl(name, folder)}&r=${pv}`} /> : <span className="dt-ph"><Icon n="film" s={38} /></span>}</div>
-          <div className="dt-info">
-            <div className="dt-chips">
-              {yr ? <span>{yr}</span> : null}
-              {m?.rating ? <span className="dt-star">★ {m.rating}</span> : null}
-              {(m?.genres ?? []).slice(0, 3).map((g) => <span key={g}>{g}</span>)}
-              {prog?.watched && <span className="dt-ok"><Icon n="check" s={12} /> Watched</span>}
-            </div>
-            <h2>{title}</h2>
-            {m === undefined && <div className="dt-skel"><i /><i /><i /></div>}
-            {m?.found && <p className="dt-over">{m.overview || 'No description available.'}</p>}
-            {m && !m.found && <p className="muted">Nothing found for “{t.title}”. You can search for it below.</p>}
-            {err && <p className="muted small">{err}</p>}
-            {part && prog && (
-              <div className="dt-prog">
-                <i className="bar"><b style={{ width: `${Math.min(100, (prog.pos / Math.max(1, prog.dur)) * 100)}%` }} /></i>
-                <span className="small muted">{clock(prog.pos)} watched{prog.dur > prog.pos ? ` · ${clock(prog.dur - prog.pos)} left` : ''}</span>
-              </div>
-            )}
-            <div className="dt-actions">
-              <button className="btn big" onClick={onPlay}><Icon n="play" s={16} /> {label}</button>
-              {remote && <button className="btn ghost big" onClick={onSave}><Icon n="save" s={16} /> Save offline</button>}
-            </div>
-          </div>
-        </div>
-        <div className="dt-grid">
-          <section><h4>Your rating</h4><Stars value={meta.r ?? 0} onChange={(n) => onMeta({ r: n })} /></section>
-          <section><h4>Tags</h4><TagsEditor tags={meta.t ?? []} all={allTags} onChange={(t) => onMeta({ t })} /></section>
-        </div>
-        <div className="dt-foot">
-          <span className="dt-file" title={name}><Icon n="film" s={14} /> <span>{name}</span>{size ? <em>{bytes(size)}</em> : null}</span>
-          <button className="dt-link" onClick={() => { setFix(!fix); setFq(t.title); setCands([]); }}>{m?.found ? 'Wrong match?' : 'Find it manually'}</button>
-        </div>
-        {fix && (
-          <div className="fixbox">
-            <span className="inline"><input autoFocus value={fq} onChange={(e) => setFq(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="Type the real title" /><button className="btn" disabled={fbusy} onClick={search}>Search</button></span>
-            {cands.map((c) => (
-              <button key={c.kind + c.id} className="cand" onClick={() => choose(c)}>
-                {c.poster ? <img alt="" src={c.poster} /> : <span className="cand-ph"><Icon n="film" s={18} /></span>}
-                <span><b>{c.title}{c.year ? ` (${c.year})` : ''}</b><small>{c.kind === 'tv' ? 'Series' : 'Movie'} · {c.overview.slice(0, 90)}{c.overview.length > 90 ? '…' : ''}</small></span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -241,7 +111,7 @@ function Library() {
   const [floating, setFloating] = useState(false);
   const [view, setView] = useState<'home' | 'library' | 'playlists' | 'collections' | 'insights' | 'discover'>('home');
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
-  const [nameAsk, setNameAsk] = useState<{ title: string; value: string; label: string; go: (v: string) => void } | null>(null);
+  const [nameAsk, setNameAsk] = useState<NameAsk | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [playlist, setPlaylist] = useState<string[] | null>(null);
@@ -641,7 +511,7 @@ function Library() {
       onDragLeave={(e) => { if (e.currentTarget === e.target) setDragging(false); }}
       onDrop={onDrop}>
       {dragging && <div className="dropzone" aria-hidden="true"><Icon n="play" s={42} /><strong>Drop to play</strong><span>The videos are played where they are. Nothing is copied.</span></div>}
-      
+
       <aside className="sidebar" aria-label="Main navigation">
         <div className="sidebar-top">
           <button className="sidebar-brand" title={APP_NAME} onClick={() => setView('home')}>
@@ -659,8 +529,8 @@ function Library() {
           <div className="sidebar-group">
             <span className="sidebar-group-label">Browse</span>
             {([
-              ['home', 'Home', 'home'], 
-              ['discover', 'Discover', 'bolt'], 
+              ['home', 'Home', 'home'],
+              ['discover', 'Discover', 'bolt'],
               ['library', 'Library', 'film']
             ] as const).map(([id, label, ic]) => (
               <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}>
@@ -673,8 +543,8 @@ function Library() {
           <div className="sidebar-group">
             <span className="sidebar-group-label">Your Stuff</span>
             {([
-              ['playlists', 'Playlists', 'list'], 
-              ['collections', 'Collections', 'folder'], 
+              ['playlists', 'Playlists', 'list'],
+              ['collections', 'Collections', 'folder'],
               ['insights', 'Insights', 'gauge']
             ] as const).map(([id, label, ic]) => (
               <button key={id} className={view === id ? 'sidebar-link on' : 'sidebar-link'} onClick={() => setView(id)} title={label} aria-current={view === id ? 'page' : undefined}>
@@ -711,17 +581,17 @@ function Library() {
             <Icon n="sliders" s={18} />
             <span className="sidebar-label">Settings</span>
           </button>
-          
+
           <div className="sidebar-data">
             <NetMini onClick={() => setDataOpen((x) => !x)} />
             {dataOpen && (
-              <DataPanel 
+              <DataPanel
                 budget={budget} saver={saver} queued={queueInfo.active + queueInfo.waiting}
                 onBudget={(g) => { post('settings', { budgetGB: g }).then(() => loadSrv()).catch(() => {}); }}
                 onClose={() => setDataOpen(false)}
                 onDownloads={() => { setDataOpen(false); setPanel('downloads'); }}
                 onInsights={() => { setDataOpen(false); setView('insights'); }}
-                onSettings={() => { setDataOpen(false); setPanel('settings'); }} 
+                onSettings={() => { setDataOpen(false); setPanel('settings'); }}
               />
             )}
           </div>
@@ -1018,229 +888,234 @@ function Library() {
 
         {view === 'library' && (
           <>
-        <div className="lib-head">
-          <div className="lib-src" role="tablist" aria-label="Storage">
-            {roots.map((r) => (
-              <button key={r.id} role="tab" aria-selected={r.id === root} className={r.id === root ? 'lib-src-b on' : 'lib-src-b'} onClick={() => { setRoot(r.id); setDir(''); }} title={r.total ? `${bytes(r.free)} free of ${bytes(r.total)}` : r.dir}>
-                {r.opened ? <><Icon n="film" s={14} /> Opened files</> : r.offline ? <><Icon n="hdd" s={14} /> On this laptop</> : <><Icon n="server" s={14} /> {r.name}</>}
-              </button>
-            ))}
-            <span className="grow" />
-            <span className={rootsErr ? 'lib-status bad' : hasServer && host ? 'lib-status ok' : 'lib-status'}><i />{hasServer ? (rootsErr ? `Cannot reach ${host}` : host ? host : 'Connecting…') : 'No server set up'}</span>
-          </div>
-          <nav className="lib-crumbs" aria-label="Folder path">
-            {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
-            <button className={dir ? 'lib-crumb' : 'lib-crumb here'} onClick={() => setDir('')}>{opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? '…'}</button>
-            {crumbs.map((c, i) => <span key={i} className="lib-crumb-w"><em>›</em><button className={i === crumbs.length - 1 ? 'lib-crumb here' : 'lib-crumb'} onClick={() => setDir(crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
-          </nav>
-        </div>
-        {sibs.length > 1 && <div className="season-tabs" role="tablist">{sibs.map((n) => <button key={n} role="tab" aria-selected={n === dir.split('/').pop()} className={n === dir.split('/').pop() ? 'on' : ''} onClick={() => setDir(join(dirOf(dir), n))}>{n}</button>)}</div>}
-        {items.length > 0 && (
-          <div className="lib-bar c2">
-            <div className="lib-c2-title">
-              {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
-              <div className="lib-c2-text">
-                <h1 className="lib-c2-h">{dir ? (crumbs[crumbs.length - 1] || 'Library') : (opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? 'Library')}</h1>
-                <p className="lib-c2-sub">
-                  {dir && crumbs.length > 1 ? `${crumbs.slice(0, -1).join(' · ')} · ` : ''}
-                  {shown.length === items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : `${shown.length} of ${items.length}`}
-                </p>
-              </div>
-              <div className="lib-quiet" role="toolbar" aria-label="Library tools">
-                <div className="lib-sort-wrap">
-                  <button type="button" className={sortMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setSortMenu((x) => !x); setLibMenu(false); }} aria-haspopup="menu" aria-expanded={sortMenu}>
-                    Sort · {sort === 'name' ? 'Name' : sort === 'new' ? 'Newest' : 'Largest'} ▾
+            <div className="lib-head">
+              <div className="lib-src" role="tablist" aria-label="Storage">
+                {roots.map((r) => (
+                  <button key={r.id} role="tab" aria-selected={r.id === root} className={r.id === root ? 'lib-src-b on' : 'lib-src-b'} onClick={() => { setRoot(r.id); setDir(''); }} title={r.total ? `${bytes(r.free)} free of ${bytes(r.total)}` : r.dir}>
+                    {r.opened ? <><Icon n="film" s={14} /> Opened files</> : r.offline ? <><Icon n="hdd" s={14} /> On this laptop</> : <><Icon n="server" s={14} /> {r.name}</>}
                   </button>
-                  {sortMenu && (
-                    <>
-                      <div className="tn-back" onClick={() => setSortMenu(false)} />
-                      <div className="lib-sort-menu" role="menu">
-                        <div className="lib-menu-lab">Sort by</div>
-                        {([['name', 'Name'], ['new', 'Newest'], ['size', 'Largest']] as const).map(([id, label]) => (
-                          <button key={id} role="menuitem" className={sort === id ? 'on' : ''} onClick={() => { setSort(id); setSortMenu(false); }}>{label}{sort === id ? ' ✓' : ''}</button>
-                        ))}
-                        {s.view !== 'list' && (
-                          <>
-                            <div className="lib-menu-lab">Poster size</div>
-                            <div className="lib-dens-row">
-                              <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </>
-                  )}
+                ))}
+                <span className="grow" />
+                <span className={rootsErr ? 'lib-status bad' : hasServer && host ? 'lib-status ok' : 'lib-status'}><i />{hasServer ? (rootsErr ? `Cannot reach ${host}` : host ? host : 'Connecting…') : 'No server set up'}</span>
+              </div>
+              <nav className="lib-crumbs" aria-label="Folder path">
+                {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
+                <button className={dir ? 'lib-crumb' : 'lib-crumb here'} onClick={() => setDir('')}>{opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? '…'}</button>
+                {crumbs.map((c, i) => <span key={i} className="lib-crumb-w"><em>›</em><button className={i === crumbs.length - 1 ? 'lib-crumb here' : 'lib-crumb'} onClick={() => setDir(crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
+              </nav>
+            </div>
+
+            {sibs.length > 1 && (
+              <div className="season-tabs" role="tablist">
+                {sibs.map((n) => <button key={n} role="tab" aria-selected={n === dir.split('/').pop()} className={n === dir.split('/').pop() ? 'on' : ''} onClick={() => setDir(join(dirOf(dir), n))}>{n}</button>)}
+              </div>
+            )}
+
+            {items.length > 0 && (
+              <div className="lib-bar c2">
+                <div className="lib-c2-title">
+                  {dir && <button className="lib-back" onClick={() => setDir(crumbs.slice(0, -1).join('/'))} title="Back" aria-label="Back"><Icon n="back" s={16} /></button>}
+                  <div className="lib-c2-text">
+                    <h1 className="lib-c2-h">{dir ? (crumbs[crumbs.length - 1] || 'Library') : (opened ? 'Opened files' : offline ? 'On this laptop' : cur?.name ?? 'Library')}</h1>
+                    <p className="lib-c2-sub">
+                      {dir && crumbs.length > 1 ? `${crumbs.slice(0, -1).join(' · ')} · ` : ''}
+                      {shown.length === items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : `${shown.length} of ${items.length}`}
+                    </p>
+                  </div>
+                  <div className="lib-quiet" role="toolbar" aria-label="Library tools">
+                    <div className="lib-sort-wrap">
+                      <button type="button" className={sortMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setSortMenu((x) => !x); setLibMenu(false); }} aria-haspopup="menu" aria-expanded={sortMenu}>
+                        Sort · {sort === 'name' ? 'Name' : sort === 'new' ? 'Newest' : 'Largest'} ▾
+                      </button>
+                      {sortMenu && (
+                        <>
+                          <div className="tn-back" onClick={() => setSortMenu(false)} />
+                          <div className="lib-sort-menu" role="menu">
+                            <div className="lib-menu-lab">Sort by</div>
+                            {([['name', 'Name'], ['new', 'Newest'], ['size', 'Largest']] as const).map(([id, label]) => (
+                              <button key={id} role="menuitem" className={sort === id ? 'on' : ''} onClick={() => { setSort(id); setSortMenu(false); }}>{label}{sort === id ? ' ✓' : ''}</button>
+                            ))}
+                            {s.view !== 'list' && (
+                              <>
+                                <div className="lib-menu-lab">Poster size</div>
+                                <div className="lib-dens-row">
+                                  <input className="dens" type="range" min={110} max={230} step={10} value={s.density} onChange={(e) => set({ density: +e.target.value })} title="Poster size" aria-label="Poster size" />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <button type="button" className={s.view === 'grid' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'grid' })}>Grid</button>
+                    <button type="button" className={s.view === 'list' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'list' })}>List</button>
+                    <button type="button" className={s.view === 'wall' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'wall' })}>Wall</button>
+                    {videos.length > 1 && (
+                      <button type="button" className={selecting ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => (selecting ? endSelect() : setSelecting(true))}>{selecting ? 'Done' : 'Select'}</button>
+                    )}
+                    {nextUp && !(dir && videos.length > 0) && <button className="btn sm" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={14} /> {nextUp.label}</button>}
+                    <div className="lib-more">
+                      <button type="button" className={libMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setLibMenu((x) => !x); setSortMenu(false); }} aria-haspopup="menu" aria-expanded={libMenu} title="More"><Icon n="more" s={16} /></button>
+                      {libMenu && (
+                        <>
+                          <div className="tn-back" onClick={() => setLibMenu(false)} />
+                          <div className="lib-menu" role="menu">
+                            <button role="menuitem" onClick={() => { setLibMenu(false); refreshAll().then(() => flash('Refreshed')); }}><Icon n="rotate" s={15} /> Refresh<kbd>F5</kbd></button>
+                            {videos.length > 1 && <button role="menuitem" onClick={() => { setLibMenu(false); randomPick(); }}><Icon n="bolt" s={15} /> Surprise me</button>}
+                            {!offline && dir && <button role="menuitem" onClick={() => { setLibMenu(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={15} /> Save folder for offline</button>}
+                            {!offline && !bridge && dir && <a role="menuitem" href={`/api/download?${qs({ root: rid, path: dir })}`} onClick={() => setLibMenu(false)}><Icon n="down" s={15} /> Download folder</a>}
+                            {seen.length > 0 && <><i className="amenu-sep" /><button role="menuitem" className="del" onClick={() => { setLibMenu(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete {seen.length} watched</button></>}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <button type="button" className={s.view === 'grid' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'grid' })}>Grid</button>
-                <button type="button" className={s.view === 'list' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'list' })}>List</button>
-                <button type="button" className={s.view === 'wall' ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => set({ view: 'wall' })}>Wall</button>
-                {videos.length > 1 && (
-                  <button type="button" className={selecting ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => (selecting ? endSelect() : setSelecting(true))}>{selecting ? 'Done' : 'Select'}</button>
-                )}
-                {nextUp && !(dir && videos.length > 0) && <button className="btn sm" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={14} /> {nextUp.label}</button>}
-                <div className="lib-more">
-                  <button type="button" className={libMenu ? 'lib-quiet-b on' : 'lib-quiet-b'} onClick={() => { setLibMenu((x) => !x); setSortMenu(false); }} aria-haspopup="menu" aria-expanded={libMenu} title="More"><Icon n="more" s={16} /></button>
-                  {libMenu && (
-                    <>
-                      <div className="tn-back" onClick={() => setLibMenu(false)} />
-                      <div className="lib-menu" role="menu">
-                        <button role="menuitem" onClick={() => { setLibMenu(false); refreshAll().then(() => flash('Refreshed')); }}><Icon n="rotate" s={15} /> Refresh<kbd>F5</kbd></button>
-                        {videos.length > 1 && <button role="menuitem" onClick={() => { setLibMenu(false); randomPick(); }}><Icon n="bolt" s={15} /> Surprise me</button>}
-                        {!offline && dir && <button role="menuitem" onClick={() => { setLibMenu(false); setTarget({ root: rid, paths: [dir], names: [crumbs[crumbs.length - 1]], sizes: 0 }); }}><Icon n="save" s={15} /> Save folder for offline</button>}
-                        {!offline && !bridge && dir && <a role="menuitem" href={`/api/download?${qs({ root: rid, path: dir })}`} onClick={() => setLibMenu(false)}><Icon n="down" s={15} /> Download folder</a>}
-                        {seen.length > 0 && <><i className="amenu-sep" /><button role="menuitem" className="del" onClick={() => { setLibMenu(false); confirmDelete(seen, `${seen.length} watched video${seen.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete {seen.length} watched</button></>}
-                      </div>
-                    </>
+
+                <label className="lib-search c2">
+                  <Icon n="search" s={16} />
+                  <input ref={search} placeholder="Search this folder" value={query} onChange={(e) => setQuery(e.target.value)} />
+                  {query ? <button className="lib-x" onClick={() => setQuery('')} aria-label="Clear search">×</button> : <kbd>/</kbd>}
+                </label>
+
+                <div className="lib-row lib-chips">
+                  <div className="chips" role="group" aria-label="Show">
+                    {([['all', 'All'], ['unwatched', 'Not watched'], ['progress', 'In progress'], ['fav', 'Favorites'], ['rated', 'Rated 4+'], ['watched', 'Watched']] as const).map(([id, label]) => (
+                      <button key={id} className={s.filter === id ? 'chipf on' : 'chipf'} aria-pressed={s.filter === id} onClick={() => set({ filter: id as Settings['filter'] })}>{label}</button>
+                    ))}
+                  </div>
+                  {allTags.length > 0 && (
+                    <select className="lib-sel quiet" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag">
+                      <option value="">All tags</option>
+                      {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   )}
                 </div>
               </div>
-            </div>
+            )}
 
-            <label className="lib-search c2">
-              <Icon n="search" s={16} />
-              <input ref={search} placeholder="Search this folder" value={query} onChange={(e) => setQuery(e.target.value)} />
-              {query ? <button className="lib-x" onClick={() => setQuery('')} aria-label="Clear search">×</button> : <kbd>/</kbd>}
-            </label>
+            {dir && videos.length > 0 && (
+              <section className="series-head">
+                <span className="series-bg" aria-hidden="true"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
+                <span className="series-art"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
+                <div className="series-info">
+                  <h1>{crumbs[crumbs.length - 1]}</h1>
+                  <p className="muted">{videos.length} video{videos.length > 1 ? 's' : ''} · {seen.length} watched{videos.length - seen.length > 0 ? ` · ${videos.length - seen.length} to go` : ''}</p>
+                  <i className="bar"><b style={{ width: `${(seen.length / videos.length) * 100}%` }} /></i>
+                  <span className="inline sh-act">
+                    {nextUp && <button className="btn big" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {seen.length ? 'Next episode' : 'Start'}</button>}
+                    {!offline && !opened && <button className="btn ghost big" onClick={() => setRuleFor(true)} title="Keep new or upcoming episodes saved on this laptop"><Icon n="save" s={15} /> Auto-save…</button>}
+                  </span>
+                </div>
+              </section>
+            )}
 
+            {selecting && (
+              <div className="seldock" role="status">
+                <strong className="sd-n"><b>{sel.length}</b> selected</strong>
+                <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play</button>
+                <button className="sd-b" onClick={() => setSel(sel.length === videos.length ? [] : videos)}>{sel.length === videos.length ? 'Clear' : 'Select all'}</button>
+                <i className="sd-sep" />
+                <button className="sd-b" disabled={!sel.length} onClick={() => setAddTo(videos.filter((n) => sel.includes(n)))}><Icon n="folder" s={15} /> Collection</button>
+                <button className="sd-b" disabled={!sel.length} onClick={savePlaylist}><Icon n="list" s={15} /> Playlist</button>
+                {!offline && <button className="sd-b" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Offline</button>}
+                <button className="sd-b danger" disabled={!sel.length} onClick={() => { const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete</button>
+                <i className="sd-sep" />
+                <button className="sd-b" onClick={endSelect} aria-label="Cancel selection">Cancel</button>
+              </div>
+            )}
+            {status === 'loading' && root !== null && <div className="skeletons" aria-label="Loading">{Array.from({ length: 10 }, (_, k) => <i key={k} />)}</div>}
+            {status === 'error' && !rootsErr && (
+              <div className="note err">
+                <strong>Could not read this folder.</strong> {err}
+                <p className="muted">Check that the server is reachable and the media folder is right (Servers).</p>
+                <button className="btn" onClick={load}>Try again</button>
+              </div>
+            )}
+            {status === 'ready' && items.length === 0 && <p className="note">{opened ? 'No opened videos. Drop a video here, press Ctrl+O, or right-click a video in Explorer and choose Open with Cinema.' : offline ? 'Nothing downloaded yet. Use the save icon on a movie, or “Save for offline” inside the player.' : 'This folder is empty. Downloads from the bot will show up here.'}</p>}
+            {status === 'ready' && items.length > 0 && shown.length === 0 && <p className="note">Nothing matches{query ? ` “${query}”` : ' this filter'}.</p>}
 
-        {dir && videos.length > 0 && (
-          <section className="series-head">
-            <span className="series-bg" aria-hidden="true"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
-            <span className="series-art"><Art root={rid} path={join(dir, videos[0])} v={0} name={crumbs[crumbs.length - 1]} /></span>
-            <div className="series-info">
-              <h1>{crumbs[crumbs.length - 1]}</h1>
-              <p className="muted">{videos.length} video{videos.length > 1 ? 's' : ''} · {seen.length} watched{videos.length - seen.length > 0 ? ` · ${videos.length - seen.length} to go` : ''}</p>
-              <i className="bar"><b style={{ width: `${(seen.length / videos.length) * 100}%` }} /></i>
-              <span className="inline sh-act">
-                {nextUp && <button className="btn big" onClick={() => startPlay(nextUp.name)}><Icon n="play" s={15} /> {seen.length ? 'Next episode' : 'Start'}</button>}
-                {!offline && !opened && <button className="btn ghost big" onClick={() => setRuleFor(true)} title="Keep new or upcoming episodes saved on this laptop"><Icon n="save" s={15} /> Auto-save…</button>}
-              </span>
-            </div>
-          </section>
-        )}
-
-            <div className="lib-row lib-chips">
-              <div className="chips" role="group" aria-label="Show">
-                {([['all', 'All'], ['unwatched', 'Not watched'], ['progress', 'In progress'], ['fav', 'Favorites'], ['rated', 'Rated 4+'], ['watched', 'Watched']] as const).map(([id, label]) => (
-                  <button key={id} className={s.filter === id ? 'chipf on' : 'chipf'} aria-pressed={s.filter === id} onClick={() => set({ filter: id as Settings['filter'] })}>{label}</button>
+            {folders.length > 0 && (
+              <div className="tiles">
+                {folders.map((f) => (
+                  <div key={f.name} className="tile" style={{ '--h': hue(f.name) } as CSSProperties}>
+                    <button className="tile-open" onClick={() => setDir(join(dir, f.name))}>
+                      <span className="tile-ic">
+                        {s.posters && (
+                          <img
+                            className="tile-poster"
+                            alt=""
+                            loading="lazy"
+                            src={folderPosterUrl(rid, join(dir, f.name))}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
+                        <Icon n="folder" s={20} />
+                      </span>
+                      <strong>{f.name}</strong>
+                    </button>
+                    <span className="tile-act">
+                      {!offline && <button className="icon" title="Save folder for offline" aria-label={`Save folder ${f.name} for offline`} onClick={() => saveOffline([f.name], 0)}><Icon n="save" s={16} /></button>}
+                      {!offline && !bridge && <a className="icon" title="Download folder" aria-label={`Download folder ${f.name}`} href={`/api/download?${qs({ root: rid, path: join(dir, f.name) })}`}><Icon n="down" s={16} /></a>}
+                      <button className="icon danger" title="Delete" aria-label={`Delete folder ${f.name}`} onClick={() => confirmDelete([f.name], `“${f.name}”`)}><Icon n="trash" s={16} /></button>
+                    </span>
+                  </div>
                 ))}
               </div>
-              {allTags.length > 0 && (
-                <select className="lib-sel quiet" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Tag">
-                  <option value="">All tags</option>
-                  {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              )}
-            </div>
-          </div>
-        )}
+            )}
 
-        {selecting && (
-          <div className="seldock" role="status">
-            <strong className="sd-n"><b>{sel.length}</b> selected</strong>
-            <button className="btn" disabled={!sel.length} onClick={playSelected}><Icon n="play" s={15} /> Play</button>
-            <button className="sd-b" onClick={() => setSel(sel.length === videos.length ? [] : videos)}>{sel.length === videos.length ? 'Clear' : 'Select all'}</button>
-            <i className="sd-sep" />
-            <button className="sd-b" disabled={!sel.length} onClick={() => setAddTo(videos.filter((n) => sel.includes(n)))}><Icon n="folder" s={15} /> Collection</button>
-            <button className="sd-b" disabled={!sel.length} onClick={savePlaylist}><Icon n="list" s={15} /> Playlist</button>
-            {!offline && <button className="sd-b" disabled={!sel.length} onClick={saveSelected}><Icon n="save" s={15} /> Offline</button>}
-            <button className="sd-b danger" disabled={!sel.length} onClick={() => { const l = videos.filter((n) => sel.includes(n)); endSelect(); confirmDelete(l, `${l.length} video${l.length > 1 ? 's' : ''}`); }}><Icon n="trash" s={15} /> Delete</button>
-            <i className="sd-sep" />
-            <button className="sd-b" onClick={endSelect} aria-label="Cancel selection">Cancel</button>
-          </div>
-        )}
-        {status === 'loading' && root !== null && <div className="skeletons" aria-label="Loading">{Array.from({ length: 10 }, (_, k) => <i key={k} />)}</div>}
-        {status === 'error' && !rootsErr && (
-          <div className="note err">
-            <strong>Could not read this folder.</strong> {err}
-            <p className="muted">Check that the server is reachable and the media folder is right (Servers).</p>
-            <button className="btn" onClick={load}>Try again</button>
-          </div>
-        )}
-        {status === 'ready' && items.length === 0 && <p className="note">{opened ? 'No opened videos. Drop a video here, press Ctrl+O, or right-click a video in Explorer and choose Open with Cinema.' : offline ? 'Nothing downloaded yet. Use the save icon on a movie, or “Save for offline” inside the player.' : 'This folder is empty. Downloads from the bot will show up here.'}</p>}
-        {status === 'ready' && items.length > 0 && shown.length === 0 && <p className="note">Nothing matches{query ? ` “${query}”` : ' this filter'}.</p>}
+            {posters.length > 0 && (
+              <ul className={(s.posters ? 'posters portrait' : 'posters') + (s.view === 'wall' ? ' wall' : '')}>
+                {posters.map((it) => {
+                  const p = prog[pkey(it.name)];
+                  const part = p && !p.watched && p.pos > 30;
+                  return (
+                    <li key={it.name} className={(p?.watched ? 'poster done' : 'poster') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')} style={{ '--h': hue(it.name) } as CSSProperties}>
+                      {selecting && <span className={sel.includes(it.name) ? 'selmark on' : 'selmark'} aria-hidden="true"><Icon n="check" s={14} /></span>}
+                      {isNew(it) && <span className="new-b">NEW</span>}
+                      <button className="poster-open" onClick={() => (selecting ? toggleSel(it.name) : startPlay(it.name))}>
+                        <span className="frame">
+                          <Art root={rid} path={join(dir, it.name)} v={it.mtime} name={it.name} />
+                          <span className="go"><Icon n="play" s={18} /></span>
+                          {p?.watched && <span className="tag"><Icon n="check" s={12} /> Watched</span>}
+                          {favs.includes(pkey(it.name)) && <span className="fav-dot" aria-label="Favorite"><Icon n="heart" s={13} /></span>}
+                          {part && <i className="prog"><b style={{ width: `${pct(p)}%` }} /></i>}
+                        </span>
+                        <span className="p-name" title={it.name}>{it.name.replace(/\.[^.]+$/, '')}</span>
+                        <span className="small muted">{bytes(it.size)}{part ? `, stopped at ${clock(p.pos)}` : ''}</span>
+                      </button>
+                      <span className="p-act">{fileActions(it, true, p)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
 
-        {folders.length > 0 && (
-          <div className="tiles">
-            {folders.map((f) => (
-              <div key={f.name} className="tile" style={{ '--h': hue(f.name) } as CSSProperties}>
-                <button className="tile-open" onClick={() => setDir(join(dir, f.name))}>
-                  <span className="tile-ic">
-                    {s.posters && (
-                      <img
-                        className="tile-poster"
-                        alt=""
-                        loading="lazy"
-                        src={folderPosterUrl(rid, join(dir, f.name))}
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    )}
-                    <Icon n="folder" s={20} />
-                  </span>
-                  <strong>{f.name}</strong>
-                </button>
-                <span className="tile-act">
-                  {!offline && <button className="icon" title="Save folder for offline" aria-label={`Save folder ${f.name} for offline`} onClick={() => saveOffline([f.name], 0)}><Icon n="save" s={16} /></button>}
-                  {!offline && !bridge && <a className="icon" title="Download folder" aria-label={`Download folder ${f.name}`} href={`/api/download?${qs({ root: rid, path: join(dir, f.name) })}`}><Icon n="down" s={16} /></a>}
-                  <button className="icon danger" title="Delete" aria-label={`Delete folder ${f.name}`} onClick={() => confirmDelete([f.name], `“${f.name}”`)}><Icon n="trash" s={16} /></button>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {posters.length > 0 && (
-          <ul className={(s.posters ? 'posters portrait' : 'posters') + (s.view === 'wall' ? ' wall' : '')}>
-            {posters.map((it) => {
-              const p = prog[pkey(it.name)];
-              const part = p && !p.watched && p.pos > 30;
-              return (
-                <li key={it.name} className={(p?.watched ? 'poster done' : 'poster') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')} style={{ '--h': hue(it.name) } as CSSProperties}>
-                  {selecting && <span className={sel.includes(it.name) ? 'selmark on' : 'selmark'} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                  {isNew(it) && <span className="new-b">NEW</span>}
-                  <button className="poster-open" onClick={() => (selecting ? toggleSel(it.name) : startPlay(it.name))}>
-                    <span className="frame">
-                      <Art root={rid} path={join(dir, it.name)} v={it.mtime} name={it.name} />
-                      <span className="go"><Icon n="play" s={18} /></span>
-                      {p?.watched && <span className="tag"><Icon n="check" s={12} /> Watched</span>}
-                      {favs.includes(pkey(it.name)) && <span className="fav-dot" aria-label="Favorite"><Icon n="heart" s={13} /></span>}
-                      {part && <i className="prog"><b style={{ width: `${pct(p)}%` }} /></i>}
-                    </span>
-                    <span className="p-name" title={it.name}>{it.name.replace(/\.[^.]+$/, '')}</span>
-                    <span className="small muted">{bytes(it.size)}{part ? `, stopped at ${clock(p.pos)}` : ''}</span>
-                  </button>
-                  <span className="p-act">{fileActions(it, true, p)}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {rows.length > 0 && (
-          <ul className="rows">
-            {rows.map((it) => {
-              const isVid = VIDEO.test(it.name);
-              const p = prog[pkey(it.name)];
-              const part = p && !p.watched && p.pos > 30;
-              return (
-                <li key={it.name} className={(p?.watched ? 'row done' : 'row') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')}>
-                  {selecting && isVid && <span className={sel.includes(it.name) ? 'selmark on inrow' : 'selmark inrow'} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                  {isNew(it) && <span className="new-b inrow">NEW</span>}
-                  <button className="open" onClick={() => isVid && (selecting ? toggleSel(it.name) : startPlay(it.name))}>
-                    <span className="ico">{isVid && s.thumbs ? <Thumb root={rid} path={join(dir, it.name)} v={it.mtime} icon="film" /> : <Icon n={isVid ? 'film' : 'file'} />}</span>
-                    <span className="info">
-                      <span className="name">{it.name}</span>
-                      <span className="meta muted small">{bytes(it.size)}, {new Date(it.mtime * 1000).toLocaleDateString()}{part ? `, stopped at ${clock(p.pos)}` : ''}</span>
-                      {part && <i className="prog"><b style={{ width: `${pct(p)}%` }} /></i>}
-                    </span>
-                    {p?.watched && <span className="tag"><Icon n="check" s={13} /> Watched</span>}
-                  </button>
-                  <span className="r-act">{fileActions(it, isVid, p)}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+            {rows.length > 0 && (
+              <ul className="rows">
+                {rows.map((it) => {
+                  const isVid = VIDEO.test(it.name);
+                  const p = prog[pkey(it.name)];
+                  const part = p && !p.watched && p.pos > 30;
+                  return (
+                    <li key={it.name} className={(p?.watched ? 'row done' : 'row') + (sel.includes(it.name) ? ' picked' : '') + (menuFor === it.name ? ' menu-open' : '')}>
+                      {selecting && isVid && <span className={sel.includes(it.name) ? 'selmark on inrow' : 'selmark inrow'} aria-hidden="true"><Icon n="check" s={14} /></span>}
+                      {isNew(it) && <span className="new-b inrow">NEW</span>}
+                      <button className="open" onClick={() => isVid && (selecting ? toggleSel(it.name) : startPlay(it.name))}>
+                        <span className="ico">{isVid && s.thumbs ? <Thumb root={rid} path={join(dir, it.name)} v={it.mtime} icon="film" /> : <Icon n={isVid ? 'film' : 'file'} />}</span>
+                        <span className="info">
+                          <span className="name">{it.name}</span>
+                          <span className="meta muted small">{bytes(it.size)}, {new Date(it.mtime * 1000).toLocaleDateString()}{part ? `, stopped at ${clock(p.pos)}` : ''}</span>
+                          {part && <i className="prog"><b style={{ width: `${pct(p)}%` }} /></i>}
+                        </span>
+                        {p?.watched && <span className="tag"><Icon n="check" s={13} /> Watched</span>}
+                      </button>
+                      <span className="r-act">{fileActions(it, isVid, p)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </>
         )}
 
@@ -1294,221 +1169,5 @@ function Library() {
       {dls.length > 0 && <Tray dls={dls} onDismiss={(id) => setDls((d) => d.filter((x) => x.id !== id))} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
-  );
-}
-
-function Tray({ dls, onDismiss }: { dls: DL[]; onDismiss: (id: string) => void }) {
-  return (
-    <aside className="dl-tray" aria-label="Browser downloads">
-      {dls.map((d) => (
-        <div key={d.id} className={`dl-tray-item is-${d.state}`}>
-          <div className="dl-tray-top">
-            <strong className="dl-tray-name" title={d.name}>{d.name}</strong>
-            {d.state === 'run'
-              ? <button className="icon sm" onClick={() => d.ctl.abort()} title="Cancel" aria-label="Cancel download"><Icon n="close" s={15} /></button>
-              : <button className="icon sm" onClick={() => onDismiss(d.id)} title="Dismiss" aria-label="Dismiss"><Icon n="close" s={15} /></button>}
-          </div>
-          <i className="dl-tray-bar"><b style={{ width: `${Math.min(100, (d.done / d.total) * 100)}%` }} /></i>
-          <span className="dl-tray-info">
-            {d.state === 'run' && `${bytes(d.done)} of ${bytes(d.total)}, ${rate(d.speed)} (${mbps(d.speed)})${d.speed > 0 ? `, ${clock((d.total - d.done) / d.speed)} left` : ''}`}
-            {d.state === 'done' && `Saved, ${bytes(d.total)}`}
-            {d.state === 'cancel' && 'Cancelled'}
-            {d.state === 'error' && `Failed: ${d.error ?? 'unknown error'}`}
-          </span>
-        </div>
-      ))}
-    </aside>
-  );
-}
-
-function Confirm({ ask, onClose, onError }: { ask: Ask; onClose: () => void; onError: (m: string) => void }) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()} role="alertdialog">
-        <h3>{ask.title}</h3>
-        <p className="muted">{ask.body}</p>
-        <div className="dlg-actions">
-          <button className="btn ghost" onClick={onClose}>Keep it</button>
-          <button className="btn danger" disabled={busy} onClick={async () => {
-            setBusy(true);
-            try { await ask.go(); } catch (e: any) { onError(e.message); }
-            onClose();
-          }}>{busy ? 'Deleting…' : ask.label}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NameDialog({ ask, onClose }: { ask: { title: string; value: string; label: string; go: (v: string) => void }; onClose: () => void }) {
-  const [v, setV] = useState(ask.value);
-  const isGoal = /goal/i.test(ask.title);
-  const done = () => { ask.go(v.trim()); onClose(); };
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="dialog de-settings name-dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={ask.title}>
-        <div className="set-accent" aria-hidden="true" />
-        <div className="dlg-head">
-          <div>
-            <h3>{ask.title}</h3>
-            {isGoal && <span className="dlg-sub">How many minutes you aim to watch each day</span>}
-          </div>
-          <button type="button" className="icon set-close" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
-        </div>
-        <div className="name-dialog-body">
-          <input
-            autoFocus
-            type={isGoal ? 'number' : 'text'}
-            min={isGoal ? 5 : undefined}
-            step={isGoal ? 5 : undefined}
-            value={v}
-            onChange={(e) => setV(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') done(); if (e.key === 'Escape') onClose(); }}
-          />
-          {isGoal && <p className="muted small name-dialog-hint">Minimum 5 minutes. No upper limit.</p>}
-        </div>
-        <div className="dlg-actions">
-          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
-          <button type="button" className="btn" onClick={done} disabled={isGoal ? !(parseInt(v, 10) >= 5) : !v.trim()}>{ask.label}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function Palette({ cmds, onClose }: { cmds: { t: string; k: string; run: () => void }[]; onClose: () => void }) {
-  const [q, setQ] = useState('');
-  const [i, setI] = useState(0);
-  const list = cmds.filter((c) => q.split(/\s+/).every((w) => c.t.toLowerCase().includes(w.toLowerCase()))).slice(0, 12);
-  const go = (c?: { run: () => void }) => { if (!c) return; onClose(); c.run(); };
-  return (
-    <div className="scrim top" onClick={onClose}>
-      <div className="palette" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette">
-        <input autoFocus placeholder="Type a command or the name of a video…" value={q}
-          onChange={(e) => { setQ(e.target.value); setI(0); }}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setI((x) => Math.min(list.length - 1, x + 1)); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); setI((x) => Math.max(0, x - 1)); }
-            else if (e.key === 'Enter') go(list[i]);
-            else if (e.key === 'Escape') onClose();
-          }} />
-        <div className="pal-list" role="listbox">
-          {list.map((c, n) => <button key={c.t + n} role="option" aria-selected={n === i} className={n === i ? 'on' : ''} onMouseEnter={() => setI(n)} onClick={() => go(c)}><span>{c.t}</span>{c.k && <kbd>{c.k}</kbd>}</button>)}
-          {!list.length && <p className="muted small">Nothing matches “{q}”.</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Sheet({ onClose }: { onClose: () => void }) {
-  const rows = [['Ctrl + K', 'Command palette'], ['Ctrl + 1 / 2 / 3', 'Home, Library, Playlists'], ['Ctrl + 4 or Ctrl + D', 'Downloads'], ['Ctrl + ,', 'Settings'], ['Ctrl + F or /', 'Search this folder'], ['Ctrl + A', 'Select every video'],
-    ['Delete', 'Delete the selected videos'], ['F5 or Ctrl + R', 'Refresh'], ['Ctrl + O', 'Open a video from this computer'], ['Esc', 'Close or clear selection'], ['?', 'This sheet'], ['In the player', 'Press H for the player shortcuts']];
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Keyboard shortcuts">
-        <h3>Keyboard shortcuts</h3>
-        <div className="sheet-grid">{rows.map(([k, d]) => <p key={k}><kbd>{k}</kbd><span>{d}</span></p>)}</div>
-      </div>
-    </div>
-  );
-}
-
-
-// Data popover: opens from the network meter in the top bar. Live speed, usage, budget and Data Saver in one place.
-function DataPanel({ budget, saver, queued, onBudget, onClose, onDownloads, onSettings, onInsights }: {
-  budget: number; saver: number; queued: number; onBudget: (gb: number) => void; onClose: () => void; onDownloads: () => void; onSettings: () => void; onInsights: () => void;
-}) {
-  const { s, set } = useContext(SettingsCtx);
-  const net = useNet(null, 1500);
-  const hist = net.hist.length > 1 ? net.hist : [0, 0];
-  const peak = Math.max(1, ...hist);
-  const pts = hist.map((v, i) => `${(i / (hist.length - 1)) * 300},${58 - (v / peak) * 52}`);
-  const line = `M${pts.join(' L')}`;
-  const used = budget > 0 ? Math.min(100, (net.month / (budget * 1e9)) * 100) : 0;
-  const left = budget > 0 ? Math.max(0, budget * 1e9 - net.month) : 0;
-  const now = new Date();
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1;
-  const budgetLabel = budget > 0 ? `${budget} GB` : 'No limit';
-  const budgetHint = budget > 0
-    ? `${bytes(left)} left · ${daysLeft} day${daysLeft > 1 ? 's' : ''} to go`
-    : 'Set a cap to keep streaming from eating your plan';
-  return (
-    <>
-      <div className="tn-back" onClick={onClose} />
-      <section className="dpanel dp-budget-first" role="dialog" aria-label="Data usage">
-        <div className="dp-accent" aria-hidden="true" />
-
-        {/* Budget is the hero */}
-        <div className="dp-hero">
-          <div className="dp-hero-top">
-            <small>Monthly budget</small>
-            <span className="muted small">{bytes(net.month)} used this month</span>
-          </div>
-          <h2>{budgetLabel}</h2>
-          <p className="dp-hero-hint">{budgetHint}</p>
-          {budget > 0 && <div className={used >= 80 ? 'dp-bar warn' : 'dp-bar'}><i style={{ width: `${used}%` }} /></div>}
-          <div className="dp-pick">
-            {([0, 5, 10, 20, 50, 100] as const).map((g) => (
-              <button key={g} type="button" className={budget === g ? 'on' : ''} onClick={() => onBudget(g)}>
-                {g === 0 ? 'No limit' : `${g} GB`}
-                <span>{g === 0 ? 'unlimited' : g === 5 ? 'light use' : g === 10 ? 'typical' : ''}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Speed + usage secondary */}
-        <div className="dp-secondary">
-          <div className="dp-sec">
-            <small>{net.active ? 'Transferring' : 'Live speed'}</small>
-            <b>{net.ok ? rate(net.speed) : 'Offline'}</b>
-            <div className="dp-sec-sub">{net.ok ? (net.active ? (net.mode || 'connected') : `Idle · ${net.mode || 'connected'}`) : 'no connection'}</div>
-            <svg className="dp-spark-sm" viewBox="0 0 160 28" preserveAspectRatio="none" aria-hidden="true">
-              <path d={`${hist.map((v, i) => `${(i / Math.max(1, hist.length - 1)) * 160},${26 - (v / peak) * 22}`).join(' L').replace(/^/, 'M')} L160,28 L0,28 Z`} className="dp-fill" />
-              <path d={`M${hist.map((v, i) => `${(i / Math.max(1, hist.length - 1)) * 160},${26 - (v / peak) * 22}`).join(' L')}`} className="dp-line" />
-            </svg>
-          </div>
-          <div className="dp-sec">
-            <small>Usage</small>
-            <div className="dp-usage-list">
-              <div><span>Today</span><b>{bytes(net.today)}</b></div>
-              <div><span>This month</span><b>{bytes(net.month)}</b></div>
-              <div><span>All time</span><b>{bytes(net.lifetime)}</b></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Data Saver */}
-        <div className="dp-saver">
-          <div className="dp-h">
-            <strong>Data Saver</strong>
-            <span className="muted small">{saver > s.saver ? 'Raised automatically by your budget' : SAVER[saver]?.hint}</span>
-          </div>
-          <div className="dp-seg" role="group" aria-label="Data Saver">
-            {SAVER.map((o) => <button key={o.id} type="button" className={saver === o.id ? 'on' : ''} onClick={() => set({ saver: o.id })}>{o.label}</button>)}
-          </div>
-          <label className="dp-row"><span>Switch to Low at 80% of the budget</span><Toggle on={s.saverAuto} label="Auto Data Saver" onClick={() => set({ saverAuto: !s.saverAuto })} /></label>
-        </div>
-
-        <div className="dp-foot">
-          <button type="button" onClick={onDownloads}><Icon n="down" s={15} /> {queued > 0 ? `${queued} downloading` : 'Downloads'}</button>
-          <button type="button" onClick={onInsights}><Icon n="gauge" s={15} /> Insights</button>
-          <button type="button" onClick={onSettings}><Icon n="sliders" s={15} /> All data settings</button>
-        </div>
-      </section>
-    </>
-  );
-}
-
-// Live network speed. It has its own timer, so the library is not redrawn every couple of seconds while videos download.
-function NetMini({ onClick }: { onClick: () => void }) {
-  const net = useNet(null, 2500);
-  return (
-    <button className="netmini" onClick={onClick} title={`Network: ${net.ok ? rate(net.speed) : 'offline'} · today ${bytes(net.today)}`}>
-      <i className={net.active ? 'netmini-dot on' : 'netmini-dot'} /><span className="netmini-speed">{net.ok ? rate(net.speed) : 'offline'}</span><small className="netmini-today">{bytes(net.today)} today</small>
-    </button>
   );
 }

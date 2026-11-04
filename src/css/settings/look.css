@@ -1,4 +1,4 @@
-/* Settings/Look: Premium Theme, Accent, Colour Style, and Display. */
+/* Settings/Look: Theme, Accent, Colour Style, Display, Library & Metadata. */
 
 .look-panel {
   display: flex;
@@ -6,13 +6,13 @@
   gap: var(--sp-4);
 }
 
-/* 2-Column Grid for the Appearance items */
 .look-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-4);
 }
 
+/* A block in this tab is a compact .s-block with the same internals. */
 .look-block {
   padding: var(--sp-5);
   border: 1px solid var(--line);
@@ -21,7 +21,6 @@
   display: flex;
   flex-direction: column;
 }
-
 .look-block-h {
   margin-bottom: var(--sp-4);
 }
@@ -37,7 +36,7 @@
   font-size: var(--fs-sm);
 }
 
-/* ---------- Theme (Mockup Previews) ---------- */
+/* ---------- Theme previews ---------- */
 
 .look-theme {
   display: grid;
@@ -59,17 +58,13 @@
   cursor: pointer;
   transition: all var(--t-fast);
 }
-.look-theme-card:hover {
-  border-color: var(--wash-4);
-  background: var(--wash-2);
-}
+.look-theme-card:hover { border-color: var(--wash-4); background: var(--wash-2); }
 .look-theme-card.on {
   border-color: var(--lamp-line);
   box-shadow: 0 0 0 1px var(--lamp-soft);
   background: var(--lamp-soft);
 }
 
-/* Mini app mockup inside the card */
 .look-theme-preview {
   height: 64px;
   border-radius: var(--r-xs);
@@ -112,16 +107,8 @@
 .look-theme-preview.dark .mock-content::after { background: #272734; }
 .look-theme-preview.light .mock-content::after { background: #dadae4; }
 
-.look-theme-meta b {
-  display: block;
-  font-size: var(--fs-md);
-  font-weight: 600;
-}
-.look-theme-meta small {
-  color: var(--mute);
-  font-size: var(--fs-xs);
-  margin-top: 2px;
-}
+.look-theme-meta b { display: block; font-size: var(--fs-md); font-weight: 600; }
+.look-theme-meta small { color: var(--mute); font-size: var(--fs-xs); margin-top: 2px; }
 
 /* ---------- Accent ---------- */
 
@@ -151,23 +138,11 @@
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
 }
-.look-accent:hover {
-  transform: scale(1.1);
-}
-.look-accent.on {
-  border-color: var(--text);
-  transform: scale(1.1);
-}
-.look-accent.on i {
-  transform: scale(.7);
-}
-.look-accent svg {
-  position: absolute;
-  color: #000;
-  pointer-events: none;
-}
+.look-accent:hover { transform: scale(1.1); }
+.look-accent.on { border-color: var(--text); transform: scale(1.1); }
+.look-accent.on i { transform: scale(.7); }
+.look-accent svg { position: absolute; color: #000; pointer-events: none; }
 
-/* Custom Color Row */
 .look-custom-row {
   display: flex;
   align-items: center;
@@ -189,9 +164,7 @@
   transition: border-color var(--t-fast);
   flex: 1;
 }
-.look-color-pick:hover {
-  border-color: var(--wash-4);
-}
+.look-color-pick:hover { border-color: var(--wash-4); }
 .look-color-pick input[type="color"] {
   position: absolute;
   inset: 0;
@@ -219,7 +192,6 @@
 
 /* ---------- Colour Style ---------- */
 
-/* 3x2 Grid for exactly 6 presets */
 .look-presets {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -245,63 +217,26 @@
   border-radius: inherit;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
 }
-.look-preset:hover {
-  transform: scale(1.05);
-  border-color: var(--wash-4);
-}
-.look-preset.on {
-  border-color: var(--text);
-  box-shadow: 0 0 0 1px var(--text);
-}
-.look-preset.on i {
-  inset: 0;
-}
+.look-preset:hover { transform: scale(1.05); border-color: var(--wash-4); }
+.look-preset.on { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.look-preset.on i { inset: 0; }
 .look-preset svg {
   position: relative;
   z-index: 1;
   color: #fff;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,.5));
 }
-.look-preset[aria-label="Paper (light)"] svg {
-  color: #000;
-  filter: none;
-}
+.look-preset[aria-label="Paper (light)"] svg { color: #000; filter: none; }
 
-/* ---------- Display ---------- */
+/* ---------- Display (uses .s-toggle-row) ---------- */
 
 .look-toggles {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
-.look-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-}
-.look-toggle-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-.look-toggle-row:first-child {
-  padding-top: 0;
-}
-.look-toggle-row b {
-  display: block;
-  font-size: var(--fs-md);
-  font-weight: 600;
-}
-.look-toggle-row small {
-  display: block;
-  font-size: var(--fs-sm);
-  color: var(--mute);
-  margin-top: 2px;
-}
 
-/* ---------- Library & Metadata (Premium) ---------- */
+/* ---------- Library & Metadata (uses .s-field) ---------- */
 
 .look-icon-title {
   display: flex;
@@ -355,10 +290,7 @@
   box-shadow: 0 0 0 3px var(--lamp-soft);
   background: var(--panel);
 }
-.input-with-icon svg {
-  color: var(--mute);
-  flex: none;
-}
+.input-with-icon svg { color: var(--mute); flex: none; }
 .input-with-icon input {
   flex: 1;
   height: 42px;
@@ -368,9 +300,7 @@
   font: 500 var(--fs-sm) var(--sans);
   outline: none;
 }
-.input-with-icon input::placeholder {
-  color: var(--mute);
-}
+.input-with-icon input::placeholder { color: var(--mute); }
 .look-field-input .btn {
   height: 42px;
   padding: 0 20px;
@@ -388,14 +318,8 @@
   font-weight: 500;
   line-height: 1.4;
 }
-.look-status.ok {
-  background: color-mix(in srgb, var(--success) 10%, transparent);
-  color: var(--success);
-}
-.look-status.bad {
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  color: var(--danger);
-}
+.look-status.ok { background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--success); }
+.look-status.bad { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
 
 .look-divider {
   height: 1px;
@@ -428,13 +352,7 @@
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 720px) {
-  .look-grid {
-    grid-template-columns: 1fr;
-  }
-  .look-field-input {
-    flex-direction: column;
-  }
-  .look-field-input .btn {
-    padding: 12px;
-  }
+  .look-grid { grid-template-columns: 1fr; }
+  .look-field-input { flex-direction: column; }
+  .look-field-input .btn { padding: 12px; }
 }

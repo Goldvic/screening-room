@@ -1,39 +1,56 @@
-/* Load order matters: later files can override earlier ones. Keep this list in this order. */
+/* Load order matters: later files can override earlier ones. Keep this list in this order.
+   Groups: tokens -> base -> components -> pages -> overlays -> player -> settings -> shell.
+   Shell comes last so the app frame and sidebar win over anything page-level. */
+
+/* ---------- 1. Foundation ---------- */
 @import './core/tokens.css';
 @import './core/base.css';
-@import './pages/discover.css';
-@import './player/top-bar.css';
+
+/* ---------- 2. Reusable components ---------- */
 @import './components/shared.css';
-@import './player/player-frame.css';
-@import './player/seek-bar.css';
-@import './pages/playlists.css';
-@import './pages/setup.css';
-@import './player/audio-menu.css';
-@import './overlays/command-palette.css';
-@import './shell/sidebar.css';
-@import './shell/net-meter.css';
-@import './shell/download-tray.css';
-@import './player/next-card.css';
-@import './player/menu.css';
-@import './settings/auto-save-rules.css';
-@import './player/cast.css';
 @import './components/poster-art.css';
-@import './shell/app-frame.css';
-@import './overlays/tour.css';
+@import './components/rails-tiles.css';
+@import './components/stars-tags.css';
+
+/* ---------- 3. Pages ---------- */
+@import './pages/home.css';
+@import './pages/library.css';
+@import './pages/discover.css';
+@import './pages/playlists.css';
+@import './pages/insights.css';
+@import './pages/downloads.css';
+@import './pages/setup.css';
+
+/* ---------- 4. Overlays ---------- */
 @import './overlays/details-sheet.css';
 @import './overlays/data-panel.css';
-@import './pages/insights.css';
-@import './components/rails-tiles.css';
-@import './overlays/add-to-collection.css';
-@import './pages/downloads.css';
-@import './settings/backup.css';
-@import './settings/settings-frame.css';
-@import './pages/library.css';
 @import './overlays/dialogs.css';
+@import './overlays/add-to-collection.css';
+@import './overlays/command-palette.css';
+@import './overlays/tour.css';
+
+/* ---------- 5. Player ---------- */
+@import './player/player-frame.css';
+@import './player/top-bar.css';
+@import './player/seek-bar.css';
+@import './player/controls.css';
+@import './player/menu.css';
+@import './player/audio-menu.css';
+@import './player/next-card.css';
+@import './player/cast.css';
+
+/* ---------- 6. Settings ---------- */
+@import './settings/settings-frame.css';
 @import './settings/look.css';
 @import './settings/play.css';
 @import './settings/subtitles.css';
 @import './settings/data.css';
 @import './settings/offline.css';
-@import './player/controls.css';
-@import './unused.css';
+@import './settings/auto-save-rules.css';
+@import './settings/backup.css';
+
+/* ---------- 7. Shell (last: wins on shell-level rules) ---------- */
+@import './shell/sidebar.css';
+@import './shell/app-frame.css';
+@import './shell/net-meter.css';
+@import './shell/download-tray.css';

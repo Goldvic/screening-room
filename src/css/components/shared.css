@@ -1,4 +1,15 @@
-/* Shared pieces used by more than one component... */
+/* Shared pieces used by more than one component.
+
+   Sections:
+     1.  Text & layout helpers
+     2.  Indicators (lamp, live dot, bars)
+     3.  Buttons (primary, ghost, danger, icon, control)
+     4.  Pills, notes, segments, chips
+     5.  Dialogs (shell only — specific dialogs live in overlays/)
+     6.  Menu options & empty states
+     7.  Settings primitives (.s-block, .s-toggle-row, .s-field, .s-chips, .s-seg)
+*/
+
 
 /* ================= 1. TEXT AND LAYOUT HELPERS ================= */
 
@@ -16,7 +27,8 @@
 
 .page-h { margin: 0 0 var(--sp-2); font: 600 var(--fs-3xl)/1.1 var(--serif); letter-spacing: -.01em; }
 
-/* ================= 2. INDICATORS: lamp, live dot, bars ================= */
+
+/* ================= 2. INDICATORS ================= */
 
 .lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 14px 2px var(--lamp-glow); }
 .lamp.big { width: 18px; height: 18px; }
@@ -32,6 +44,9 @@
 
 .prog { display: block; height: 3px; margin-top: 8px; border-radius: var(--r-pill); background: var(--on-media-line); overflow: hidden; }
 .prog b { display: block; height: 100%; background: var(--lamp); }
+
+
+/* ================= 3. BUTTONS ================= */
 
 /* Primary button. Variants: .ghost, .danger, .ghost.danger, .sm, .big */
 .btn {
@@ -71,6 +86,7 @@
 .cbtn.lit { color: var(--lamp); }
 .cbtn.sm { width: 28px; height: 28px; }
 
+
 /* ================= 4. PILLS, NOTES, SEGMENTS, CHIPS ================= */
 
 .tag { display: inline-flex; align-items: center; flex: none; gap: 4px; padding: 2px 10px; border: 1px solid var(--lamp-line); border-radius: var(--r-pill); background: var(--lamp-soft); color: var(--lamp); font: 500 var(--fs-xs)/1.5 var(--sans); }
@@ -91,6 +107,7 @@
 .nudge button:hover { background: var(--wash-3); }
 .nudge button.on { background: var(--wash-4); }
 
+/* Legacy two-segment control kept for the player (menu.css) and old call sites. */
 .seg-m { display: flex; margin: 4px 0; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .seg-m button { flex: 1; padding: 8px 6px; background: var(--raise); color: var(--mute); font-size: var(--fs-md); transition: background var(--t-fast), color var(--t-fast); }
 .seg-m button:hover { color: var(--text); }
@@ -111,7 +128,8 @@
 .search:focus-within { border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-soft); color: var(--text); }
 .search input { flex: 1; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; color: var(--text); }
 
-/* ================= 7. DIALOGS ================= */
+
+/* ================= 5. DIALOG SHELL ================= */
 
 /* Bumped z-index to 100 so it floats OVER the absolute sidebar */
 .scrim { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--scrim); backdrop-filter: blur(8px); }
@@ -127,7 +145,8 @@
 .dlg-actions { display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-5); }
 .dlg-actions.spread { align-items: center; flex-wrap: wrap; justify-content: space-between; }
 
-/* ================= 8. MENU OPTIONS AND EMPTY STATES ================= */
+
+/* ================= 6. MENU OPTIONS AND EMPTY STATES ================= */
 
 .msec { margin: 14px 0 4px; padding: 0 4px; color: var(--mute); font: 600 var(--fs-xs) var(--sans); letter-spacing: .08em; text-transform: uppercase; }
 
@@ -144,3 +163,140 @@
 .empty { display: grid; justify-items: center; gap: var(--sp-3); padding: 64px 20px; border: 1px dashed var(--line); border-radius: var(--r-xl); text-align: center; }
 .empty h2 { margin: 4px 0 0; font: 600 var(--fs-2xl)/1.2 var(--serif); }
 .empty p { max-width: 420px; margin: 0; color: var(--mute); }
+
+
+/* ================= 7. SETTINGS PRIMITIVES ================= */
+
+/* A block is the panel/card wrapper used on every settings tab. */
+.s-block {
+  padding: var(--sp-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--wash-1);
+  display: flex;
+  flex-direction: column;
+}
+/* Compact variant for tabs that use the smaller look (data, offline, subtitles). */
+.s-block.compact { padding: var(--sp-4); }
+
+.s-block-h {
+  margin-bottom: var(--sp-4);
+}
+.s-block-h h4 {
+  margin: 0 0 4px;
+  font: 650 var(--fs-md)/1.2 var(--sans);
+  letter-spacing: .02em;
+  color: var(--text);
+}
+/* Small-caps variant used by data/offline/subtitles tabs. */
+.s-block-h.eyebrow h4 {
+  font: 650 var(--fs-sm)/1.2 var(--sans);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.s-block-h p {
+  margin: 0;
+  line-height: 1.4;
+  font-size: var(--fs-sm);
+}
+
+/* A toggle / checkbox row inside a block. */
+.s-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.s-toggle-row:first-child { padding-top: 0; }
+.s-toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.s-toggle-row b {
+  display: block;
+  font: 600 var(--fs-md) var(--sans);
+}
+.s-toggle-row small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  line-height: 1.35;
+}
+
+/* A field row (label + input). */
+.s-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.s-field:first-of-type { padding-top: 0; }
+.s-field:last-of-type { border-bottom: none; padding-bottom: 0; }
+.s-field-label b {
+  display: block;
+  font: 600 var(--fs-md) var(--sans);
+}
+.s-field-label small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--mute);
+}
+
+/* Row of option chips. */
+.s-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.s-chip {
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--raise);
+  color: var(--text);
+  font: 500 var(--fs-sm) var(--sans);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.s-chip:hover { border-color: var(--wash-4); }
+.s-chip.on {
+  border-color: var(--lamp-line);
+  background: var(--lamp-soft);
+  color: var(--lamp);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--lamp-soft);
+}
+
+/* Segmented control (pill). */
+.s-seg {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  background: var(--wash-2);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  width: 100%;
+  max-width: 320px;
+}
+.s-seg button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--mute);
+  font: 500 var(--fs-sm) var(--sans);
+  padding: 8px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  text-align: center;
+}
+.s-seg button:hover { color: var(--text); }
+.s-seg button.on {
+  background: var(--lamp);
+  color: var(--on-lamp);
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+}

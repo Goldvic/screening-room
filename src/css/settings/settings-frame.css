@@ -1,11 +1,11 @@
-/* Settings frame: the dialog layout, the left sidebar, the right content area, and basic form fields. */
+/* Settings frame: dialog layout, left sidebar, right content, form fields. */
 
 /* ================= 1. DIALOG LAYOUT ================= */
 
 .dialog.settings,
 .dialog.de-settings {
   display: grid;
-  grid-template-columns: 260px 1fr; /* Sidebar width */
+  grid-template-columns: 260px 1fr;
   width: min(940px, 96vw);
   height: min(740px, 90vh);
   padding: 0;
@@ -16,7 +16,6 @@
   overflow: hidden;
   animation: set-in var(--t-med) var(--ease);
 }
-
 @keyframes set-in {
   from { transform: translateY(12px) scale(.985); opacity: 0; }
   to { transform: none; opacity: 1; }
@@ -30,6 +29,7 @@
   background: var(--ink);
   border-right: 1px solid var(--line);
   overflow: hidden;
+  min-height: 0;
 }
 
 .set-side-top {
@@ -55,11 +55,7 @@
   color: var(--mute);
   transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
 }
-.set-close:hover {
-  background: var(--wash-3);
-  color: var(--text);
-  transform: scale(1.05);
-}
+.set-close:hover { background: var(--wash-3); color: var(--text); transform: scale(1.05); }
 
 .set-search-bar {
   padding: 0 var(--sp-4) var(--sp-5);
@@ -80,36 +76,26 @@
   border-color: var(--lamp);
   box-shadow: 0 0 0 3px var(--lamp-soft);
 }
-.set-search::placeholder {
-  color: var(--mute);
-}
+.set-search::placeholder { color: var(--mute); }
 
-/* 👇 THIS IS THE CONTAINER FOR THE NAV ITEMS 👇 */
 .set-nav {
   flex: 1;
   overflow-y: auto;
   padding: 0 var(--sp-3) var(--sp-6);
   display: flex;
   flex-direction: column;
-  
-  /* GAP BETWEEN EACH BUTTON (12px) */
-  gap: 12px; 
-  
+  gap: 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--wash-3) transparent;
 }
 .set-nav::-webkit-scrollbar { width: 6px; }
 .set-nav::-webkit-scrollbar-thumb { background: var(--wash-3); border-radius: var(--r-pill); }
 
-/* 👇 THIS IS THE INDIVIDUAL BUTTON 👇 */
 .set-nav-b {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  
-  /* PADDING INSIDE THE BUTTON (16px top/bottom) */
-  padding: 16px 16px; 
-  
+  padding: 16px 16px;
   border-radius: var(--r);
   border: 1px solid transparent;
   background: transparent;
@@ -119,10 +105,7 @@
   cursor: pointer;
   transition: all var(--t-fast);
 }
-.set-nav-b:hover {
-  background: var(--wash-1);
-  color: var(--text);
-}
+.set-nav-b:hover { background: var(--wash-1); color: var(--text); }
 .set-nav-b.on {
   background: var(--wash-2);
   border-color: var(--line);
@@ -130,18 +113,11 @@
   font-weight: 600;
   box-shadow: inset 3px 0 0 var(--lamp);
 }
-.set-nav-b svg {
-  flex: none;
-  opacity: .6;
-  transition: opacity var(--t-fast);
-}
+.set-nav-b svg { flex: none; opacity: .6; transition: opacity var(--t-fast); }
 .set-nav-b:hover svg,
-.set-nav-b.on svg {
-  opacity: 1;
-  color: var(--lamp);
-}
+.set-nav-b.on svg { opacity: 1; color: var(--lamp); }
 
-/* ================= 3. RIGHT CONTENT AREA ================= */
+/* ================= 3. RIGHT CONTENT ================= */
 
 .set-content {
   overflow-y: auto;
@@ -151,13 +127,12 @@
   gap: var(--sp-4);
   scrollbar-width: thin;
   scrollbar-color: var(--wash-3) transparent;
+  min-width: 0;                    /* prevent long <code> from blowing the panel out */
 }
 .set-content::-webkit-scrollbar { width: 8px; }
 .set-content::-webkit-scrollbar-thumb { background: var(--wash-3); border-radius: var(--r-pill); }
 
-.set-content section {
-  margin-bottom: var(--sp-4);
-}
+.set-content section { margin-bottom: var(--sp-4); min-width: 0; }
 .set-content h4 {
   margin: 0 0 var(--sp-4);
   font: 650 var(--fs-md)/1.2 var(--sans);
@@ -175,18 +150,9 @@
   border-bottom: 1px solid var(--wash-1);
   transition: background var(--t-fast);
 }
-.field:last-child {
-  border-bottom: none;
-}
-.field > div:first-child {
-  flex: 1;
-  min-width: 0;
-}
-.field b {
-  display: block;
-  font: 550 var(--fs-md) var(--sans);
-  letter-spacing: -.01em;
-}
+.field:last-child { border-bottom: none; }
+.field > div:first-child { flex: 1; min-width: 0; }
+.field b { display: block; font: 550 var(--fs-md) var(--sans); letter-spacing: -.01em; }
 .field small {
   display: block;
   margin-top: 2px;
@@ -195,16 +161,8 @@
   max-width: 400px;
 }
 
-.field-c {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-}
-.field-c input:not([type=range]):not([type=checkbox]) {
-  width: 240px;
-  max-width: 100%;
-}
+.field-c { flex: none; display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.field-c input:not([type=range]):not([type=checkbox]) { width: 240px; max-width: 100%; }
 
 .dialog.settings select,
 .dialog.settings input[type="text"],
@@ -250,23 +208,14 @@
   margin: 0;
   padding: 0;
 }
-.toggle .sw::after {
-  content: none;
-}
-.toggle .sw.on {
-  transform: translateX(18px);
-}
+.toggle .sw::after { content: none; }
+.toggle .sw.on { transform: translateX(18px); }
 .toggle[aria-checked="true"],
-.toggle:has(.sw.on) {
-  background: var(--lamp);
-}
+.toggle:has(.sw.on) { background: var(--lamp); }
 
 /* ================= 5. SEARCH RESULTS ================= */
 
-.sres {
-  display: grid;
-  gap: 4px;
-}
+.sres { display: grid; gap: 4px; }
 .sres h4 {
   margin: var(--sp-2) 0 var(--sp-3);
   font: 600 var(--fs-xs) var(--sans);
@@ -287,18 +236,9 @@
   cursor: pointer;
   transition: all var(--t-fast);
 }
-.sres .opt:hover {
-  background: var(--wash-2);
-  border-color: var(--line);
-}
-.sres .opt b {
-  display: block;
-  font-weight: 550;
-}
-.sres .opt small {
-  color: var(--mute);
-  font-size: var(--fs-sm);
-}
+.sres .opt:hover { background: var(--wash-2); border-color: var(--line); }
+.sres .opt b { display: block; font-weight: 550; }
+.sres .opt small { color: var(--mute); font-size: var(--fs-sm); }
 
 /* ================= 6. RESPONSIVE ================= */
 
@@ -308,39 +248,44 @@
     grid-template-rows: auto 1fr;
     height: 90vh;
   }
+
+  /* Sidebar becomes a horizontal header: title + close on one line,
+     search on a second line, tabs on a third horizontal scroll strip. */
   .set-sidebar {
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     border-right: 0;
     border-bottom: 1px solid var(--line);
-    padding: var(--sp-2);
-    overflow-x: auto;
+    overflow: hidden;
   }
-  .set-side-top, .set-search-bar {
-    display: none;
+  .set-side-top {
+    padding: var(--sp-3) var(--sp-4) var(--sp-2);
+  }
+  .set-search-bar {
+    padding: 0 var(--sp-4) var(--sp-3);
   }
   .set-nav {
     flex-direction: row;
-    padding: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 var(--sp-3) var(--sp-2);
     gap: var(--sp-1);
+    scrollbar-width: none;
   }
+  .set-nav::-webkit-scrollbar { display: none; }
   .set-nav-b {
     padding: 10px 14px;
     white-space: nowrap;
     box-shadow: none !important;
+    flex: none;
   }
   .set-nav-b.on {
     box-shadow: inset 0 -3px 0 var(--lamp) !important;
   }
-  .set-content {
-    padding: var(--sp-4);
-  }
+  .set-content { padding: var(--sp-4); }
   .dialog.settings .field {
     flex-direction: column;
     align-items: flex-start;
   }
-  .field-c {
-    width: 100%;
-    justify-content: flex-start;
-  }
+  .field-c { width: 100%; justify-content: flex-start; }
 }

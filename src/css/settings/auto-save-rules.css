@@ -1,30 +1,54 @@
-/* Styles for settings/auto-save-rules */
+/* Settings/auto-save-rules
+   The "Auto-save rules" list shown inside Downloads (Extras.tsx: RulesBlock) and the
+   scheduled-download rows shown in the Downloads dock. */
 
-/* scheduled downloads */
-.sched { margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: var(--raise); }
-.sched .msec { margin: 0 0 4px; }
-.sched-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; }
-.sched-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+/* ================= RULES LIST (inside Downloads) ================= */
+
 .sched {
-  padding: 8px 0;
-  border-bottom: 0.5px solid rgba(255,255,255,.05);
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--wash-1);
 }
-.sched .msec {
-  margin: 6px 16px !important;
-}
+
 .sched-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 16px;
-  border-bottom: 0.5px solid rgba(255,255,255,.04);
+  gap: var(--sp-3);
+  padding: 10px var(--sp-4);
+  border-bottom: 1px solid var(--wash-1);
 }
 .sched-row:last-child { border-bottom: 0; }
-.dialog.de-settings .msec {
-  margin: 14px 14px 6px !important;
+
+.sched-row b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.sched-row small {
+  display: block;
+  color: var(--mute);
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+}
+
+/* ================= SECTION LABEL ================= */
+
+.sched .msec {
+  margin: var(--sp-2) var(--sp-4);
   font: 600 10.5px var(--sans);
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.34);
+  color: var(--mute);
+}
+
+/* Used by Extras.tsx RuleDialog and other settings dialogs. */
+.dialog.de-settings .msec {
+  margin: var(--sp-4) var(--sp-4) var(--sp-2);
+  font: 600 10.5px var(--sans);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--mute);
 }

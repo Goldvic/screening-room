@@ -1,6 +1,6 @@
 /* pages/library
-   Everything for the Library page: top bar, breadcrumbs, toolbar, series banner,
-   folder tiles, poster grid, list rows and the selection dock. */
+   Library top bar, breadcrumbs, toolbar, series banner, folder tiles, poster grid,
+   list rows, selection dock. */
 
 /* ================= 1. TOP BAR & BREADCRUMBS ================= */
 
@@ -33,17 +33,13 @@
   font: 600 var(--fs-sm) var(--sans);
   transition: background var(--t-fast), color var(--t-fast);
 }
-.lib-src-b:hover {
-  color: var(--text);
-}
+.lib-src-b:hover { color: var(--text); }
 .lib-src-b.on {
   background: var(--wash-2);
   color: var(--text);
   box-shadow: inset 0 0 0 1px var(--line);
 }
-.lib-src-b.on svg {
-  color: var(--lamp);
-}
+.lib-src-b.on svg { color: var(--lamp); }
 
 .lib-status {
   display: inline-flex;
@@ -59,14 +55,8 @@
   border-radius: 50%;
   background: var(--mute);
 }
-.lib-status.ok i {
-  background: var(--success);
-  box-shadow: 0 0 8px var(--success);
-}
-.lib-status.bad i {
-  background: var(--danger);
-  box-shadow: 0 0 8px var(--danger);
-}
+.lib-status.ok i { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.lib-status.bad i { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
 
 .lib-crumbs {
   display: flex;
@@ -89,16 +79,9 @@
   color: var(--text);
   transition: border-color var(--t-fast);
 }
-.lib-back:hover {
-  border-color: var(--lamp);
-  color: var(--lamp);
-}
+.lib-back:hover { border-color: var(--lamp); color: var(--lamp); }
 
-.lib-crumb-w {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-}
+.lib-crumb-w { display: inline-flex; align-items: center; gap: var(--sp-1); }
 .lib-crumb-w em {
   font-style: normal;
   color: var(--mute);
@@ -112,32 +95,24 @@
   color: var(--mute);
   transition: color var(--t-fast), background var(--t-fast);
 }
-.lib-crumb:hover {
-  color: var(--text);
-  background: var(--raise);
-}
-.lib-crumb.here {
-  color: var(--text);
-}
+.lib-crumb:hover { color: var(--text); background: var(--raise); }
+.lib-crumb.here { color: var(--text); }
 
-/* ================= 2. TOOLBAR ================= */
+/* ================= 2. TOOLBAR (sticky) ================= */
 
 .lib-bar {
   position: sticky;
-  top: -26px;
+  top: 0;
   z-index: 8;
   display: grid;
   gap: var(--sp-3);
-  margin: 0 calc(var(--page-pad) * -1) var(--sp-5);
+  margin: 0 calc(var(--page-pad) * -1) var(--sp-4);
   padding: var(--sp-4) var(--page-pad) var(--sp-3);
   background: color-mix(in srgb, var(--ink) 86%, transparent);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
-
-.lib-bar.c2 {
-  margin-bottom: var(--sp-4);
-}
+.lib-bar.c2 { margin-bottom: var(--sp-4); }
 
 .lib-c2-title {
   display: flex;
@@ -145,12 +120,7 @@
   gap: var(--sp-2);
   flex-wrap: wrap;
 }
-
-.lib-c2-text {
-  flex: 1;
-  min-width: 0;
-}
-
+.lib-c2-text { flex: 1; min-width: 0; }
 .lib-c2-h {
   font: 700 var(--fs-3xl) var(--sans);
   letter-spacing: -.03em;
@@ -159,7 +129,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .lib-c2-sub {
   margin: var(--sp-1) 0 0;
   font: 500 var(--fs-md) var(--sans);
@@ -173,7 +142,6 @@
   flex-wrap: wrap;
   flex: none;
 }
-
 .lib-quiet-b {
   height: 34px;
   padding: 0 12px;
@@ -187,20 +155,12 @@
   gap: var(--sp-1);
   transition: background var(--t-fast), color var(--t-fast);
 }
-.lib-quiet-b:hover {
-  background: var(--wash-2);
-  color: var(--text);
-}
-.lib-quiet-b.on {
-  background: var(--wash-3);
-  color: var(--text);
-}
+.lib-quiet-b:hover { background: var(--wash-2); color: var(--text); }
+.lib-quiet-b.on { background: var(--wash-3); color: var(--text); }
 
 /* Dropdown menus */
 .lib-sort-wrap,
-.lib-more {
-  position: relative;
-}
+.lib-more { position: relative; }
 
 .lib-sort-menu,
 .lib-menu {
@@ -218,7 +178,6 @@
   display: grid;
   gap: 2px;
 }
-
 .lib-sort-menu button,
 .lib-menu button,
 .lib-menu a {
@@ -237,13 +196,8 @@
 }
 .lib-sort-menu button:hover,
 .lib-menu button:hover,
-.lib-menu a:hover {
-  background: var(--wash-2);
-}
-.lib-sort-menu button.on {
-  background: var(--lamp-soft);
-  color: var(--lamp);
-}
+.lib-menu a:hover { background: var(--wash-2); }
+.lib-sort-menu button.on { background: var(--lamp-soft); color: var(--lamp); }
 
 .lib-menu-lab {
   font: 600 10px var(--sans);
@@ -253,13 +207,8 @@
   padding: 6px 10px 4px;
 }
 
-.lib-dens-row {
-  padding: 4px 10px 8px;
-}
-.lib-dens-row .dens {
-  width: 100%;
-  accent-color: var(--lamp);
-}
+.lib-dens-row { padding: 4px 10px 8px; }
+.lib-dens-row .dens { width: 100%; accent-color: var(--lamp); }
 
 .lib-search {
   display: flex;
@@ -301,8 +250,45 @@
   color: var(--mute);
   padding: 0 4px;
 }
-.lib-search .lib-x:hover {
+.lib-search .lib-x:hover { color: var(--text); }
+
+/* Filter chips row (lives inside the sticky bar). */
+.lib-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin: 0;
+}
+.lib-chips { justify-content: space-between; }
+
+.chips { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+.chipf {
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mute);
+  font: 600 var(--fs-sm) var(--sans);
+  transition: all var(--t-fast);
+}
+.chipf:hover {
   color: var(--text);
+  border-color: color-mix(in srgb, var(--lamp) 45%, var(--line));
+}
+.chipf.on {
+  background: var(--text);
+  color: var(--ink);
+  border-color: var(--text);
+}
+
+.lib-sel.quiet {
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--wash-1);
+  color: var(--mute);
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
 }
 
 /* ================= 3. SERIES BANNER ================= */
@@ -347,10 +333,7 @@
   box-shadow: var(--shadow-3);
 }
 
-.series-info {
-  flex: 1;
-  min-width: 0;
-}
+.series-info { flex: 1; min-width: 0; }
 .series-info h1 {
   font: 800 var(--fs-3xl)/1.1 var(--sans);
   letter-spacing: -.03em;
@@ -373,55 +356,7 @@
   flex-wrap: wrap;
 }
 
-/* ================= 4. FILTERS ================= */
-
-.lib-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-3);
-}
-
-.lib-chips {
-  justify-content: space-between;
-}
-
-.chips {
-  display: flex;
-  gap: var(--sp-1);
-  flex-wrap: wrap;
-}
-
-.chipf {
-  padding: 6px 13px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--mute);
-  font: 600 var(--fs-sm) var(--sans);
-  transition: all var(--t-fast);
-}
-.chipf:hover {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--lamp) 45%, var(--line));
-}
-.chipf.on {
-  background: var(--text);
-  color: var(--ink);
-  border-color: var(--text);
-}
-
-.lib-sel.quiet {
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: var(--wash-1);
-  color: var(--mute);
-  padding: 6px 10px;
-  font-size: var(--fs-sm);
-}
-
-/* ================= 5. FOLDER TILES ================= */
+/* ================= 4. FOLDER TILES ================= */
 
 .tiles {
   display: grid;
@@ -474,11 +409,7 @@
   background: var(--wash-1);
   color: var(--lamp);
 }
-.tile-ic > svg {
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 1px 3px var(--shade-3));
-}
+.tile-ic > svg { position: relative; z-index: 2; filter: drop-shadow(0 1px 3px var(--shade-3)); }
 .tile-poster {
   position: absolute;
   inset: 0;
@@ -501,11 +432,9 @@
   border-radius: var(--r-sm);
 }
 .tile:hover .tile-act,
-.tile:focus-within .tile-act {
-  opacity: 1;
-}
+.tile:focus-within .tile-act { opacity: 1; }
 
-/* ================= 6. POSTERS ================= */
+/* ================= 5. POSTERS ================= */
 
 .posters {
   list-style: none;
@@ -515,23 +444,15 @@
   grid-template-columns: repeat(auto-fill, minmax(var(--pw, 138px), 1fr));
   gap: 24px 16px;
 }
-.posters.portrait {
-  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
-}
-.posters.portrait .frame {
-  aspect-ratio: 2 / 3;
-}
+.posters.portrait { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.posters.portrait .frame { aspect-ratio: 2 / 3; }
 .posters.wall {
   grid-template-columns: repeat(auto-fill, minmax(max(var(--pw, 150px), 240px), 1fr));
   gap: 22px 18px;
 }
-.posters.wall .p-name {
-  font-size: 15px;
-}
+.posters.wall .p-name { font-size: 15px; }
 
-.poster {
-  position: relative;
-}
+.poster { position: relative; }
 
 .poster-open {
   display: grid;
@@ -570,18 +491,9 @@
   margin: 0 0 -19px -19px;
 }
 .poster-open:hover .go,
-.poster-open:focus-visible .go {
-  opacity: 1;
-  transform: none;
-}
+.poster-open:focus-visible .go { opacity: 1; transform: none; }
 
-.frame .tag {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  background: var(--shade-2);
-}
-
+.frame .tag { position: absolute; left: 8px; top: 8px; background: var(--shade-2); }
 .frame .prog {
   position: absolute;
   left: 0;
@@ -604,16 +516,9 @@
   overflow-wrap: anywhere;
 }
 
-.poster .small.muted {
-  font-size: 11.5px;
-}
-
-.poster.done .p-name {
-  color: var(--mute);
-}
-.poster.done .frame {
-  opacity: .72;
-}
+.poster .small.muted { font-size: 11.5px; }
+.poster.done .p-name { color: var(--mute); }
+.poster.done .frame { opacity: .72; }
 
 .fav-dot {
   position: absolute;
@@ -640,12 +545,8 @@
   letter-spacing: .1em;
   pointer-events: none;
 }
-
 .selmark ~ .new-b,
-.new-b.inrow {
-  left: auto;
-  right: 8px;
-}
+.new-b.inrow { left: auto; right: 8px; }
 
 /* Hover menu */
 .p-act {
@@ -686,13 +587,9 @@
   place-items: center;
 }
 .p-act .icon:hover,
-.r-act .icon:hover {
-  background: var(--wash-3);
-}
+.r-act .icon:hover { background: var(--wash-3); }
 .p-act .icon.on,
-.r-act .icon.on {
-  color: var(--danger);
-}
+.r-act .icon.on { color: var(--danger); }
 .p-act .icon.danger,
 .r-act .icon.danger {
   color: var(--danger);
@@ -700,12 +597,9 @@
   border-radius: 0 var(--r-xs) var(--r-xs) 0;
 }
 .p-act .icon.danger:hover,
-.r-act .icon.danger:hover {
-  background: var(--danger);
-  color: var(--on-media);
-}
+.r-act .icon.danger:hover { background: var(--danger); color: var(--on-media); }
 
-/* ================= 7. LIST ROWS ================= */
+/* ================= 6. LIST ROWS ================= */
 
 .rows {
   list-style: none;
@@ -730,13 +624,8 @@
   padding: 5px 8px;
   transition: background var(--t-fast);
 }
-.row:hover {
-  background: var(--raise);
-}
-
-.row.done .name {
-  color: var(--mute);
-}
+.row:hover { background: var(--raise); }
+.row.done .name { color: var(--mute); }
 
 .open {
   flex: 1;
@@ -761,13 +650,7 @@
   overflow: hidden;
 }
 
-.info {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
+.info { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .name {
   font: 600 var(--fs-md) var(--sans);
   overflow: hidden;
@@ -786,20 +669,12 @@
   transition: opacity var(--t-fast);
 }
 .row:hover .r-act,
-.row:focus-within .r-act {
-  opacity: 1;
-}
-.row.menu-open .r-act {
-  opacity: 1;
-}
+.row:focus-within .r-act { opacity: 1; }
+.row.menu-open .r-act { opacity: 1; }
 
-/* ================= 8. ACTION MENU ================= */
+/* ================= 7. ACTION MENU ================= */
 
-.amenu-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-}
+.amenu-bg { position: fixed; inset: 0; z-index: 30; }
 
 .amenu {
   position: absolute;
@@ -828,15 +703,9 @@
   font-size: var(--fs-md);
   white-space: nowrap;
 }
-.amenu button:hover {
-  background: var(--wash-2);
-}
-.amenu button.del {
-  color: var(--danger);
-}
-.amenu button.del:hover {
-  background: var(--lamp-soft);
-}
+.amenu button:hover { background: var(--wash-2); }
+.amenu button.del { color: var(--danger); }
+.amenu button.del:hover { background: var(--lamp-soft); }
 .amenu-sep {
   display: block;
   height: 1px;
@@ -844,7 +713,7 @@
   background: var(--line);
 }
 
-/* ================= 9. SELECTION & MARKERS ================= */
+/* ================= 8. SELECTION & MARKERS ================= */
 
 .selmark {
   position: absolute;
@@ -876,9 +745,7 @@
   transform: translateY(-50%);
   right: 120px;
 }
-.row .selmark + .open {
-  padding-left: 34px;
-}
+.row .selmark + .open { padding-left: 34px; }
 
 .row.picked,
 .poster.picked .frame {
@@ -906,10 +773,7 @@
   box-shadow: var(--shadow-3);
   animation: dockin var(--t-fast) var(--ease);
 }
-
-@keyframes dockin {
-  from { transform: translate(-50%, 16px); opacity: 0; }
-}
+@keyframes dockin { from { transform: translate(-50%, 16px); opacity: 0; } }
 
 .sd-n {
   padding: 0 14px 0 10px;
@@ -917,11 +781,7 @@
   white-space: nowrap;
   color: var(--mute);
 }
-.sd-n b {
-  color: var(--lamp);
-  font-size: var(--fs-lg);
-}
-
+.sd-n b { color: var(--lamp); font-size: var(--fs-lg); }
 .sd-b {
   display: inline-flex;
   align-items: center;
@@ -934,17 +794,9 @@
   white-space: nowrap;
   transition: background var(--t-fast);
 }
-.sd-b:hover:not(:disabled) {
-  background: var(--raise);
-}
-.sd-b:disabled {
-  opacity: .35;
-  cursor: not-allowed;
-}
-.sd-b.danger {
-  color: var(--danger);
-}
-
+.sd-b:hover:not(:disabled) { background: var(--raise); }
+.sd-b:disabled { opacity: .35; cursor: not-allowed; }
+.sd-b.danger { color: var(--danger); }
 .sd-sep {
   width: 1px;
   height: 22px;
@@ -953,7 +805,7 @@
   flex: none;
 }
 
-/* ================= 10. LOADING SKELETON ================= */
+/* ================= 9. LOADING SKELETON ================= */
 
 .skeletons {
   display: grid;
@@ -968,64 +820,35 @@
   animation: sk 1.2s linear infinite;
 }
 
-/* ================= 11. RESPONSIVE ================= */
+/* ================= 10. RESPONSIVE ================= */
 
 @media (max-width: 760px) {
   .lib-bar {
     margin: 0 calc(var(--page-pad) * -1) var(--sp-4);
     padding: var(--sp-3) var(--page-pad);
-    top: -16px;
   }
-  .lib-crumbs {
-    font-size: var(--fs-xl);
-  }
+  .lib-crumbs { font-size: var(--fs-xl); }
   .series-head {
     flex-direction: column;
     align-items: flex-start;
     padding: var(--sp-4);
   }
-  .series-art {
-    flex-basis: auto;
-    width: 100%;
-  }
-  .series-info h1 {
-    font-size: var(--fs-2xl);
-  }
-  .lib-search {
-    flex-basis: 100%;
-  }
-  .lib-c2-h {
-    font-size: var(--fs-2xl);
-  }
-  .lib-quiet {
-    width: 100%;
-  }
-  .lib-c2-title {
-    flex-direction: column;
-    align-items: stretch;
-  }
+  .series-art { flex-basis: auto; width: 100%; }
+  .series-info h1 { font-size: var(--fs-2xl); }
+  .lib-search { flex-basis: 100%; }
+  .lib-c2-h { font-size: var(--fs-2xl); }
+  .lib-quiet { width: 100%; }
+  .lib-c2-title { flex-direction: column; align-items: stretch; }
 }
 
 @media (hover: none) {
   .tile-act,
-  .p-act {
-    opacity: 1;
-    transform: none;
-  }
-  .frame .go {
-    opacity: 1;
-    transform: none;
-  }
+  .p-act { opacity: 1; transform: none; }
+  .frame .go { opacity: 1; transform: none; }
 }
 
-html[data-compact="1"] .posters {
-  gap: 10px 8px;
-}
-html[data-compact="1"] .rows .row {
-  padding: 3px 6px;
-}
+html[data-compact="1"] .posters { gap: 10px 8px; }
+html[data-compact="1"] .rows .row { padding: 3px 6px; }
 
 html.pop .seldock,
-html.pop .lib-bar {
-  display: none !important;
-}
+html.pop .lib-bar { display: none !important; }
