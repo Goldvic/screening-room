@@ -50,7 +50,10 @@ export type Bridge = {
   updateInstall(): Promise<void>;
   onUpdate(cb: (s: UpdateState) => void): () => void;
   openFolder(dir: string): Promise<void>;
-  openTrailer(key: string, title?: string): Promise<string>;
+  trailerShow(key: string, rect: { x: number; y: number; w: number; h: number }): Promise<string>;
+  trailerBounds(rect: { x: number; y: number; w: number; h: number }): Promise<void>;
+  trailerHide(): Promise<void>;
+  onTrailerClosed(cb: () => void): () => void;
   zoomIn(): void;
   zoomOut(): void;
   zoomReset(): void;

@@ -1,5 +1,5 @@
 import Hls from 'hls.js';
-import { CastDialog } from './Extras';
+import { CastDialog, WindowMenu } from './Extras';
 import { CSSProperties, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AudioRig, EQ_FLAT, EQ_LABELS, EQ_PRESETS, isNeutral } from './audio';
 import {
@@ -24,6 +24,7 @@ let sessionVol: number | undefined;
 
 const Slider = ({ value, min, max, step = 1, onChange, label }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; label?: string }) => (
   <input type="range" className="slider" min={min} max={max} step={step} value={value} aria-label={label}
+    style={{ '--p': `${((value - min) / (max - min)) * 100}%`, '--u': `${((100 - min) / (max - min)) * 100}%` } as any}
     onChange={(e) => onChange(+e.target.value)} onPointerUp={(e) => e.currentTarget.blur()} />
 );
 const Opt = ({ on, label, hint, onClick }: { on?: boolean; label: string; hint?: string; onClick: () => void }) => (
@@ -113,6 +114,8 @@ export default function Player(p: Props) {
   const [scrub, setScrub] = useState<number | null>(null);
   const [fs, setFs] = useState(false);
   const [mini, setMini] = useState(false);
+  const miniRef = useRef(false); miniRef.current = mini;
+  const [winOpen, setWinOpen] = useState(false);
   // Shrink the whole interface with the window: buttons, titles, menus and subtitles follow its size (mini player, small windows).
   const [uiScale, setUiScale] = useState(1);
   useEffect(() => {
@@ -569,7 +572,7 @@ export default function Player(p: Props) {
 
   // keep the laptop awake while playing
   useEffect(() => { bridge?.powerSave(playing).catch(() => {}); }, [playing]);
-  useEffect(() => () => { bridge?.powerSave(false).catch(() => {}); if (mini) bridge?.miniPlayer(false).catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { bridge?.powerSave(false).catch(() => {}); if (miniRef.current) bridge?.miniPlayer(false).catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // media keys + system media overlay
   useEffect(() => {
@@ -608,7 +611,7 @@ export default function Player(p: Props) {
         else if (e.altKey && k === 'Enter') { e.preventDefault(); toggleFs(); }
         return;
       }
-      if (k === 'Escape') { if (help) setHelp(false); else if (menu) setMenu(null); else p.onClose(); }
+      if (k === 'Escape') { if (help) setHelp(false); else if (menu) setMenu(null); else if (winOpen || castOpen) { setWinOpen(false); setCastOpen(false); } else p.onClose(); }
       else if (k === '?' || k === 'h') setHelp((x) => !x);
       else if (k === 'PageDown' && next) { e.preventDefault(); p.onNext(next); }
       else if (k === 'PageUp' && idx > 0) { e.preventDefault(); p.onNext(p.videos[idx - 1]); }
@@ -676,7 +679,7 @@ export default function Player(p: Props) {
   const peak = Math.max(0, ...net.hist);
   const vq = (vref.current as any)?.getVideoPlaybackQuality?.();
   const fracOf = (e: React.PointerEvent) => { const r = seekRef.current!.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); };
-  const toggle = (m: MenuId) => setMenu((x) => (x === m ? null : m));
+  const toggle = (m: MenuId) => { setWinOpen(false); setCastOpen(false); setMenu((x) => (x === m ? null : m)); };
   const cbtn = (m: MenuId, icon: string, title: string, on = false) => (
     <button className={menu === m ? 'cbtn on' : on ? 'cbtn lit' : 'cbtn'} title={title} aria-label={title} onClick={() => toggle(m)}><Icon n={icon} s={20} /></button>
   );
@@ -776,7 +779,7 @@ export default function Player(p: Props) {
           </div>
         )}
 
-        <div className="surface" onClick={() => (menu ? setMenu(null) : togglePlay())}
+        <div className="surface" onClick={() => (menu || winOpen || castOpen ? (setMenu(null), setWinOpen(false), setCastOpen(false)) : togglePlay())}
           onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); togglePlay(); } }}
           onDoubleClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
@@ -851,6 +854,7 @@ export default function Player(p: Props) {
             <button className="btn ghost" onClick={() => { setSuggest(false); dismissed.current = true; }}>Not now</button>
           </div>
         )}
+        {winOpen && <WindowMenu pipOn={pipOn} mini={mini} desktop={!!bridge} canFloat={!!p.onFloat} onPip={pip} onMini={toggleMini} onFloat={() => p.onFloat?.(true)} onPop={popout} onClose={() => setWinOpen(false)} />}
         {castOpen && <CastDialog title={p.name} stream={`/api/stream?root=${p.root}&path=${encodeURIComponent(path)}&q=orig`} getPos={() => pos} onStart={() => vref.current?.pause()} onClose={() => setCastOpen(false)} />}
         {help && (
           <div className="sheet" onClick={() => setHelp(false)} role="dialog" aria-label="Keyboard shortcuts">
@@ -954,22 +958,13 @@ export default function Player(p: Props) {
                 </label>
                 {subBusy && <p className="mnote">Loading subtitles…</p>}
                 {subErr && <p className="mnote err">{subErr}</p>}
-                <div className="msec">Look and timing</div>
+                <div className="msec">Appearance</div>
                 <Row label={`Size ${s.subSize}px`}><Slider value={s.subSize} min={16} max={64} onChange={(v) => set({ subSize: v })} /></Row>
                 <Row label={`Background ${s.subBg}%`}><Slider value={s.subBg} min={0} max={95} step={5} onChange={(v) => set({ subBg: v })} /></Row>
                 <Row label="Color">
                   <span className="swatches">{['#ffffff', '#ffe066', '#7df9ff', '#9dff9d'].map((c) => (
                     <button key={c} className={s.subColor === c ? 'sw-c on' : 'sw-c'} style={{ background: c }} aria-label={`Subtitle color ${c}`} onClick={() => set({ subColor: c })} />
                   ))}</span>
-                </Row>
-                <Row label={`Sync ${delay > 0 ? '+' : ''}${delay.toFixed(1)}s`}>
-                  <span className="nudge">
-                    <button onClick={() => setDelay((d) => +(d - 0.5).toFixed(1))}>−0.5</button>
-                    <button onClick={() => setDelay((d) => +(d - 0.1).toFixed(1))}>−0.1</button>
-                    <button onClick={() => setDelay(0)}>0</button>
-                    <button onClick={() => setDelay((d) => +(d + 0.1).toFixed(1))}>+0.1</button>
-                    <button onClick={() => setDelay((d) => +(d + 0.5).toFixed(1))}>+0.5</button>
-                  </span>
                 </Row>
               </>
             )}
@@ -1074,8 +1069,7 @@ export default function Player(p: Props) {
                 {mark && <button className="opt" onClick={() => { const n = { ...(prefs.intros ?? {}) }; delete n[ikey]; setPref('intros', n); }}><span><b>Clear this folder’s intro</b></span></button>}
                 
                 <button className="opt" onClick={shot}><span><b><Icon n="camera" s={15} /> Save screenshot (S)</b></span></button>
-                <button className="opt" onClick={pip}><span><b><Icon n="pip" s={15} /> Picture-in-picture (P)</b></span></button>
-                {bridge && <button className="opt" onClick={toggleMini}><span><b><Icon n="pip" s={15} /> {mini ? 'Leave mini player' : 'Mini player (stays on top)'}</b></span></button>}
+                <button className="opt" onClick={() => { setMenu(null); setWinOpen(true); }}><span><b><Icon n="external" s={15} /> Watch in a window</b><small>Picture-in-picture, mini player, pop out</small></span></button>
                 {bridge && <button className="opt" onClick={openOutside}><span><b><Icon n="external" s={15} /> Open in another player</b><small>{s.externalPlayer ? 'Uses the player chosen in Settings' : 'Uses your computer’s default player'}</small></span></button>}
                 {!p.offline && p.onDownload && <button className="opt" onClick={() => { setMenu(null); p.onDownload!(p.name); }}><span><b><Icon n="save" s={15} /> Save for offline…</b><small>Watch on this laptop without internet</small></span></button>}
                 {!p.offline && !bridge && <a className="opt" href={`/api/download?${qs({ root: p.root, path })}`}><span><b><Icon n="down" s={15} /> Download this video</b></span></a>}
@@ -1128,11 +1122,8 @@ export default function Player(p: Props) {
             <div className="ctl-zone tools">
               <button className={sub !== 'off' ? 'cbtn lit' : 'cbtn'} onClick={() => toggle('subs')} title="Subtitles (C)" aria-label="Subtitles"><Icon n="cc" s={20} /></button>
               {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
-              <button className="cbtn" onClick={pip} title="Picture-in-picture, over other apps (P)" aria-label="Picture-in-picture"><Icon n="pip" s={20} /></button>
-              {bridge && <button className={mini ? 'cbtn lit' : 'cbtn'} onClick={toggleMini} title="Mini player that stays on top of other apps" aria-label="Mini player over other apps"><Icon n="external" s={20} /></button>}
-              {bridge && <button className="cbtn" onClick={popout} title="Pop out into its own window (for a second screen)" aria-label="Pop out"><Icon n="grid" s={20} /></button>}
-              <button className="cbtn" onClick={() => setCastOpen((x) => !x)} title="Cast to a TV (Chromecast or smart TV)" aria-label="Cast to a TV"><Icon n="cast" s={20} /></button>
-              {p.onFloat && <button className="cbtn" onClick={() => p.onFloat!(true)} title="Mini player: keep watching while you browse" aria-label="Mini player"><Icon n="exitfs" s={20} /></button>}
+              <button className={castOpen ? 'cbtn on' : 'cbtn'} onClick={() => { setWinOpen(false); setMenu(null); setCastOpen((x) => !x); }} title="Cast to a TV or phone" aria-label="Cast to a TV or phone"><Icon n="cast" s={20} /></button>
+              <button className={winOpen ? 'cbtn win on' : mini || pipOn ? 'cbtn win lit' : 'cbtn win'} onClick={() => { setCastOpen(false); setMenu(null); setWinOpen((x) => !x); }} title="Picture-in-picture, mini player, pop out" aria-label="Window modes"><Icon n="external" s={20} /></button>
               {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
               <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
             </div>

@@ -175,11 +175,11 @@
   color: var(--text); 
 }
 
-/* The active state: a soft accent pill */
-.sidebar-link.on, 
-.sidebar-link.on:hover { 
-  background: var(--lamp-soft); 
-  color: var(--lamp); 
+/* The active state: no box, just the accent color on the icon and label */
+.sidebar-link.on,
+.sidebar-link.on:hover {
+  background: transparent;
+  color: var(--lamp);
   font-weight: 600;
 }
 .sidebar-link.on svg {

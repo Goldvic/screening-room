@@ -49,6 +49,7 @@
 @import './settings/offline.css';
 @import './settings/auto-save-rules.css';
 @import './settings/backup.css';
+@import './settings/app.css'; /* <--- ADDED THIS LINE */
 
 /* ---------- 7. Shell (last: wins on shell-level rules) ---------- */
 @import './shell/sidebar.css';

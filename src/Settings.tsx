@@ -19,15 +19,32 @@ function ServerTools() {
   useEffect(() => { load(); }, []);
   if (!c || !c.hasServer) return null;
   const ok = c.remote.ffmpeg;
+  
   return (
-    <section>
-      <Field label="Server ffmpeg" hint={ok ? 'Found. Compressed downloads work.' : 'Not found. Compressed downloads and conversion need it.'}>
+    <div className="srv-tool-list">
+      <div className="srv-tool-item">
+        <div>
+          <b>Server ffmpeg</b>
+          <small className="muted">{ok ? 'Found. Compressed downloads work.' : 'Not found. Conversion needs it.'}</small>
+        </div>
         <span className={'kstat ' + (ok ? 'ok' : 'bad')}>{ok ? '✓ Installed' : '✕ Missing'}</span>
-      </Field>
-      {!ok && <p className="mnote" style={{ marginBottom: 12 }}>Run this on your server over SSH:<br /><code>sudo apt update &amp;&amp; sudo apt install -y ffmpeg</code></p>}
-      <Field label="Laptop ffmpeg"><span className={'kstat ' + (c.local.ffmpeg ? 'ok' : 'bad')}>{c.local.ffmpeg ? '✓ Built in' : '✕ Missing'}</span></Field>
-      <div className="dlg-actions" style={{ marginTop: 12 }}><button className="btn ghost sm" disabled={busy} onClick={() => load(true)}>{busy ? 'Checking…' : 'Check again'}</button></div>
-    </section>
+      </div>
+      
+      <div className="srv-tool-item">
+        <div>
+          <b>Laptop ffmpeg</b>
+        </div>
+        <span className={'kstat ' + (c.local.ffmpeg ? 'ok' : 'bad')}>{c.local.ffmpeg ? '✓ Built in' : '✕ Missing'}</span>
+      </div>
+
+      {!ok && <p className="mnote" style={{ margin: '4px 0' }}>Run this on your server over SSH:<br /><code>sudo apt update &amp;&amp; sudo apt install -y ffmpeg</code></p>}
+      
+      <div className="app-btn-row">
+        <button className="btn ghost sm" disabled={busy} onClick={() => load(true)}>
+          {busy ? 'Checking…' : 'Check again'}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -930,6 +947,29 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
                 {/* ================= LEFT COLUMN ================= */}
                 <div className="app-col">
                   
+                  {/* Servers */}
+                  <div className="app-card">
+                    <div className="app-card-h">
+                      <div className="app-card-icon"><Icon n="server" s={18} /></div>
+                      <div>
+                        <h4>Servers</h4>
+                        <p>Where your movies are stored and streamed from.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="app-action-row">
+                      <div>
+                        <b>Connections</b>
+                        <small className="muted">Add or manage your VPS and local folders.</small>
+                      </div>
+                      <button className="btn ghost" onClick={onServers}>
+                        Manage servers
+                      </button>
+                    </div>
+
+                    <ServerTools />
+                  </div>
+
                   {/* App Behaviour */}
                   <div className="app-card">
                     <div className="app-card-h">
@@ -939,27 +979,25 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
                         <p>System integration and version.</p>
                       </div>
                     </div>
+                    
                     {bridge ? (
-                      <Field label="Open Cinema when I sign in" hint="Starts quietly in the tray and closes itself again unless a download needs it">
+                      <div className="app-action-row">
+                        <div>
+                          <b>Start on sign in</b>
+                          <small className="muted">Runs quietly in the tray for scheduled downloads.</small>
+                        </div>
                         <Toggle on={login} label="Start with Windows" onClick={() => bridge?.loginItemSet?.(!login).then(setLogin)} />
-                      </Field>
-                    ) : <p className="muted small">Available in the installed app.</p>}
-                    <div style={{ marginTop: 12, fontSize: 'var(--fs-sm)', color: 'var(--mute)' }}>
-                      {APP_NAME} {bridge ? `${bridge.version}` : ''}
-                    </div>
-                  </div>
-
-                  {/* Servers */}
-                  <div className="app-card">
-                    <div className="app-card-h">
-                      <div className="app-card-icon"><Icon n="server" s={18} /></div>
+                      </div>
+                    ) : (
+                      <p className="muted small">Available in the installed app.</p>
+                    )}
+                    
+                    <div className="app-action-row">
                       <div>
-                        <h4>Servers</h4>
-                        <p>Where your movies are stored.</p>
+                        <b>Version</b>
+                        <small className="muted">{bridge ? `Cinema for Windows v${bridge.version}` : 'Cinema Web'}</small>
                       </div>
                     </div>
-                    <button className="btn ghost" onClick={onServers} style={{ alignSelf: 'flex-start' }}><Icon n="server" s={15} /> Manage servers</button>
-                    <ServerTools />
                   </div>
 
                   {/* Updates */}
@@ -1024,37 +1062,55 @@ export default function SettingsDialog({ onClose, mode, prog, onStorage, onServe
           {cur === 'bot' && (
             <section className="look-panel">
               <div className="look-block">
-                <div className="look-block-h"><h4>Connection</h4><p className="muted small">Point the app to your Telegram bot</p></div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 4px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>API URL</label>
-                    <input value={s.botApiUrl} onChange={(e) => { set({ botApiUrl: e.target.value }); setBotTest('idle'); }} placeholder="http://ip:port" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }} />
-                    <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>e.g. http://51.21.221.236:8080</p>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>API Key</label>
-                    <input type="password" value={s.botApiKey} onChange={(e) => { set({ botApiKey: e.target.value }); setBotTest('idle'); }} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }} />
-                    <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>From BOT_API_KEY in your .env</p>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 600, marginBottom: '6px' }}>Telegram User ID</label>
-                    <input value={s.telegramId} onChange={(e) => { set({ telegramId: e.target.value }); setBotTest('idle'); }} style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)', color: 'var(--text)', fontSize: '13.5px', outline: 'none' }} />
-                    <p className="muted small" style={{ margin: '6px 0 0', fontSize: '12px' }}>Your numeric Telegram ID</p>
-                  </div>
+                <div className="look-block-h">
+                  <h4>Connection</h4>
+                  <p className="muted small">Point the app to your Telegram bot.</p>
                 </div>
-                <div style={{ marginTop: '28px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--line)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <b style={{ fontSize: '13.5px' }}>Test connection</b>
-                      <p className="muted small" style={{ margin: '4px 0 0', fontSize: '12px' }}>Ensure the bot is running and the key is correct.</p>
+                <div className="app-inner">
+                  <div className="s-field">
+                    <div className="s-field-label">
+                      <b>API URL</b>
+                      <small>e.g. http://51.21.221.236:8080</small>
                     </div>
-                    <button type="button" className="btn" onClick={testBot} disabled={botTest === 'testing'} style={{ padding: '10px 16px', borderRadius: '10px' }}>
-                      {botTest === 'testing' ? 'Testing…' : 'Test Now'}
-                    </button>
+                    <input value={s.botApiUrl} onChange={(e) => { set({ botApiUrl: e.target.value }); setBotTest('idle'); }} placeholder="http://ip:port" autoComplete="off" />
                   </div>
-                  {botTest === 'ok' && <div style={{ marginTop: 14, background: 'rgba(74,222,128,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#86efac', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}><Icon n="check" s={16} /> Connection successful!</div>}
-                  {botTest === 'error' && <div style={{ marginTop: 14, background: 'rgba(240,98,79,0.1)', padding: '10px 14px', borderRadius: '8px', color: '#f0a090', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}><Icon n="close" s={16} /> {botErr}</div>}
+                  <div className="s-field">
+                    <div className="s-field-label">
+                      <b>API Key</b>
+                      <small>From BOT_API_KEY in your .env</small>
+                    </div>
+                    <input type="password" value={s.botApiKey} onChange={(e) => { set({ botApiKey: e.target.value }); setBotTest('idle'); }} autoComplete="new-password" />
+                  </div>
+                  <div className="s-field" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                    <div className="s-field-label">
+                      <b>Telegram User ID</b>
+                      <small>Your numeric Telegram ID</small>
+                    </div>
+                    <input value={s.telegramId} onChange={(e) => { set({ telegramId: e.target.value }); setBotTest('idle'); }} autoComplete="off" />
+                  </div>
                 </div>
+              </div>
+
+              <div className="look-block">
+                <div className="look-block-h">
+                  <h4>Test Connection</h4>
+                  <p className="muted small">Ensure the bot is running and the key is correct.</p>
+                </div>
+                <div className="app-btn-row" style={{ marginTop: 0 }}>
+                  <button type="button" className="btn" onClick={testBot} disabled={botTest === 'testing'}>
+                    {botTest === 'testing' ? 'Testing…' : 'Test Now'}
+                  </button>
+                </div>
+                {botTest === 'ok' && (
+                  <div className="look-status ok" style={{ marginTop: '16px' }}>
+                    <Icon n="check" s={16} /> Connection successful!
+                  </div>
+                )}
+                {botTest === 'error' && (
+                  <div className="look-status bad" style={{ marginTop: '16px' }}>
+                    <Icon n="close" s={16} /> {botErr}
+                  </div>
+                )}
               </div>
             </section>
           )}

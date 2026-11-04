@@ -10,6 +10,9 @@ export type CastStatus = { state: 'idle' | 'loading' | 'playing' | 'paused' | 'e
 
 const ifaces = () => Object.values(os.networkInterfaces()).flatMap((l) => (l ?? []).filter((a) => a.family === 'IPv4' && !a.internal));
 
+/** This laptop's addresses on the local network, home Wi-Fi style (192.168.x.x) first. */
+export const lanIps = (): string[] => ifaces().map((a) => a.address).sort((a, b) => Number(b.startsWith('192.168.')) - Number(a.startsWith('192.168.')));
+
 /** Our address on the same network as the device (the TV has to be able to reach it). */
 export function lanIpFor(host: string): string {
   const ip = host.split('.').map(Number);

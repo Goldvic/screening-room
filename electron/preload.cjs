@@ -28,7 +28,10 @@ contextBridge.exposeInMainWorld('cinema', {
   onUpdate: (cb) => { const f = (_e, s) => cb(s); ipcRenderer.on('update-status', f); return () => ipcRenderer.removeListener('update-status', f); },
   reveal: (file) => ipcRenderer.invoke('reveal', file),
   openFolder: (dir) => ipcRenderer.invoke('open-folder', dir),
-  openTrailer: (key, title) => ipcRenderer.invoke('open-trailer', String(key), String(title || '')),
+  trailerShow: (key, rect) => ipcRenderer.invoke('trailer-show', String(key), rect),
+  trailerBounds: (rect) => ipcRenderer.invoke('trailer-bounds', rect),
+  trailerHide: () => ipcRenderer.invoke('trailer-hide'),
+  onTrailerClosed: (cb) => { const f = () => cb(); ipcRenderer.on('trailer-closed', f); return () => ipcRenderer.removeListener('trailer-closed', f); },
   // zoom controls
   zoomIn: () => ipcRenderer.send('zoom-in'),
   zoomOut: () => ipcRenderer.send('zoom-out'),

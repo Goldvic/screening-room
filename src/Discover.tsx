@@ -460,16 +460,25 @@ export function Discover() {
         : `Trailer lookup failed (server answered ${r.status}).`);
       if (!r.ok) throw new Error(d.error || 'Could not look up the trailer.');
       if (!d.key) { flash('No trailer found for this title'); return; }
-      // In the desktop app the trailer opens in its own in-app window; in a plain browser the embedded player is used.
-      if (bridge?.openTrailer) {
-        const bad = await bridge.openTrailer(d.key, botDisplayName(item.title));
-        if (bad) flash(bad);
-      } else {
-        setTrailer({ title: item.title, key: d.key });
-      }
+      setTrailer({ title: item.title, key: d.key }); // plays right here in the page, no new window
     } catch (e: any) { console.error('[trailer]', e); flash(e.message || 'Trailer failed'); }
     finally { setTrailerBusy(false); }
   };
+
+  // Desktop app: YouTube is layered over this box inside the same window. Keep it exactly on top of the box.
+  const frameRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!trailer || !bridge?.trailerShow) return;
+    const el = frameRef.current;
+    if (!el) return;
+    const rect = () => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; };
+    const t = window.setTimeout(() => { bridge.trailerShow(trailer.key, rect()).then((bad) => { if (bad) { flash(bad); setTrailer(null); } }).catch(() => setTrailer(null)); }, 120);
+    const sync = () => { bridge.trailerBounds(rect()).catch(() => {}); };
+    const ro = new ResizeObserver(sync); ro.observe(el);
+    window.addEventListener('resize', sync);
+    const off = bridge.onTrailerClosed(() => setTrailer(null));
+    return () => { window.clearTimeout(t); ro.disconnect(); window.removeEventListener('resize', sync); off(); bridge.trailerHide().catch(() => {}); };
+  }, [trailer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!pick) return;
@@ -691,14 +700,16 @@ export function Discover() {
         <div className="dc-modal dc-tmodal" onClick={() => setTrailer(null)}>
           <div className="dc-tbox" onClick={e => e.stopPropagation()}>
             <button className="dc-close" onClick={() => setTrailer(null)} aria-label="Close trailer"><Icon n="close" s={16} /></button>
-            <div className="dc-frame">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&rel=0&playsinline=1`}
-                title={`Trailer: ${trailer.title}`}
-                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+            <div className="dc-frame" ref={frameRef}>
+              {!bridge?.trailerShow && (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&rel=0&playsinline=1`}
+                  title={`Trailer: ${trailer.title}`}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              )}
             </div>
             <p className="dc-note">
               Trailer for {botDisplayName(trailer.title)}. If YouTube asks you to sign in or says it cannot play it here,{' '}

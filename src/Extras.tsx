@@ -1,3 +1,4 @@
+import qrcode from 'qrcode-generator';
 import { ReactNode, useEffect, useState } from 'react';
 import { Icon, api, bytes, parseTitle, post } from './lib';
 import './css/components/stars-tags.css';
@@ -455,11 +456,14 @@ export function BackupBlock({ clientSettings, restoreClient }: { clientSettings:
 type CastDev = { id: string; name: string; kind: 'cast' | 'dlna'; host: string; port: number; control?: string; render?: string };
 type CastSt = { state: string; pos: number; dur: number; device: string; error?: string };
 export function CastDialog({ title, stream, getPos, onStart, onClose }: { title: string; stream: string; getPos: () => number; onStart: () => void; onClose: () => void }) {
+  const [tab, setTab] = useState<'tv' | 'phone'>('tv');
   const [devs, setDevs] = useState<CastDev[] | null>(null);
   const [st, setSt] = useState<CastSt | null | undefined>(undefined);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [vol, setVol] = useState(50);
+  const [link, setLink] = useState('');
+  const [copied, setCopied] = useState(false);
   const scan = () => { setDevs(null); setErr(''); api<{ items: CastDev[] }>('cast/devices').then((d) => setDevs(d.items)).catch((e) => { setErr(e.message); setDevs([]); }); };
   useEffect(() => { api<{ status: CastSt | null }>('cast/status').then((d) => { setSt(d.status); if (!d.status) scan(); }).catch(() => { setSt(null); scan(); }); }, []);
   useEffect(() => {
@@ -467,6 +471,15 @@ export function CastDialog({ title, stream, getPos, onStart, onClose }: { title:
     const t = setInterval(() => api<{ status: CastSt | null }>('cast/status').then((d) => setSt(d.status)).catch(() => {}), 1500);
     return () => clearInterval(t);
   }, [!!st]); // eslint-disable-line react-hooks/exhaustive-deps
+  const makeLink = () => {
+    setErr(''); setLink('');
+    post<{ url: string }>('cast/phone', { stream, title })
+      .then((r) => setLink(`${r.url}#t=${Math.floor(getPos())}`))
+      .catch((e) => setErr(e.message));
+  };
+  useEffect(() => { if (tab === 'phone' && !link && !err) makeLink(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  const qr = (() => { if (!link) return ''; try { const q = qrcode(0, 'M'); q.addData(link); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch { return ''; } })();
+  const copy = () => { navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {}); };
   const play = async (d: CastDev) => {
     setBusy(d.id); setErr('');
     try { await post('cast/play', { device: d, stream, title, start: getPos() }); onStart(); setSt({ state: 'loading', pos: 0, dur: 0, device: d.name }); }
@@ -476,15 +489,32 @@ export function CastDialog({ title, stream, getPos, onStart, onClose }: { title:
   const ctl = (action: string, value?: number) => post('cast/control', { action, value }).catch((e) => setErr(e.message));
   const fmt = (x: number) => { x = Math.max(0, Math.floor(x)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
   return (
-    <div className="castbox de-cast" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Cast to a TV">
+    <div className="castbox de-cast" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Cast">
       <div className="castbox-h">
         <div>
-          <b><Icon n="cast" s={16} /> Cast to a TV</b>
+          <b><Icon n="cast" s={16} /> Cast</b>
           <span className="dlg-sub">Same Wi‑Fi as this laptop</span>
         </div>
         <button className="cbtn sm" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
       </div>
-      {st ? (
+      <div className="cast-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'tv'} className={tab === 'tv' ? 'on' : ''} onClick={() => setTab('tv')}>TV</button>
+        <button role="tab" aria-selected={tab === 'phone'} className={tab === 'phone' ? 'on' : ''} onClick={() => setTab('phone')}>Phone</button>
+      </div>
+      {tab === 'phone' ? (
+        <div className="castlist cast-phone">
+          {link ? (
+            <>
+              <div className="cast-qr" dangerouslySetInnerHTML={{ __html: qr }} />
+              <p className="muted small cast-hint">Scan with your phone camera. It opens this video in the phone's browser, from where you are now.</p>
+              <div className="cast-url"><span title={link}>{link}</span><button className="btn ghost" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button></div>
+            </>
+          ) : err ? <span className="kstat bad">{err}</span> : <p className="muted">Making a link for your phone…</p>}
+          {err && link && <span className="kstat bad">{err}</span>}
+          <span className="inline"><button className="btn ghost" onClick={makeLink}>New link</button></span>
+          <p className="muted small">The phone must be on the same Wi-Fi. Phones play MP4 (H.264) best; some MKV or HEVC files may not play. Windows may ask to allow Cinema through the firewall: say yes for private networks.</p>
+        </div>
+      ) : st ? (
         <div className="castctl">
           <span className="muted small">Playing on</span><b>{st.device}</b>
           <span className={'kstat ' + (st.state === 'error' ? 'bad' : 'ok')}>{st.state === 'loading' ? 'Starting…' : st.state === 'playing' ? 'Playing' : st.state === 'paused' ? 'Paused' : st.state === 'error' ? 'Problem' : 'Stopped'}</span>
@@ -499,7 +529,7 @@ export function CastDialog({ title, stream, getPos, onStart, onClose }: { title:
         </div>
       ) : (
         <div className="castlist">
-          {devs === null ? <p className="muted">Looking for TVs on your Wi-Fi…</p> : devs.length === 0 ? <p className="muted small">No TV found. Turn the TV on, put it on the same Wi-Fi as this laptop, and try again.</p> : devs.map((d) => (
+          {devs === null ? <p className="muted">Looking for TVs on your Wi-Fi…</p> : devs.length === 0 ? <p className="muted small">No TV found. Turn the TV on, put it on the same Wi-Fi as this laptop, and try again. No TV? Use the Phone tab.</p> : devs.map((d) => (
             <button key={d.id} className="opt" disabled={!!busy} onClick={() => play(d)}><span><b>{busy === d.id ? 'Connecting…' : d.name}</b><small>{d.kind === 'cast' ? 'Chromecast / Google TV' : 'Smart TV (DLNA)'} · {d.host}</small></span></button>
           ))}
           {err && <span className="kstat bad">{err}</span>}
@@ -507,6 +537,32 @@ export function CastDialog({ title, stream, getPos, onStart, onClose }: { title:
           <p className="muted small">The TV plays the file itself, so it must support the format. MP4 with H.264 works best. Windows may ask to allow Cinema through the firewall: say yes for private networks.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/* One menu for every "small window" mode, so they are never mixed up. */
+export function WindowMenu({ pipOn, mini, desktop, canFloat, onPip, onMini, onFloat, onPop, onClose }: {
+  pipOn: boolean; mini: boolean; desktop: boolean; canFloat: boolean;
+  onPip: () => void; onMini: () => void; onFloat: () => void; onPop: () => void; onClose: () => void;
+}) {
+  const row = (icon: string, label: string, hint: string, go: () => void, on = false) => (
+    <button className={'opt' + (on ? ' on' : '')} onClick={() => { go(); onClose(); }}>
+      <span><b><Icon n={icon} s={16} /> {label}</b><small>{hint}</small></span>
+    </button>
+  );
+  return (
+    <div className="castbox winbox" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Window modes">
+      <div className="castbox-h">
+        <div><b><Icon n="external" s={16} /> Watch in a window</b><span className="dlg-sub">Pick one way to keep watching</span></div>
+        <button className="cbtn sm" onClick={onClose} aria-label="Close"><Icon n="close" s={16} /></button>
+      </div>
+      <div className="castlist">
+        {row('pip', 'Picture-in-picture', 'A small video that floats over every app', onPip, pipOn)}
+        {desktop && row('external', mini ? 'Back to normal size' : 'Mini player', mini ? 'Restore the Cinema window' : 'Shrink Cinema into a small window that stays on top', onMini, mini)}
+        {canFloat && row('exitfs', 'Keep watching in Cinema', 'A small player in the corner while you browse', onFloat)}
+        {desktop && row('grid', 'Pop out', 'Move the video to its own window, for a second screen', onPop)}
+      </div>
     </div>
   );
 }

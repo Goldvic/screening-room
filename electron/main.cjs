@@ -1,6 +1,6 @@
 // Cinema desktop shell. It starts the Cinema server inside this process, then shows it in a window.
 // Everything the window can ask of the computer goes through the small bridge in preload.cjs.
-const { app, BrowserWindow, Menu, Notification, Tray, dialog, globalShortcut, powerMonitor, ipcMain, nativeImage, powerSaveBlocker, safeStorage, session, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, Notification, Tray, dialog, globalShortcut, powerMonitor, ipcMain, nativeImage, powerSaveBlocker, safeStorage, session, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
@@ -338,27 +338,37 @@ ipcMain.handle('open-stream', async (_e, apiPath, player) => {
   if (!str(player)) return 'Choose the player you want to use in Settings > Other players first.';
   return launch(player, `http://127.0.0.1:${port}${apiPath}&tk=${token}`);
 });
-// ----- trailers: play inside the app, in a window that looks like a normal Chrome to YouTube -----
+// ----- trailers: play inside the app window, as a page that looks like a normal Chrome to YouTube -----
 // YouTube refuses to play inside an Electron app that announces itself as "Electron" (error 152 / 153) and refuses embeds on a
 // 127.0.0.1 page. A normal top-level YouTube page has neither problem, so trailers get their own small window.
 const CHROME_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
 const TRAILER_HOSTS = /(^|\.)(youtube\.com|youtube-nocookie\.com|youtu\.be|google\.com|gstatic\.com|googlevideo\.com|ytimg\.com)$/;
-let trailerWin = null;
-ipcMain.handle('open-trailer', (_e, key, title) => {
-  if (!/^[\w-]{6,20}$/.test(String(key))) return 'Bad trailer';
-  if (trailerWin && !trailerWin.isDestroyed()) trailerWin.close();
+// The trailer is a second web page layered INSIDE the main window (no new window): the page tells us the rectangle it wants.
+let trailerView = null, trailerFs = false;
+const trailerFit = (r) => {
+  const z = win && !win.isDestroyed() ? win.webContents.getZoomFactor() : 1;
+  const n = (x) => Math.max(0, Math.round((Number(x) || 0) * z));
+  return { x: n(r.x), y: n(r.y), width: Math.max(1, n(r.w)), height: Math.max(1, n(r.h)) };
+};
+const closeTrailer = (notify) => {
+  const v = trailerView;
+  if (!v) return;
+  trailerView = null;
+  try { if (win && !win.isDestroyed()) { if (trailerFs && win.isFullScreen()) win.setFullScreen(false); win.contentView.removeChildView(v); } } catch { /* window going away */ }
+  trailerFs = false;
+  try { v.webContents.close(); } catch { /* already closed */ }
+  if (notify && win && !win.isDestroyed()) win.webContents.send('trailer-closed');
+};
+ipcMain.handle('trailer-show', (_e, key, rect) => {
+  if (!win || win.isDestroyed()) return 'No window';
+  if (!/^[\w-]{6,20}$/.test(String(key)) || !rect) return 'Bad trailer';
+  closeTrailer(false);
   const ses = session.fromPartition('persist:trailer');
   ses.setUserAgent(CHROME_UA);
   ses.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'fullscreen'));
-  const w = new BrowserWindow({
-    width: 1120, height: 700, minWidth: 640, minHeight: 400, backgroundColor: '#000000',
-    title: str(title) ? `Trailer: ${title}` : 'Trailer', icon: ICON, autoHideMenuBar: true,
-    parent: win && !win.isDestroyed() ? win : undefined,
-    webPreferences: { partition: 'persist:trailer', contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false },
-  });
-  trailerWin = w;
-  w.removeMenu();
-  const wc = w.webContents;
+  const v = new WebContentsView({ webPreferences: { partition: 'persist:trailer', contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false } });
+  trailerView = v; trailerFs = false;
+  const wc = v.webContents;
   wc.setUserAgent(CHROME_UA);
   const hostOk = (u) => { try { const x = new URL(u); return x.protocol === 'https:' && TRAILER_HOSTS.test(x.hostname); } catch { return false; } };
   wc.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -374,10 +384,35 @@ ipcMain.handle('open-trailer', (_e, key, title) => {
   ).catch(() => {});
   wc.on('did-finish-load', tidy);
   wc.on('did-navigate-in-page', tidy);
-  w.on('closed', () => { if (trailerWin === w) trailerWin = null; });
-  w.loadURL(`https://www.youtube.com/watch?v=${key}&autoplay=1&rel=0`);
+  // Esc: leave YouTube's full screen first, otherwise close the trailer
+  wc.on('before-input-event', (ev, input) => {
+    if (input.type === 'keyDown' && input.key === 'Escape') { ev.preventDefault(); if (trailerFs) wc.executeJavaScript('document.exitFullscreen&&document.exitFullscreen()').catch(() => {}); else closeTrailer(true); }
+  });
+  // YouTube's own full-screen button: grow the trailer to the whole window, and back
+  wc.on('enter-html-full-screen', () => {
+    if (trailerView !== v || !win || win.isDestroyed()) return;
+    trailerFs = true; win.setFullScreen(true);
+    const [w, h] = win.getContentSize(); v.setBounds({ x: 0, y: 0, width: w, height: h });
+  });
+  wc.on('leave-html-full-screen', () => {
+    if (trailerView !== v || !win || win.isDestroyed()) return;
+    trailerFs = false; win.setFullScreen(false);
+    if (trailerRectLast) v.setBounds(trailerFit(trailerRectLast));
+  });
+  trailerRectLast = rect;
+  v.setBackgroundColor('#000000');
+  try { v.setBorderRadius(14); } catch { /* older Electron */ }
+  v.setBounds(trailerFit(rect));
+  win.contentView.addChildView(v);
+  wc.loadURL(`https://www.youtube.com/watch?v=${key}&autoplay=1&rel=0`);
   return '';
 });
+let trailerRectLast = null;
+ipcMain.handle('trailer-bounds', (_e, rect) => {
+  trailerRectLast = rect;
+  if (trailerView && !trailerFs && rect) trailerView.setBounds(trailerFit(rect));
+});
+ipcMain.handle('trailer-hide', () => closeTrailer(false));
 ipcMain.handle('take-pending-open', () => { rendererReady = true; const f = pendingOpen; pendingOpen = null; return f; });
 ipcMain.handle('update-get', () => updView());
 ipcMain.handle('update-config', (_e, cfg) => {

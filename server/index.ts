@@ -1,7 +1,7 @@
 import { fingerprint, matchIntro, pcm } from './intro';
 import { detectEncoders, EncInfo } from './encoders';
 import { Remote } from './remote';
-import { castControl, castPlay, castStatus, castStop, CastDevice, discover, lanIpFor, mimeOf } from './cast';
+import { castControl, castPlay, castStatus, castStop, CastDevice, discover, lanIpFor, lanIps, mimeOf } from './cast';
 import { spawn as spawnProc, execFile } from 'node:child_process';
 let boundPort = 0;
 import 'dotenv/config';
@@ -1405,6 +1405,22 @@ export async function start(opts: StartOpts = {}) {
     const url = `http://${lanIpFor(dev.host)}:${remote.port}/c/${remote.addCast(b.stream)}/${encodeURIComponent(name)}${ext}`;
     await castPlay(dev, url, String(b.title ?? 'Video').slice(0, 120), Math.max(0, Number(b.start) || 0), mimeOf(name + ext));
     res.json({ ok: true });
+  }));
+  // ---------- "cast" to a phone: a link + QR the phone opens in its own browser ----------
+  app.post('/api/cast/phone', h(async (req, res) => {
+    const b = req.body ?? {};
+    if (typeof b.stream !== 'string' || !b.stream.startsWith('/api/stream?')) throw new HttpError(400, 'Nothing to share');
+    const c = rcfg();
+    if (!remote.on) {
+      const pin = c.pin || String(Math.floor(100000 + Math.random() * 900000));
+      store.setPref('remote', { ...c, pin });
+      try { await remote.start(c.port, pin); } catch { throw new HttpError(500, `Could not open port ${c.port} so your phone can reach this laptop. Change the port in Settings, or allow Cinema in the Windows firewall.`); }
+    }
+    const ip = lanIps()[0];
+    if (!ip) throw new HttpError(500, 'This laptop is not on a Wi-Fi or network, so a phone cannot reach it');
+    const name = String(b.title ?? 'video').replace(/\.[^.]+$/, '').replace(/[^\w\- ]/g, '_').slice(0, 60) || 'video';
+    const ext = /\.(mkv|webm|mov)$/i.exec(String(b.title ?? ''))?.[0] ?? '.mp4';
+    res.json({ url: `http://${ip}:${remote.port}/c/${remote.addCast(b.stream)}/${encodeURIComponent(name)}${ext}` });
   }));
   app.post('/api/cast/control', h(async (req, res) => { await castControl(String(req.body?.action), Number(req.body?.value)); res.json({ ok: true }); }));
   app.get('/api/cast/status', (_req, res) => res.json({ status: castStatus() }));

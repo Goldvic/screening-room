@@ -1,20 +1,20 @@
 /* Player seek bar: track, buffered, progress, hover thumb, chapter marks, and preview. */
 
-.hud.bottom { bottom: 0; padding: 80px 20px 18px; gap: var(--sp-1); display: flex; flex-direction: column; background: linear-gradient(0deg, var(--shade-4) 0%, color-mix(in srgb, var(--shade-4) 50%, transparent) 55%, transparent 100%); }
+.hud.bottom { bottom: 0; padding: 96px 28px 22px; gap: var(--sp-2); display: flex; flex-direction: column; background: linear-gradient(0deg, var(--shade-4) 0%, color-mix(in srgb, var(--shade-4) 55%, transparent) 50%, transparent 100%); }
 
-.seek { position: relative; height: 28px; margin: 0 2px 2px; cursor: pointer; touch-action: none; }
+.seek { position: relative; height: 28px; margin: 0 0 6px; cursor: pointer; touch-action: none; }
 .seek i { position: absolute; left: 0; transition: top var(--t-fast), height var(--t-fast); }
 
-.seek .track { top: 12px; right: 0; height: 4px; border-radius: var(--r-pill); background: var(--on-media-line); }
-.seek .buffered { top: 12px; height: 4px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--on-media) 42%, transparent); }
-.seek .cached { top: 12px; height: 4px; border-radius: var(--r-pill); background: var(--info); opacity: .8; }
-.seek .played { top: 12px; height: 4px; border-radius: var(--r-pill); background: var(--lamp); box-shadow: 0 0 10px var(--lamp-glow); }
+.seek .track { top: 12px; right: 0; height: 3px; border-radius: var(--r-pill); background: var(--on-media-line); }
+.seek .buffered { top: 12px; height: 3px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--on-media) 42%, transparent); }
+.seek .cached { top: 12px; height: 3px; border-radius: var(--r-pill); background: var(--info); opacity: .8; }
+.seek .played { top: 12px; height: 3px; border-radius: var(--r-pill); background: var(--lamp); }
 
-.seek .knob { top: 7px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--on-media); box-shadow: var(--shadow-1); opacity: 0; transition: opacity var(--t-fast), transform var(--t-fast); }
+.seek .knob { top: 7px; width: 14px; height: 14px; margin-left: -7px; box-shadow: 0 0 0 4px var(--lamp-soft); border-radius: 50%; background: var(--on-media); box-shadow: var(--shadow-1); opacity: 0; transition: opacity var(--t-fast), transform var(--t-fast); }
 .seek:hover .knob, .seek:active .knob { opacity: 1; transform: scale(1.1); }
 
-.seek:hover .track, .seek:hover .buffered, .seek:hover .cached, .seek:hover .played { top: 11px; height: 6px; }
-.seek:hover .knob { top: 6px; }
+.seek:hover .track, .seek:hover .buffered, .seek:hover .cached, .seek:hover .played { top: 11px; height: 5px; }
+.seek:hover .knob { top: 6.5px; }
 
 .seek .chap { top: 11px; width: 2px; height: 6px; background: var(--on-media-mute); border-radius: 1px; z-index: 2; pointer-events: none; }
 .seek .abmark { top: 11px; height: 6px; border-radius: var(--r-xs); background: color-mix(in srgb, var(--lamp) 45%, transparent); border-left: 2px solid var(--lamp); z-index: 2; pointer-events: none; }

@@ -6,10 +6,9 @@
   gap: var(--sp-4);
 }
 
-/* Automatically switches to a single column if the dialog gets too narrow */
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: var(--sp-4);
   align-items: start;
 }
@@ -18,10 +17,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-  min-width: 0; /* Prevents grid blowout */
+  min-width: 0;
 }
 
-/* Modern Card Design */
 .app-card {
   padding: var(--sp-5);
   border: 1px solid var(--line);
@@ -30,14 +28,22 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.02), 0 4px 20px rgba(0,0,0,.1);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
   min-width: 0;
+}
+
+/* Use standard margins for reliable spacing instead of flex gap */
+.app-card > * {
+  margin-bottom: var(--sp-4);
+}
+.app-card > *:last-child {
+  margin-bottom: 0;
 }
 
 .app-card-h {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
 }
 .app-card-icon {
   display: grid;
@@ -62,27 +68,151 @@
   color: var(--mute);
 }
 
-/* Make the internal `keybox` from Extras.tsx blend into the card */
-.app-card .keybox {
-  background: transparent;
-  border: none;
-  padding: 0;
-  gap: 12px;
+/* Structural helpers for inside the cards */
+.app-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
 }
 
-/* Make the Field component blend nicely into the card */
-.app-card .field {
-  padding: 12px 0;
+.app-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--line);
 }
-.app-card .field:last-child {
+.app-action-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
+.app-action-row:first-child {
+  padding-top: 0;
+}
 
-/* Server Tools overrides */
-.app-card .section {
+/* Force text to stack properly inside rows */
+.app-action-row > div > small {
+  display: block;
+  margin-top: 2px;
+  color: var(--mute);
+  font-size: var(--fs-sm);
+}
+
+.app-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  margin-top: var(--sp-2);
+}
+
+.app-hint {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  line-height: 1.4;
+}
+
+/* Server tools specific */
+.srv-tool-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: var(--sp-2);
+}
+.srv-tool-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--wash-1);
+  border: 1px solid var(--line);
+}
+.srv-tool-item b {
+  font-size: var(--fs-md);
+  font-weight: 550;
+  display: block;
+}
+.srv-tool-item small {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Remote Block Redesign */
+.remote-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--sp-3);
+}
+
+.remote-url-box {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin: 8px 0;
+}
+.remote-url-box input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--raise);
+  color: var(--lamp);
+  font: 500 var(--fs-sm) var(--mono);
+  outline: none;
+  cursor: text;
+}
+.remote-url-box input:focus {
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 3px var(--lamp-soft);
+}
+.remote-url-box .btn {
+  flex: none;
+  padding: 0 16px;
+}
+
+.remote-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  margin-top: 12px;
+}
+
+.remote-help {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--wash-1);
+}
+.remote-help summary {
+  padding: 10px 12px;
+  font: 600 var(--fs-sm) var(--sans);
+  cursor: pointer;
+  color: var(--text);
+  user-select: none;
+}
+.remote-help summary:hover {
+  background: var(--wash-2);
+  border-radius: var(--r-sm);
+}
+.remote-help p {
+  margin: 0;
+  padding: 0 12px 12px;
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  line-height: 1.45;
 }

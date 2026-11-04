@@ -23,13 +23,10 @@
 .cues.lift { bottom: 130px; }
 .cues span { padding: 2px 12px; border-radius: var(--r-xs); text-shadow: 0 1px 3px var(--shade-4); }
 
-/* Volume slider */
-.vol .slider { width: 0; opacity: 0; transition: width var(--t-med), opacity var(--t-med); accent-color: var(--lamp); }
-.vol:hover .slider, .vol:focus-within .slider { width: 96px; opacity: 1; margin: 0 4px; }
+/* Volume slider: styled in controls.css */
 .slider { accent-color: var(--lamp); width: 100%; }
 
 @media (max-width: 800px) {
-  .vol .slider { display: none; }
   .cues.lift { bottom: 150px; }
 }
 
