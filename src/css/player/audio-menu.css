@@ -1,3 +1,11 @@
-/* Styles for player/audio-menu */
+/* Player audio menu: the 10-band equalizer. */
 
+.eq { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 4px 6px 10px; }
 .eq label { display: grid; justify-items: center; gap: 4px; }
+.eq input { writing-mode: vertical-lr; direction: rtl; width: 22px; height: 110px; accent-color: var(--lamp); }
+.eq small { font-size: 10px; color: var(--mute); }
+.loudnote { color: var(--on-media-mute); }
+
+@media (max-width: 720px) {
+  .eq input { height: 80px; }
+}

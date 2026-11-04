@@ -1,211 +1,256 @@
-/* Styles for overlays/data-panel */
+/* Overlays/DataPanel: The data usage popover in the sidebar (Budget First). */
 
-.dp-line { fill: none; stroke: var(--lamp); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.dp-fill { fill: color-mix(in srgb, var(--lamp) 16%, transparent); }
-.dp-h strong { font-size: 13.5px; }
-.dp-h .small { text-align: right; }
-.dp-bar { height: 8px; border-radius: 99px; background: var(--raise); overflow: hidden; }
-.dp-bar i { display: block; height: 100%; border-radius: 99px; background: var(--lamp); transition: width .4s; }
-.dp-bar.warn i { background: var(--danger); }
-.dp-seg button.on { background: var(--lamp); color: #111; }
-.dp-foot button:hover { background: color-mix(in srgb, var(--lamp) 16%, var(--raise)); color: var(--lamp); }
-.dp-foot button:last-child { margin-left: auto; }
-/* belongs in overlays/details-sheet (kept here so the look stays identical) */
-.dt-skel i { height: 12px; border-radius: 6px; background: linear-gradient(100deg, var(--raise) 30%, var(--panel) 50%, var(--raise) 70%); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
-/* belongs in player/next-card (kept here so the look stays identical) */
-.nextcard strong { font-weight: 650; line-height: 1.3; }
-/* belongs in player/menu (kept here so the look stays identical) */
-.menu-h strong {
-  font: 650 15.5px/1.2 var(--sans) !important;
-  letter-spacing: -.02em;
-  color: rgba(255,255,255,.95);
+.dp-line {
+  fill: none;
+  stroke: var(--lamp);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
-/* belongs in player/menu (kept here so the look stays identical) */
-.menu-tabs button:hover {
-  color: rgba(255,255,255,.85) !important;
-  border-color: rgba(255,255,255,.12) !important;
-  background: rgba(255,255,255,.04) !important;
+.dp-fill {
+  fill: var(--lamp-soft);
 }
-/* belongs in player/menu (kept here so the look stays identical) */
-.menu-tabs button.on {
-  color: #121218 !important;
-  background: #e8e8ed !important;
-  border-color: #e8e8ed !important;
-  font-weight: 600 !important;
+.dp-h strong {
+  font-size: var(--fs-md);
 }
-/* belongs in player/menu (kept here so the look stays identical) */
-.menu .seg-m button {
-  flex: 1;
-  padding: 8px 4px;
-  background: transparent;
-  color: rgba(255,255,255,.42);
-  font: 500 11.5px/1 var(--sans);
-  border: 0;
-  transition: background .15s ease, color .15s ease;
-}
-/* belongs in player/menu (kept here so the look stays identical) */
-.menu .nudge button {
-  padding: 6px 11px;
-  border-radius: 8px;
-  background: rgba(255,255,255,.06);
-  font-size: 12px;
-  color: rgba(255,255,255,.7);
-  border: 1px solid rgba(255,255,255,.04);
-  transition: background .15s ease, color .15s ease;
-}
-@media (min-width: 900px) {
-  /* belongs in player/menu (kept here so the look stays identical) */
-  .menu-h strong { font-size: 16px !important; }
+.dp-h .small {
+  text-align: right;
 }
 
-/* belongs in components/shared (kept here so the look stays identical) */
-.budget .bar > i {
-  display: block;
-  height: 100%;
-  background: var(--lamp);
-  border-radius: 99px;
-}
-/* belongs in overlays/tour (kept here so the look stays identical) */
-.tour-dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.15);
-  transition: background .15s, transform .15s;
-}
-/* belongs in overlays/tour (kept here so the look stays identical) */
-.tour-dots i.on {
-  background: var(--lamp);
-  transform: scale(1.2);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--lamp) 40%, transparent);
-}
-/* ── Data panel: Budget First (laptop) ──────────────────────────────── */
 .dpanel.dp-budget-first {
   width: 400px;
   max-width: calc(100vw - 24px);
   padding: 0;
   gap: 0;
   overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-3);
 }
-.dp-budget-first .dp-accent {
+
+.dp-accent {
   height: 1.5px;
-  background: linear-gradient(90deg, var(--lamp), #60a5fa 45%, transparent);
+  background: linear-gradient(90deg, var(--lamp), var(--info) 45%, transparent);
 }
-.dp-budget-first .dp-hero {
+
+.dp-hero {
   padding: 20px 20px 18px;
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, color-mix(in srgb, var(--lamp) 14%, transparent), transparent 65%);
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, var(--lamp-soft), transparent 65%);
   border-bottom: 1px solid var(--line);
 }
-.dp-budget-first .dp-hero h2 {
-  font: 700 26px/1.15 var(--sans);
+.dp-hero-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.dp-hero-top small {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.dp-hero h2 {
+  font: 700 var(--fs-3xl)/1.15 var(--sans);
   letter-spacing: -.03em;
   margin: 0 0 4px;
 }
 .dp-hero-hint {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--mute);
 }
-.dp-budget-first .dp-bar {
+
+.dp-bar {
   height: 4px;
-  border-radius: 99px;
-  background: rgba(255,255,255,.1);
+  border-radius: var(--r-pill);
+  background: var(--wash-3);
   overflow: hidden;
   margin-bottom: 14px;
 }
-.dp-budget-first .dp-bar i {
+.dp-bar i {
   display: block;
   height: 100%;
   background: var(--lamp);
-  border-radius: 99px;
+  border-radius: var(--r-pill);
 }
-.dp-budget-first .dp-bar.warn i {
-  background: #f97316;
+.dp-bar.warn i {
+  background: var(--danger);
+}
+
+.dp-pick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.dp-pick button {
+  border: 1px solid var(--line);
+  background: var(--wash-1);
+  color: var(--text);
+  font: 600 var(--fs-md) var(--sans);
+  padding: 11px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--t-fast);
+}
+.dp-pick button:hover {
+  border-color: var(--wash-4);
 }
 .dp-pick button span {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   opacity: .65;
   margin-top: 3px;
   min-height: 1.1em;
 }
-.dp-pick button:hover {
-  border-color: rgba(255,255,255,.16);
-}
 .dp-pick button.on {
   background: var(--lamp);
-  color: #111;
+  color: var(--on-lamp);
   border-color: var(--lamp);
 }
 .dp-pick button.on span {
   opacity: .75;
-  color: #111;
+  color: var(--on-lamp);
+}
+
+.dp-secondary {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  border-bottom: 1px solid var(--line);
+}
+.dp-sec {
+  padding: 14px 16px;
+  min-width: 0;
 }
 .dp-sec + .dp-sec {
   border-left: 1px solid var(--line);
 }
-.dp-sec-sub {
-  font-size: 12.5px;
+.dp-sec > small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
   color: var(--mute);
+  margin-bottom: 4px;
+}
+.dp-sec > b {
+  font: 700 var(--fs-xl)/1.2 var(--sans);
+  letter-spacing: -.02em;
+}
+.dp-sec-sub {
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  margin-top: 2px;
+}
+
+.dp-usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
   margin-top: 2px;
 }
 .dp-usage-list div {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
-.dp-budget-first .dp-h {
+.dp-usage-list span { color: var(--mute); }
+.dp-usage-list b { font-weight: 600; }
+
+.dp-spark-sm {
+  width: 100%;
+  height: 28px;
+  margin-top: 10px;
+  border-radius: var(--r-sm);
+  background: var(--wash-1);
+  display: block;
+}
+
+.dp-saver {
+  padding: 14px 18px 12px;
+  display: grid;
+  gap: 10px;
+}
+.dp-saver .dp-h {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
 }
-.dp-budget-first .dp-h strong {
-  font-size: 13.5px;
+.dp-saver .dp-h strong {
+  font-size: var(--fs-md);
   font-weight: 600;
 }
-.dp-budget-first .dp-seg {
+.dp-saver .dp-h span {
+  font-size: var(--fs-sm);
+  color: var(--mute);
+}
+
+.dp-seg {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
 }
-.dp-budget-first .dp-seg button {
+.dp-seg button {
   border: 1px solid var(--line);
-  background: rgba(0,0,0,.2);
+  background: var(--wash-1);
   color: var(--mute);
-  font: 500 12.5px var(--sans);
+  font: 500 var(--fs-sm) var(--sans);
   padding: 9px 4px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all var(--t-fast);
 }
-.dp-budget-first .dp-seg button.on {
+.dp-seg button.on {
   background: var(--lamp);
-  color: #111;
+  color: var(--on-lamp);
   border-color: var(--lamp);
   font-weight: 600;
 }
-.dp-budget-first .dp-row {
+
+.dp-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--mute);
   margin-top: 2px;
 }
-.dp-budget-first .dp-foot {
+
+.dp-foot {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
   padding: 12px 16px 14px;
   margin: 0;
   border-top: 1px solid var(--line);
 }
-.dp-budget-first .dp-foot button {
+.dp-foot button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  border: 0;
+  color: var(--text);
+  font: 600 var(--fs-sm) var(--sans);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
   flex: 1;
   justify-content: center;
 }
-.dp-budget-first .dp-foot button:last-child {
+.dp-foot button:hover {
+  background: var(--lamp-soft);
+  color: var(--lamp);
+}
+.dp-foot button:last-child {
   margin-left: 0;
 }

@@ -1,6 +1,60 @@
-/* Styles for overlays/command-palette */
+/* Overlays/CommandPalette: the Ctrl+K search modal. */
 
-.scrim.top { align-items: flex-start; padding-top: 12vh; }
-.palette { width: min(620px, 94vw); border-radius: 16px; background: rgba(22,22,29,.96); border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); overflow: hidden; animation: slidein .14s ease-out; }
-.pal-list { max-height: 50vh; overflow: auto; padding: 6px; display: grid; gap: 1px; }
-.pal-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scrim.top {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.palette {
+  width: min(620px, 94vw);
+  border-radius: var(--r-lg);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  animation: slidein var(--t-fast) var(--ease);
+}
+
+.palette input {
+  width: 100%;
+  padding: 16px 18px;
+  font-size: var(--fs-lg);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  outline: none;
+  color: var(--text);
+}
+
+.pal-list {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 6px;
+  display: grid;
+  gap: 1px;
+}
+.pal-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.pal-list button:hover, .pal-list button.on {
+  background: var(--wash-2);
+}
+.pal-list button.on {
+  background: var(--lamp-soft);
+}
+.pal-list button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

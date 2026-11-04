@@ -60,7 +60,6 @@ button, select, input, textarea { font: inherit; color: inherit; }
 
 button { padding: 0; border: 0; background: none; cursor: pointer; }
 
-/* belongs in components/shared (kept here until that file is redesigned) */
 :where(select, input:not([type=range]):not([type=checkbox]):not([type=file]), textarea) {
   min-width: 0;
   padding: 7px 10px;
@@ -70,7 +69,6 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
   color: var(--text);
 }
 
-/* belongs in components/shared (kept here until that file is redesigned) */
 :where(textarea) { width: 100%; resize: vertical; font: 400 var(--fs-sm)/1.45 var(--mono); }
 
 /* ---------- 4. Focus ---------- */
@@ -91,7 +89,6 @@ button { padding: 0; border: 0; background: none; cursor: pointer; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
-/* Thin pill, inset from the edge by a transparent border */
 ::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: var(--r-pill);

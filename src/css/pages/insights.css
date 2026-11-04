@@ -1,78 +1,99 @@
-/* Styles for pages/insights */
+/* Pages/Insights: the user's watching stats and data overview. */
 
-/* ── Insights page ──────────────────────────────────────────────────── */
 .insights-page {
   max-width: 1100px;
   margin: 0 auto;
 }
+
 .ins-head {
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-5);
 }
 .ins-sub {
-  margin: 4px 0 0;
-  font-size: 13.5px;
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-md);
 }
+
 .ins-hero {
   display: grid;
   grid-template-columns: 1.2fr 1.4fr;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
   align-items: stretch;
 }
+
 .ins-hero-main {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 22px 24px;
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
-  background-image: radial-gradient(ellipse 70% 80% at 100% 0%, color-mix(in srgb, var(--lamp) 12%, transparent), transparent 60%);
+  gap: var(--sp-2);
+  background-image: radial-gradient(ellipse 70% 80% at 100% 0%, var(--lamp-soft), transparent 60%);
 }
+.ins-hero-main small {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.ins-hero-main b {
+  font: 800 clamp(28px, 4vw, 36px)/1.1 var(--sans);
+  letter-spacing: -.03em;
+}
+.ins-hero-main > span {
+  font-size: var(--fs-md);
+}
+
 .ins-hero-side {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
+
 .ins-pill {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px 14px;
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
   min-width: 0;
   height: 100%;
   justify-content: center;
 }
 .ins-pill-val {
-  font: 700 20px/1.15 var(--sans);
+  font: 700 var(--fs-2xl)/1.15 var(--sans);
   letter-spacing: -.02em;
 }
 .ins-pill-lbl {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text);
 }
+
 .ins-grid {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
-  gap: 14px;
+  gap: var(--sp-3);
   align-items: stretch;
 }
+
 .ins-side {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-3);
   min-width: 0;
 }
+
 .ins-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 18px 18px 16px;
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
   min-width: 0;
 }
 .ins-card-wide {
@@ -83,18 +104,20 @@
 .ins-card-wide .ins-bars {
   flex: 1;
 }
+
 .ins-card-h {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
 }
 .ins-card-h h2 {
   margin: 0;
-  font: 650 15px/1.2 var(--sans);
+  font: 650 var(--fs-lg)/1.2 var(--sans);
   letter-spacing: -.01em;
 }
+
 .ins-bars {
   display: flex;
   flex-direction: column;
@@ -110,11 +133,11 @@
   width: 24px;
   height: 24px;
   border-radius: 7px;
-  background: rgba(255,255,255,.05);
+  background: var(--wash-2);
   border: 1px solid var(--line);
   display: grid;
   place-items: center;
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--mute);
 }
@@ -122,32 +145,40 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   font-weight: 500;
 }
 .ins-bar-track {
   display: block;
   height: 8px;
-  border-radius: 99px;
+  border-radius: var(--r-pill);
   background: var(--raise);
   overflow: hidden;
 }
+.ins-bar-track b {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--lamp), var(--info));
+}
 .ins-bar-time {
   font-style: normal;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--mute);
   text-align: right;
   white-space: nowrap;
 }
+
 .ins-empty {
   margin: 8px 0 4px;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   line-height: 1.45;
 }
+
 .ins-goal {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 .ins-goal-ring {
   position: relative;
@@ -160,7 +191,7 @@
 }
 .ins-ring-bg {
   fill: none;
-  stroke: rgba(255,255,255,.1);
+  stroke: var(--wash-3);
   stroke-width: 6;
 }
 .ins-ring-fg {
@@ -168,14 +199,14 @@
   stroke: var(--lamp);
   stroke-width: 6;
   stroke-linecap: round;
-  transition: stroke-dashoffset .4s ease;
+  transition: stroke-dashoffset var(--t-slow);
 }
 .ins-goal-pct {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 700;
   letter-spacing: -.02em;
 }
@@ -185,45 +216,35 @@
   gap: 4px;
   min-width: 0;
 }
+
 .ins-metric {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 10px;
 }
+.ins-metric b {
+  font: 700 var(--fs-2xl)/1.15 var(--sans);
+  letter-spacing: -.02em;
+}
+.ins-metric span {
+  font-size: var(--fs-md);
+}
+
 .ins-note {
   margin: 0;
   line-height: 1.4;
 }
+
 @media (max-width: 960px) {
-  .ins-hero {
-      grid-template-columns: 1fr;
-    }
-  .ins-hero-side {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  .ins-grid {
-      grid-template-columns: 1fr;
-    }
-  .ins-side {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
+  .ins-hero { grid-template-columns: 1fr; }
+  .ins-hero-side { grid-template-columns: repeat(3, 1fr); }
+  .ins-grid { grid-template-columns: 1fr; }
+  .ins-side { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 }
 
 @media (max-width: 640px) {
-  .ins-hero-side {
-      grid-template-columns: 1fr;
-    }
-  .ins-side {
-      grid-template-columns: 1fr;
-    }
-  .ins-grid {
-      grid-template-columns: 1fr;
-    }
-  .ins-barrow {
-      grid-template-columns: 24px minmax(60px, 1fr) 1fr 64px;
-      gap: 8px;
-    }
+  .ins-hero-side { grid-template-columns: 1fr; }
+  .ins-side { grid-template-columns: 1fr; }
+  .ins-barrow { grid-template-columns: 24px minmax(60px, 1fr) 1fr 64px; gap: 8px; }
 }

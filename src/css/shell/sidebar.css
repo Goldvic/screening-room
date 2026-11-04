@@ -5,7 +5,6 @@
      small  (under 700px)    bottom bar with icons and short labels
    Markup lives in App.tsx (<aside className="sidebar">). Tokens come from core/tokens.css. */
 
-
 /* ================= 1. LAYOUT ================= */
 
 .sidebar { position: relative; z-index: 20; display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; padding: var(--sp-3); border-right: 1px solid var(--line); background: var(--panel); }
@@ -73,27 +72,3 @@ html.pop .sidebar { display: none !important; }
   .sidebar-link.on::before { top: 0; bottom: auto; left: 25%; right: 25%; width: auto; height: 3px; border-radius: 0 0 var(--r-pill) var(--r-pill); }
   .sidebar-badge { top: 6px; right: 12px; }
 }
-
-
-/* ================= PARKED: old rules that were stored in topnav.css but belong to other files =================
-   Kept so nothing breaks. Remove each block when its own file is redesigned. */
-
-/* -> overlays/data-panel */
-.sidebar-data .dpanel { top: auto; right: auto; bottom: 0; left: calc(100% + var(--sp-3)); }
-
-/* -> pages/setup */
-.seg { display: inline-flex; margin-left: auto; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-.setup-card { width: min(560px, 96vw); padding: 28px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--panel); }
-
-/* -> settings/settings-frame */
-.set-accent { flex: none; height: 1.5px; background: linear-gradient(90deg, var(--lamp) 0%, var(--info) 40%, transparent 85%); }
-
-/* -> player/player-frame */
-.theatre { position: fixed; inset: 0; z-index: 20; background: var(--media-bg); color: var(--on-media); user-select: none; }
-.cues { position: absolute; bottom: 6%; left: 50%; z-index: 2; display: grid; justify-items: center; gap: 4px; width: min(90%, 1100px); font-weight: 500; line-height: 1.3; text-align: center; transform: translateX(-50%); pointer-events: none; transition: bottom .2s; }
-.mrow { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: 8px 10px; font-size: 14px; }
-.audio-only { position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; gap: var(--sp-2); padding: 20px; color: var(--on-media-mute); text-align: center; pointer-events: none; }
-
-/* -> player/audio-menu */
-.eq { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 4px 6px 10px; }
-.loudnote { color: var(--on-media-mute); }

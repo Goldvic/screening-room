@@ -1,10 +1,6 @@
 /* Shared pieces used by more than one component: text helpers, buttons, pills, toggles,
    search field, dialogs, menu options, empty states.
-   Everything here reads tokens from core/tokens.css. Class names are unchanged from before.
-
-   The section at the bottom, "PARKED", holds old rules that were stored in this file but belong
-   to other files. Each one keeps working until its own file is redesigned, then moves out and
-   is deleted from here. */
+   Everything here reads tokens from core/tokens.css. */
 
 /* ================= 1. TEXT AND LAYOUT HELPERS ================= */
 
@@ -156,89 +152,3 @@
 .empty { display: grid; justify-items: center; gap: var(--sp-3); padding: 64px 20px; border: 1px dashed var(--line); border-radius: var(--r-xl); text-align: center; }
 .empty h2 { margin: 4px 0 0; font: 600 var(--fs-2xl)/1.2 var(--serif); }
 .empty p { max-width: 420px; margin: 0; color: var(--mute); }
-
-/* -> pages/library */
-.go { position: absolute; top: 12px; right: 12px; z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--lamp); color: var(--on-lamp); }
-
-/* -> shell/topnav and shell/app-frame */
-.tn-back { position: fixed; inset: 0; z-index: 29; }
-html.pop .side, html.pop .main, html.pop .selbar { display: none !important; }
-
-/* -> overlays/tour and pages/setup */
-.keybox { display: grid; gap: var(--sp-2); width: 100%; }
-.keybox .inline { gap: var(--sp-2); }
-.sheet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; margin-top: 10px; }
-.sheet-grid kbd { min-width: 96px; text-align: center; }
-@media (max-width: 720px) {
- .sheet-grid { grid-template-columns: 1fr; } 
-}
-
-.bars { display: grid; gap: var(--sp-2); }
-@keyframes slidein { from { transform: translateX(30px); opacity: 0; } }
-@keyframes de-in { from { transform: translate(-50%, -46%) scale(.97); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-
-/* -> player/player-frame, player/top-bar, player/menu, player/controls */
-.hud { position: absolute; left: 0; right: 0; z-index: 4; opacity: 0; pointer-events: none; }
-.theatre.ui .hud { opacity: 1; pointer-events: auto; }
-.theatre .hud { background: linear-gradient(180deg, var(--shade-3) 0%, var(--shade-1) 55%, transparent 100%); transition: opacity .25s ease, transform .25s ease; }
-.theatre .cbtn.sm { width: 32px; height: 32px; border-radius: var(--r); }
-.theatre.mini .hud.top .ttl span, .theatre.mini .vol, .theatre.mini .time { display: none; }
-.theatre.float .hud, .theatre.float .menu, .theatre.float .nextcard, .theatre.float .skipintro, .theatre.float .ptoast, .theatre.float .subs-pos { display: none !important; }
-.theatre:not(.float) .hud, .theatre:not(.float) .menu, .theatre:not(.float) .nextcard, .theatre:not(.float) .skipintro, .theatre:not(.float) .ptoast { zoom: var(--ui, 1); }
-.stats h4 { margin: 0 0 var(--sp-2); font: 600 var(--fs-md) var(--sans); }
-.menu .opt.on svg, .menu .opt.on .icon, .menu .opt[aria-checked="true"] svg { opacity: 1; }
-
-/* -> settings/settings-frame, settings/look, pages/downloads */
-.dialog.de-settings, .dialog.settings { display: flex; flex-direction: column; width: min(860px, 94vw); max-height: min(88vh, 720px); padding: 0; border: 0; border-radius: var(--r-xl); background: linear-gradient(180deg, color-mix(in srgb, var(--raise) 96%, transparent) 0%, var(--panel) 100%); box-shadow: var(--shadow-3); overflow: hidden; animation: set-in .28s var(--ease); }
-@keyframes set-in { from { transform: translateY(12px) scale(.985); opacity: 0; } to { transform: none; opacity: 1; } }
-.dialog.de-settings > .small, .dialog.de-settings > p { padding: 0 16px; }
-.dialog.de-settings .bar.big { display: block; height: 6px; margin: 10px 0; border-radius: var(--r-pill); background: var(--wash-2); overflow: hidden; }
-.dialog.de-settings .bar.big > i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--lamp); }
-.dialog.settings .dlg-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: 10px 14px; }
-.dialog.settings .seg button:hover { color: var(--text); }
-.dialog.settings .seg button.on { background: var(--wash-3); color: var(--text); font-weight: 600; }
-.set-close:hover { background: var(--wash-3) !important; transform: scale(1.05); }
-.sw-c:hover, .swt:hover { transform: scale(1.08); }
-.st-accent { flex: none; height: 1.5px; background: linear-gradient(90deg, var(--lamp), var(--info) 45%, transparent); }
-.st-head { display: flex; align-items: flex-start; justify-content: space-between; flex: none; gap: var(--sp-3); padding: 16px 18px 12px; }
-.st-x { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--mute); cursor: pointer; }
-.st-x:hover { background: var(--wash-2); color: var(--text); }
-.look-panel > .look-block:first-child .look-block-h h4 { margin-top: 0; }
-.look-block { padding: 14px 16px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--wash-1); }
-.dl-row, .st-row { display: flex; align-items: center; gap: var(--sp-3); padding: 12px 16px !important; border-bottom: 1px solid var(--wash-1) !important; border-left: 3px solid transparent; transition: background var(--t-fast), border-left-color var(--t-med); }
-.dl-row:hover, .st-row:hover { background: var(--wash-1); }
-.drawer .pad, .muted.pad { padding: 20px 16px; color: var(--mute); font-size: var(--fs-md); }
-.srv.on { border-color: var(--lamp); }
-
-.menu .opt svg,
-.menu .opt .icon {
-  color: var(--lamp);
-  flex: none;
-  opacity: 0;
-  transition: opacity .15s ease;
-}
-
-.empty p {
-  max-width: 400px;
-  margin: 0;
-  color: var(--mute);
-  font-size: 13.5px;
-}
-
-.srv:hover { background: rgba(255,255,255,.03); }
-
-.srv.on {
-  border-left-color: var(--lamp);
-  background: rgba(0,0,0,.15);
-}
-
-.note.err {
-  background: rgba(240,98,79,.08);
-  box-shadow: inset 0 0 0 1px rgba(240,98,79,.15);
-  color: #f8c4bc;
-}
-
-.dialog.de-settings .sform,
-.dialog.de-settings .srv {
-  margin: 0;
-}

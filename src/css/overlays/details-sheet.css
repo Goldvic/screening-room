@@ -1,55 +1,169 @@
-/* Styles for overlays/details-sheet */
+/* Overlays/DetailsSheet: The media details popup, including the fix-match box. */
 
-/* fix the match */
-.fixbox { display: grid; gap: 6px; margin: 8px 0; }
-.cand:hover { background: color-mix(in srgb, var(--lamp) 16%, var(--raise)); }
-.dt-scrim { place-items: center; padding: 20px; }
+.fixbox { display: grid; gap: 6px; margin: var(--sp-2) 0; }
+.cand:hover { background: var(--lamp-soft); }
+.cand span { display: grid; min-width: 0; }
+.cand img, .cand-ph { width: 38px; height: 56px; border-radius: var(--r-sm); object-fit: cover; flex: none; display: grid; place-items: center; background: var(--panel); }
+.cand small { color: var(--mute); }
+.cand { display: flex; gap: var(--sp-2); align-items: center; padding: 6px; border-radius: var(--r); text-align: left; background: var(--raise); }
+
+.dt-scrim { place-items: center; padding: var(--sp-5); }
 @keyframes dtin { from { transform: translateY(14px) scale(.985); opacity: 0; } }
-.dt-bg { position: absolute; inset: -40px; z-index: -2; background-size: cover; background-position: center 20%; filter: blur(46px) saturate(1.4); opacity: .42; transform: scale(1.15); }
-.dt::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 55%, transparent), var(--panel) 78%); }
-.dt-close:hover { background: rgba(0,0,0,.6); }
-.dt-main { display: flex; gap: 30px; align-items: flex-start; }
-.dt-ph { display: grid; place-items: center; width: 100%; height: 100%; color: var(--mute); }
-.dt-info { flex: 1; min-width: 0; display: grid; gap: 14px; align-content: start; padding-top: 4px; }
-.dt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.dt-chips .dt-star { color: #f2b84b; }
-.dt-chips .dt-ok { color: #86efac; }
-.dt h2 { margin: 0; font: 800 34px/1.08 var(--sans); letter-spacing: -.03em; overflow-wrap: anywhere; }
-.dt-over { margin: 0; color: color-mix(in srgb, var(--text) 82%, var(--mute)); font-size: 14.5px; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 7; line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
-.dt-skel { display: grid; gap: 8px; }
-.dt-skel i:nth-child(2) { width: 90%; }
-.dt-skel i:nth-child(3) { width: 60%; }
-.dt-prog { display: grid; gap: 6px; max-width: 360px; }
-.dt-prog .bar { display: block; height: 4px; margin: 0; border-radius: 4px; }
-.dt-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-.dt-grid section { display: grid; gap: 8px; align-content: start; }
-.dt-grid h4 { margin: 0; }
-.dt-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; color: var(--mute); font-size: 12px; }
-.dt-file { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
-.dt-file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dt-file em { font-style: normal; flex: none; padding-left: 8px; border-left: 1px solid var(--line); }
-.dt-link { flex: none; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
-.dt-link:hover { color: var(--lamp); }
-.dt .fixbox { margin: 0; }
-@media (max-width: 680px) {
-  .dt-main { flex-direction: column; }
-  .dt h2 { font-size: 26px; }
+
+.dt {
+  position: relative;
+  isolation: isolate;
+  width: min(820px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border-radius: var(--r-xl);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-3);
+  padding: 34px;
+  display: grid;
+  gap: var(--sp-5);
+  animation: dtin var(--t-med) var(--ease);
 }
 
-/* belongs in components/shared (kept here so the look stays identical) */
-.empty h2 {
-  font: 700 20px var(--sans);
-  margin: 4px 0 0;
-  letter-spacing: -.02em;
+.dt-bg {
+  position: absolute;
+  inset: -40px;
+  z-index: -2;
+  background-size: cover;
+  background-position: center 20%;
+  filter: blur(46px) saturate(1.4);
+  opacity: .42;
+  transform: scale(1.15);
 }
-/* belongs in components/shared (kept here so the look stays identical) */
-.budget .bar {
-  display: block;
-  height: 3px;
-  border-radius: 99px;
-  background: rgba(255,255,255,.08);
-  margin-top: 6px;
+
+.dt::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 55%, transparent), var(--panel) 78%);
+}
+
+.dt-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wash-2);
+  color: var(--text);
+  backdrop-filter: blur(8px);
+  transition: background var(--t-fast);
+}
+.dt-close:hover { background: var(--wash-3); }
+
+.dt-main {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.dt-poster {
+  flex: 0 0 210px;
+  aspect-ratio: 2/3;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--raise);
+  box-shadow: var(--shadow-3);
+  border: 1px solid var(--line);
+}
+.dt-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.dt-ph { display: grid; place-items: center; width: 100%; height: 100%; color: var(--mute); }
+
+.dt-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding-top: 4px;
+}
+
+.dt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dt-chips span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: var(--r-pill); background: var(--wash-2); color: var(--mute); font: 600 var(--fs-sm) var(--sans); }
+.dt-chips .dt-star { color: var(--warn); }
+.dt-chips .dt-ok { color: var(--success); }
+
+.dt h2 {
+  margin: 0;
+  font: 800 34px/1.08 var(--sans);
+  letter-spacing: -.03em;
+  overflow-wrap: anywhere;
+}
+.dt-over {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 82%, var(--mute));
+  font-size: var(--fs-lg);
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  line-clamp: 7;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.sheet-grid p { display: flex; align-items: center; gap: 10px; margin: 0; padding: 4px 0; }
+.dt-skel { display: grid; gap: 8px; }
+.dt-skel i { height: 12px; border-radius: var(--r-xs); background: linear-gradient(100deg, var(--raise) 30%, var(--panel) 50%, var(--raise) 70%); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
+.dt-skel i:nth-child(2) { width: 90%; }
+.dt-skel i:nth-child(3) { width: 60%; }
+
+.dt-prog { display: grid; gap: 6px; max-width: 360px; }
+.dt-prog .bar { display: block; height: 4px; margin: 0; border-radius: var(--r-xs); }
+
+.dt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.dt-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px 40px;
+  padding: 18px 20px;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  border: 1px solid var(--line);
+}
+.dt-grid section { display: grid; gap: 8px; align-content: start; }
+.dt-grid h4 { margin: 0; }
+
+.dt-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--mute);
+  font-size: var(--fs-sm);
+}
+.dt-file { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.dt-file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-file em { font-style: normal; flex: none; padding-left: 8px; border-left: 1px solid var(--line); }
+.dt-link {
+  flex: none;
+  color: var(--mute);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: var(--fs-sm);
+}
+.dt-link:hover { color: var(--lamp); }
+.dt .fixbox { margin: 0; }
+
+@media (max-width: 680px) {
+  .dt-main { flex-direction: column; }
+  .dt h2 { font-size: var(--fs-2xl); }
+  .dt { padding: 22px 18px; }
+  .dt-poster { flex-basis: auto; width: 150px; }
+  .dt-grid { grid-template-columns: 1fr; }
+}

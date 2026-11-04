@@ -1,6 +1,5 @@
 /* App frame: the page grid (sidebar + content), the content scroll area, the toast,
-   the boot screen and the drag-and-drop overlay. */
-
+   the boot screen, the drag-and-drop overlay, and global overlays like .tn-back. */
 
 /* ================= 1. LAYOUT ================= */
 
@@ -13,6 +12,9 @@
 .toast { position: fixed; bottom: var(--sp-6); left: 50%; z-index: 40; padding: 10px 18px; transform: translateX(-50%); }
 
 .dropzone { position: fixed; inset: 0; z-index: 200; display: grid; place-content: center; justify-items: center; gap: var(--sp-2); text-align: center; pointer-events: none; }
+
+/* Global invisible backdrop for menus/dropdowns */
+.tn-back { position: fixed; inset: 0; z-index: 29; }
 
 
 /* ================= 2. COLORS ================= */
@@ -29,6 +31,7 @@
 html[data-compact="1"] .main { padding: var(--sp-4) var(--sp-5) var(--sp-7); }
 
 html.pop .shell { grid-template-columns: minmax(0, 1fr); }
+html.pop .side, html.pop .main, html.pop .selbar, html.pop .seldock, html.pop .lib-bar { display: none !important; }
 
 @media (max-width: 1099px) {
   .shell { --sidebar-w: 68px; }

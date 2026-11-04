@@ -1,152 +1,159 @@
-/* Styles for settings/play */
+/* Settings/Play: Playback, Smart features, Sound, Other players. */
 
-/* ── Playback & sound panel (append to redesign.css) ───────────────── */
 .play-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 8px;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-2);
 }
+
 .play-block {
-  background: rgba(255,255,255,.025);
+  padding: var(--sp-4);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px 16px 16px;
+  border-radius: var(--r-lg);
+  background: var(--wash-1);
 }
+
 .play-block-h {
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-3);
 }
 .play-block-h h4 {
   margin: 0 0 2px;
-  font: 650 12px/1.2 var(--sans);
-  letter-spacing: .05em;
+  font: 650 var(--fs-sm)/1.2 var(--sans);
+  letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--mute);
 }
 .play-block-h p {
   margin: 0;
 }
-/* Field */
+
 .play-field {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 2px;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-1);
   border-bottom: 1px solid var(--line);
 }
 .play-field:last-child {
   border-bottom: none;
+  padding-bottom: 0;
 }
+
 .play-field-label b {
   display: block;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 .play-field-label small {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-sm);
+  color: var(--mute);
   margin-top: 2px;
 }
-/* Quality / volume chips */
+
+/* Chips */
 .play-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--sp-2);
 }
 .play-chip {
   padding: 7px 13px;
-  border-radius: 99px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
-  background: rgba(0,0,0,.25);
+  background: var(--wash-2);
   color: var(--text);
-  font: 500 12.5px var(--sans);
+  font: 500 var(--fs-sm) var(--sans);
   cursor: pointer;
-  transition: .12s;
+  transition: all var(--t-fast);
 }
 .play-chip:hover {
-  border-color: rgba(255,255,255,.18);
+  border-color: var(--wash-4);
 }
 .play-chip.on {
-  border-color: color-mix(in srgb, var(--lamp) 55%, var(--line));
-  background: color-mix(in srgb, var(--lamp) 14%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lamp) 28%, transparent);
+  border-color: var(--lamp-line);
+  background: var(--lamp-soft);
+  box-shadow: 0 0 0 1px var(--lamp-soft);
   font-weight: 600;
   color: var(--lamp);
 }
-/* Aspect ratio visual cards */
+
+/* Aspect ratio cards */
 .play-aspects {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .play-aspect {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: var(--sp-2);
   padding: 10px 6px 9px;
-  border-radius: 11px;
+  border-radius: var(--r);
   border: 1px solid var(--line);
-  background: rgba(0,0,0,.25);
+  background: var(--wash-2);
   color: var(--text);
-  font: 500 11.5px var(--sans);
+  font: 500 var(--fs-sm) var(--sans);
   cursor: pointer;
-  transition: .12s;
+  transition: all var(--t-fast);
 }
 .play-aspect:hover {
-  border-color: rgba(255,255,255,.16);
+  border-color: var(--wash-4);
 }
 .play-aspect.on {
-  border-color: color-mix(in srgb, var(--lamp) 55%, var(--line));
-  background: color-mix(in srgb, var(--lamp) 12%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lamp) 25%, transparent);
+  border-color: var(--lamp-line);
+  background: var(--lamp-soft);
+  box-shadow: 0 0 0 1px var(--lamp-soft);
   font-weight: 600;
 }
 .play-aspect-preview {
   width: 100%;
   max-width: 52px;
-  border-radius: 4px;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-xs);
+  background: var(--wash-3);
+  border: 1px solid var(--wash-4);
 }
-/* ids from ASPECTS: fit, fill, stretch, 16:9 → a-169, 21:9 → a-219, 4:3 → a-43, 1:1 → a-11 */
 .play-aspect-preview.a-fit     { aspect-ratio: 16/10; }
-.play-aspect-preview.a-fill    { aspect-ratio: 16/9; background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.04)); }
+.play-aspect-preview.a-fill    { aspect-ratio: 16/9; background: linear-gradient(135deg, var(--wash-3), var(--wash-1)); }
 .play-aspect-preview.a-stretch { aspect-ratio: 16/9; }
 .play-aspect-preview.a-169     { aspect-ratio: 16/9; }
 .play-aspect-preview.a-219     { aspect-ratio: 21/9; }
 .play-aspect-preview.a-43      { aspect-ratio: 4/3; }
 .play-aspect-preview.a-11      { aspect-ratio: 1/1; }
 .play-aspect.on .play-aspect-preview {
-  border-color: color-mix(in srgb, var(--lamp) 50%, transparent);
-  background: color-mix(in srgb, var(--lamp) 18%, rgba(255,255,255,.06));
+  border-color: var(--lamp-line);
+  background: var(--lamp-soft);
 }
-/* Power saving segmented */
+
+/* Segmented controls */
 .play-seg {
   display: flex;
   padding: 3px;
   gap: 2px;
-  background: rgba(0,0,0,.35);
-  border-radius: 9px;
+  background: var(--wash-2);
+  border-radius: var(--r);
   border: 1px solid var(--line);
 }
 .play-seg button {
+  flex: 1;
   border: none;
   background: transparent;
   color: var(--mute);
-  font: 500 12.5px var(--sans);
+  font: 500 var(--fs-sm) var(--sans);
   padding: 6px 12px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   cursor: pointer;
-  transition: .15s;
-  flex: 1;
+  transition: all var(--t-fast);
   text-align: center;
 }
 .play-seg button.on {
   background: var(--lamp);
-  color: #111;
+  color: var(--on-lamp);
   font-weight: 600;
 }
+
 /* Toggles */
 .play-toggles {
   display: flex;
@@ -157,50 +164,51 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 12px 4px;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-1);
   border-bottom: 1px solid var(--line);
 }
 .play-toggle-row:last-child {
   border-bottom: none;
-  padding-bottom: 2px;
+  padding-bottom: 0;
 }
 .play-toggle-row b {
   display: block;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 .play-toggle-row small {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-sm);
+  color: var(--mute);
   margin-top: 2px;
-  line-height: 1.35;
 }
-/* Volume visual bar */
+
+/* Volume preview */
 .play-vol-preview {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   margin-top: 2px;
   padding: 10px 12px;
-  background: rgba(0,0,0,.25);
-  border-radius: 10px;
+  background: var(--wash-2);
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
 }
 .play-vol-bar {
   flex: 1;
   height: 6px;
-  background: rgba(255,255,255,.1);
-  border-radius: 99px;
+  background: var(--wash-3);
+  border-radius: var(--r-pill);
   overflow: hidden;
   position: relative;
 }
 .play-vol-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--lamp), #f59e0b);
-  border-radius: 99px;
-  transition: width .2s ease;
+  background: linear-gradient(90deg, var(--lamp), var(--warn));
+  border-radius: var(--r-pill);
+  transition: width var(--t-med) var(--ease);
 }
 .play-vol-boost {
   position: absolute;
@@ -208,45 +216,43 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(255,255,255,.25);
+  background: var(--wash-4);
 }
 .play-vol-label {
-  font: 600 12px var(--sans);
+  font: 600 var(--fs-sm) var(--sans);
   color: var(--lamp);
   min-width: 42px;
   text-align: right;
 }
+
 /* Equalizer chips */
 .play-eq {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .play-eq-chip {
   padding: 10px 8px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
-  background: rgba(0,0,0,.25);
+  background: var(--wash-2);
   color: var(--text);
-  font: 500 12.5px var(--sans);
+  font: 500 var(--fs-sm) var(--sans);
   text-align: center;
   cursor: pointer;
-  transition: .12s;
+  transition: all var(--t-fast);
 }
 .play-eq-chip:hover {
-  border-color: rgba(255,255,255,.18);
+  border-color: var(--wash-4);
 }
 .play-eq-chip.on {
-  border-color: color-mix(in srgb, var(--lamp) 55%, var(--line));
-  background: color-mix(in srgb, var(--lamp) 12%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lamp) 25%, transparent);
+  border-color: var(--lamp-line);
+  background: var(--lamp-soft);
+  box-shadow: 0 0 0 1px var(--lamp-soft);
   font-weight: 600;
 }
+
 @media (max-width: 520px) {
-  .play-aspects {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  .play-eq {
-      grid-template-columns: repeat(2, 1fr);
-    }
+  .play-aspects { grid-template-columns: repeat(2, 1fr); }
+  .play-eq { grid-template-columns: repeat(2, 1fr); }
 }

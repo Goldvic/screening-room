@@ -1,285 +1,74 @@
-/* Styles for player/menu */
+/* Player settings menu: the centered glass panel, tabs, rows, and small controls. */
 
-.swatches { display: inline-flex; gap: 8px; align-items: center; }
-.sw-c { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; }
-.sw-c.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--ink) inset; }
-.menu { position: absolute; right: 16px; bottom: 100px; width: 350px; max-height: calc(100% - 190px); overflow: auto; z-index: 6; background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 16px; padding: 8px; }
-.menu-h { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 8px; font: 600 16px var(--serif); }
-.opt.file { cursor: pointer; }
-.mnote.keys { margin-top: 12px; line-height: 1.6; }
-@media (max-width: 800px) {
-  .menu { right: 8px; left: 8px; width: auto; bottom: 96px; }
-}
-
-.pad { padding: 16px 0; }
-.menu .seg-m { border-color: rgba(255,255,255,.18); }
-.menu .seg-m button { background: rgba(255,255,255,.06); color: rgba(255,255,255,.75); }
-.menu .seg-m button.on { background: var(--lamp); color: #1a1405; }
-.nudge.pad { padding: 6px 10px; }
-/* belongs in components/shared (kept here so the look stays identical) */
-.nudge button:hover, .nudge button.on { background: rgba(255,255,255,.22); }
-.opt.bm { padding: 2px 4px 2px 10px; }
-.opt.bm > button:first-child { flex: 1; text-align: left; padding: 7px 0; }
-@media (max-width: 760px) {
-  .menu { width: 100%; }
-}
-
-/* belongs in pages/library (kept here so the look stays identical) */
-html[data-eco="1"] .menu { background: rgba(14,14,20,.96); }
-/* belongs in overlays/command-palette (kept here so the look stays identical) */
-.pal-list button.on { background: color-mix(in srgb, var(--lamp) 22%, transparent); }
-.swatches { display: flex; gap: 8px; }
-/* belongs in pages/library (kept here so the look stays identical) */
-.chlist { display: grid; gap: 4px; }
-/* belongs in shell/topnav (kept here so the look stays identical) */
-.tn-menu button:hover { background: var(--raise); }
-/* belongs in components/shared (kept here so the look stays identical) */
-.dp-chips button:hover, .dp-seg button:hover { color: var(--text); }
-/* belongs in components/shared (kept here so the look stays identical) */
-.menu.sheet-up,
-.theatre .menu,
-.menu.de-panel {
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  bottom: auto !important;
-  right: auto !important;
-  transform: translate(-50%, -50%);
-  width: min(380px, calc(100% - 40px)) !important;
-  max-height: min(72vh, 560px) !important;
-  border-radius: 18px !important;
-  /* 3: soft inset — no hard border */
-  border: none !important;
-  padding: 0 !important;
-  background: linear-gradient(180deg, rgba(34,34,42,.92) 0%, rgba(14,14,18,.97) 100%) !important;
-  backdrop-filter: blur(40px) saturate(1.25) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(1.25) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.1),
-    inset 0 -1px 0 rgba(0,0,0,.35),
-    0 40px 100px rgba(0,0,0,.65),
-    0 12px 28px rgba(0,0,0,.4) !important;
-  color: #fff;
-  animation: de-in .32s cubic-bezier(.22,.8,.22,1) !important;
-  display: flex;
-  flex-direction: column;
-  z-index: 8;
-  overflow: hidden;
-}
-/* thin accent (6) */
-.menu-accent {
-  height: 1.5px;
-  flex: none;
-  background: linear-gradient(90deg, var(--lamp) 0%, #60a5fa 40%, transparent 85%);
-}
-/* centered header */
-.menu.de-panel .menu-h,
-.menu.sheet-up .menu-h {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 16px 44px 2px;
-  flex: none;
-  position: relative;
-  gap: 3px;
-}
-.menu-sub {
-  display: block;
-  font: 400 12px/1.3 var(--sans);
-  color: rgba(255,255,255,.4);
-}
-.menu-h .cbtn.sm {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.06);
-  color: rgba(255,255,255,.5);
-  transition: background .15s ease, color .15s ease, transform .15s ease;
-}
-.menu-h .cbtn.sm:hover {
-  background: rgba(255,255,255,.12);
-  color: #fff;
-  transform: scale(1.05);
-}
-/* soft pill tabs */
-.menu-tabs {
-  display: flex !important;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 5px !important;
-  overflow-x: auto !important;
-  grid-template-columns: none !important;
-  padding: 12px 12px 8px !important;
-  margin: 0 !important;
-  border-bottom: 0 !important;
-  scrollbar-width: none;
-  flex: none;
-}
-.menu-tabs::-webkit-scrollbar { display: none; }
-.menu-tabs button.on::after { display: none !important; }
-/* 6: full-bleed body, no side padding on list */
-.menu-body {
-  overflow: auto;
-  padding: 0 0 12px;
-  flex: 1;
-  min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,.12) transparent;
-}
-.menu-body::-webkit-scrollbar { width: 6px; }
-.menu-body::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,.12);
-  border-radius: 99px;
-}
-.menu .msec {
-  margin: 8px 16px 6px;
-  font: 600 10px/1 var(--sans);
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.3);
-}
-.menu .msec:first-child { margin-top: 4px; }
-.menu .seg-m {
-  display: flex;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.06);
-  margin: 0 12px 10px;
-  background: rgba(0,0,0,.3);
-}
-.menu .seg-m button:hover {
-  color: rgba(255,255,255,.85);
-  background: rgba(255,255,255,.04);
-}
-.menu .seg-m button.on {
-  background: rgba(255,255,255,.1);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: none;
-}
-/* 6: ultra-thin rows — dividers + left accent */
-.menu .opt {
-  border-radius: 0 !important;
-  background: transparent !important;
-  margin-bottom: 0 !important;
-  padding: 12px 16px !important;
-  border: 0 !important;
-  border-bottom: 0.5px solid rgba(255,255,255,.05) !important;
-  border-left: 3px solid transparent !important;
-  transition: background .15s ease, border-left-color .15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  color: rgba(255,255,255,.88);
-  cursor: pointer;
-}
-.menu .opt:last-child {
-  border-bottom: 0 !important;
-}
-.menu .opt:hover {
-  background: rgba(255,255,255,.03) !important;
-}
-.menu .opt:active {
-  background: rgba(255,255,255,.025) !important;
-}
-.menu .opt.on,
-.menu .opt[aria-checked="true"] {
-  background: rgba(0,0,0,.2) !important;
-  border-left-color: var(--lamp) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-}
-.menu .opt.on:hover,
-.menu .opt[aria-checked="true"]:hover {
-  background: rgba(0,0,0,.28) !important;
-}
-.menu .opt.on b,
-.menu .opt[aria-checked="true"] b {
-  color: #fff;
-}
-.menu .opt b {
-  font-weight: 550;
-  font-size: 13.5px;
-  letter-spacing: -.01em;
-}
-.menu .mnote {
-  margin: 10px 16px 4px;
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: rgba(255,255,255,.32);
-}
-.menu .mnote.err { color: #f0a090; }
-.menu .nudge {
-  display: inline-flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  padding: 6px 16px;
-  align-items: center;
-}
-.menu .nudge button:hover {
-  background: rgba(255,255,255,.11);
-  color: #fff;
-}
-.menu .nudge b {
-  min-width: 48px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: rgba(255,255,255,.65);
-}
-.menu .chlist { display: grid; gap: 0; }
-.menu .opt.danger { color: #f0a090; }
-.menu .opt.danger:hover {
-  background: rgba(240,98,79,.08) !important;
-}
-@media (min-width: 900px) {
-  .menu.sheet-up,
-    .theatre .menu,
-    .menu.de-panel {
-      width: min(400px, calc(100% - 48px)) !important;
-      max-height: min(70vh, 580px) !important;
-      border-radius: 20px !important;
-    }
-  .menu .opt { padding: 13px 18px !important; }
-  .menu .opt b { font-size: 14px; }
-}
-
-@media (max-width: 760px) {
-  .menu.sheet-up,
-    .theatre .menu,
-    .menu.de-panel {
-      width: calc(100% - 24px) !important;
-      max-height: 78vh !important;
-      border-radius: 16px !important;
-    }
-  .menu.de-panel .menu-h { padding: 14px 40px 2px; }
-  .menu-tabs { padding: 10px 10px 8px !important; gap: 4px !important; }
-}
-
-/* belongs in components/shared (kept here so the look stays identical) */
-.dialog.settings .seg button {
-  padding: 7px 12px;
-  border: 0;
-  background: transparent;
-  color: var(--mute);
-  font: 500 12.5px var(--sans);
-  transition: background .15s, color .15s;
-}
 .swatches { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-/* belongs in components/shared (kept here so the look stays identical) */
-.sw-c.on, .swt.on {
-  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--lamp);
+.sw-c { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; }
+.sw-c.on, .swt.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--lamp); border-color: transparent; }
+
+.menu { position: absolute; right: 16px; bottom: 100px; width: 350px; max-height: calc(100% - 190px); overflow: auto; z-index: 6; background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 8px; }
+
+/* Center panel layout */
+.menu.sheet-up, .theatre .menu, .menu.de-panel { position: absolute; left: 50%; top: 50%; bottom: auto; right: auto; transform: translate(-50%, -50%); width: min(380px, calc(100% - 40px)); max-height: min(72vh, 560px); border-radius: var(--r-xl); border: none; padding: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--raise) 92%, transparent) 0%, var(--panel) 100%); backdrop-filter: blur(40px) saturate(1.25); box-shadow: inset 0 1px 0 var(--on-media-line), inset 0 -1px 0 var(--shade-1), 0 40px 100px var(--shade-4), 0 12px 28px var(--shade-3); color: var(--text); animation: de-in var(--t-med) var(--ease); display: flex; flex-direction: column; z-index: 8; overflow: hidden; }
+
+.menu-accent { height: 1.5px; flex: none; background: linear-gradient(90deg, var(--lamp) 0%, var(--info) 40%, transparent 85%); }
+
+.menu.de-panel .menu-h, .menu.sheet-up .menu-h { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 44px 2px; flex: none; position: relative; gap: 3px; }
+.menu-sub { display: block; font: 400 var(--fs-sm)/1.3 var(--sans); color: var(--mute); }
+.menu-h .cbtn.sm { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 50%; background: var(--wash-2); color: var(--mute); transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast); }
+.menu-h .cbtn.sm:hover { background: var(--wash-3); color: var(--text); transform: scale(1.05); }
+
+.menu-tabs { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; overflow-x: auto; padding: 12px 12px 8px; margin: 0; border-bottom: 0; scrollbar-width: none; flex: none; }
+.menu-tabs::-webkit-scrollbar { display: none; }
+.menu-tabs button { flex: 0 0 auto; position: relative; padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--line); color: var(--mute); font: 500 var(--fs-sm)/1 var(--sans); background: transparent; text-align: center; letter-spacing: -.01em; transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast); }
+.menu-tabs button:hover { color: var(--text); background: var(--wash-2); }
+.menu-tabs button.on { color: var(--on-lamp); background: var(--text); border-color: var(--text); font-weight: 600; }
+.menu-tabs button.on::after { display: none; }
+
+.menu-body { overflow: auto; padding: 0 0 12px; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--wash-3) transparent; }
+.menu-body::-webkit-scrollbar { width: 6px; }
+.menu-body::-webkit-scrollbar-thumb { background: var(--wash-3); border-radius: var(--r-pill); }
+
+.menu .msec { margin: 8px 16px 6px; font: 600 10px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+.menu .msec:first-child { margin-top: 4px; }
+
+.menu .seg-m { display: flex; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--line); margin: 0 12px 10px; background: var(--wash-1); }
+.menu .seg-m button { flex: 1; padding: 8px 4px; background: transparent; color: var(--mute); font: 500 var(--fs-sm)/1 var(--sans); border: 0; transition: background var(--t-fast), color var(--t-fast); }
+.menu .seg-m button:hover { color: var(--text); background: var(--wash-2); }
+.menu .seg-m button.on { background: var(--wash-3); color: var(--text); font-weight: 600; }
+
+.menu .opt { border-radius: 0; background: transparent; margin-bottom: 0; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--wash-1); border-left: 3px solid transparent; transition: background var(--t-fast), border-left-color var(--t-fast); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: 100%; text-align: left; color: var(--text); cursor: pointer; }
+.menu .opt:last-child { border-bottom: 0; }
+.menu .opt:hover { background: var(--wash-1); }
+.menu .opt:active { background: var(--wash-2); }
+.menu .opt.on, .menu .opt[aria-checked="true"] { background: var(--wash-1); border-left-color: var(--lamp); }
+.menu .opt.on b, .menu .opt[aria-checked="true"] b { color: var(--text); }
+.menu .opt b { font-weight: 550; font-size: var(--fs-md); letter-spacing: -.01em; }
+.menu .opt small { color: var(--mute); display: block; font-size: var(--fs-sm); margin-top: 1px; font-weight: 400; line-height: 1.3; }
+.menu .opt .icon { color: var(--lamp); flex: none; opacity: 0; transition: opacity var(--t-fast); }
+.menu .opt.on svg, .menu .opt.on .icon, .menu .opt[aria-checked="true"] svg { opacity: 1; }
+
+.menu .mnote { margin: 10px 16px 4px; font-size: var(--fs-sm); line-height: 1.4; color: var(--mute); }
+.menu .mnote.err { color: var(--danger); }
+
+.menu .nudge { display: inline-flex; gap: 4px; flex-wrap: wrap; padding: 6px 16px; align-items: center; }
+.menu .nudge button { padding: 6px 11px; border-radius: var(--r-sm); background: var(--wash-2); font-size: var(--fs-sm); color: var(--text); border: 1px solid var(--wash-1); transition: background var(--t-fast), color var(--t-fast); }
+.menu .nudge button:hover { background: var(--wash-3); }
+.menu .nudge b { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--mute); }
+
+.menu .chlist { display: grid; gap: 0; }
+.menu .opt.danger { color: var(--danger); }
+.menu .opt.danger:hover { background: var(--wash-1); }
+.menu .mrow input:not([type=range]) { max-width: 160px; }
+.menu input[type="range"] { accent-color: var(--lamp); }
+
+@media (min-width: 900px) {
+  .menu.sheet-up, .theatre .menu, .menu.de-panel { width: min(400px, calc(100% - 48px)); max-height: min(70vh, 580px); border-radius: var(--r-xl); }
+  .menu .opt { padding: 13px 18px; }
+  .menu .opt b { font-size: var(--fs-lg); }
 }
-/* belongs in components/shared (kept here so the look stays identical) */
-.dialog.settings .mnote {
-  margin: 8px 14px;
-  font-size: 12px;
-  color: var(--mute);
-  line-height: 1.4;
+
+@media (max-width: 760px) {
+  .menu.sheet-up, .theatre .menu, .menu.de-panel { width: calc(100% - 24px); max-height: 78vh; border-radius: var(--r-lg); }
+  .menu.de-panel .menu-h { padding: 14px 40px 2px; }
+  .menu-tabs { padding: 10px 10px 8px; gap: 4px; }
+  .menu { right: 8px; left: 8px; width: auto; bottom: 96px; }
 }
