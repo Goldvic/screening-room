@@ -1,0 +1,47 @@
+/* Styles for overlays/tour */
+
+/* tour */
+.dialog.tour { text-align: center; display: grid; gap: 8px; justify-items: center; width: min(420px, 92vw); }
+.tour-dots { display: flex; gap: 6px; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tour-dots i.on { background: var(--lamp); width: 20px; border-radius: 4px; }
+.dialog.tour.de-tour,
+.dialog.tour {
+  width: min(400px, 92vw) !important;
+  text-align: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 0 0 18px !important;
+  border: none !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, rgba(34,34,42,.96), rgba(14,14,18,.98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.1),
+    0 36px 90px rgba(0,0,0,.6) !important;
+  overflow: hidden;
+}
+.dialog.tour .set-accent { width: 100%; }
+.dialog.tour h3 {
+  font: 650 18px/1.2 var(--sans);
+  letter-spacing: -.02em;
+  margin: 4px 20px 0;
+}
+.dialog.tour p {
+  margin: 0 24px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  max-width: 32ch;
+}
+.tour-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 6px 0 2px;
+}
+.dialog.tour .dlg-actions {
+  padding: 8px 20px 0;
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+}

@@ -1,9 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { SettingsCtx, Icon, bytes, hue, bridge } from './lib';
-// @ts-ignore -- CSS imports are handled by the bundler.
-import './discover.css';
-// @ts-ignore -- CSS imports are handled by the bundler.
-import './discover-seasons.css';
 
 type BotItem = {
   title: string;

@@ -1,0 +1,30 @@
+/* Styles for settings/auto-save-rules */
+
+/* scheduled downloads */
+.sched { margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: var(--raise); }
+.sched .msec { margin: 0 0 4px; }
+.sched-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; }
+.sched-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sched {
+  padding: 8px 0;
+  border-bottom: 0.5px solid rgba(255,255,255,.05);
+}
+.sched .msec {
+  margin: 6px 16px !important;
+}
+.sched-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 0.5px solid rgba(255,255,255,.04);
+}
+.sched-row:last-child { border-bottom: 0; }
+.dialog.de-settings .msec {
+  margin: 14px 14px 6px !important;
+  font: 600 10.5px var(--sans);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.34);
+}

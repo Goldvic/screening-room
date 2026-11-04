@@ -1,0 +1,42 @@
+/* Styles for player/controls */
+
+.tools { display: flex; gap: 10px; margin-bottom: 18px; align-items: center; flex-wrap: wrap; }
+.cbtn.big { width: 46px; height: 46px; }
+.ctl { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.vol { display: inline-flex; align-items: center; }
+.time { font-size: 14px; margin-left: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.time i { color: rgba(255,255,255,.5); font-style: normal; }
+/* player: sound, loop, chapters, audio only */
+.volpct { font-size: 12px; min-width: 38px; text-align: left; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; margin-left: 2px; }
+.volpct.hot { color: var(--lamp); font-weight: 600; }
+.tools { gap: 8px; margin-bottom: 12px; }
+.ctl { gap: 4px; }
+.theatre .cbtn.big {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(255,255,255,.14);
+}
+.theatre .cbtn.big:hover { background: rgba(255,255,255,.24); transform: scale(1.04); }
+/* control dock zones */
+.ctl {
+  display: flex; align-items: center; gap: 4px;
+  flex-wrap: nowrap;
+}
+.ctl-zone {
+  display: flex; align-items: center; gap: 2px;
+}
+.ctl-zone.transport { gap: 2px; }
+.ctl-zone.status { gap: 8px; margin-left: 6px; }
+.ctl-zone.tools { gap: 1px; }
+.vol {
+  display: inline-flex; align-items: center; gap: 2px;
+}
+.volpct {
+  font: 600 12px/1 var(--sans); font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,.7); min-width: 36px;
+}
+.volpct.hot { color: var(--lamp); }
+.time {
+  font: 600 12.5px/1 var(--sans); font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,.78); white-space: nowrap;
+}
+.time i { opacity: .45; margin: 0 3px; font-style: normal; }

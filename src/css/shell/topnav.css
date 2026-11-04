@@ -1,0 +1,128 @@
+/* Styles for shell/topnav */
+
+.shell { display: grid; grid-template-columns: 300px 1fr; height: 100%; }
+.main { padding: 30px 40px 80px; overflow: auto; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.search { flex: 1; min-width: 200px; max-width: 420px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; color: var(--mute); }
+/* belongs in pages/setup (kept here so the look stays identical) */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-left: auto; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.note { padding: 20px; border: 1px dashed var(--line); border-radius: 14px; color: var(--mute); }
+/* belongs in components/shared (kept here so the look stays identical) */
+.tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--lamp); border: 1px solid var(--lamp); border-radius: 99px; padding: 1px 9px; flex: none; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.scrim { position: fixed; inset: 0; background: rgba(5,7,10,.7); backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 30; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.dialog { width: min(440px, 92vw); background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.sw { display: inline-block; width: 38px; height: 22px; border-radius: 99px; background: var(--line); position: relative; transition: background .15s; flex: none; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.err-t { color: var(--danger); }
+/* belongs in player/frame (kept here so the look stays identical) */
+.theatre { position: fixed; inset: 0; background: #000; z-index: 20; color: #fff; user-select: none; }
+/* belongs in player/frame (kept here so the look stays identical) */
+.cues { position: absolute; left: 50%; transform: translateX(-50%); bottom: 6%; width: min(90%, 1100px); text-align: center; z-index: 2; pointer-events: none; display: grid; justify-items: center; gap: 4px; transition: bottom .2s; line-height: 1.3; font-weight: 500; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.cbtn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; color: #fff; flex: none; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.msec { margin: 12px 10px 4px; font: 600 13px var(--sans); color: var(--lamp); }
+/* belongs in player/frame (kept here so the look stays identical) */
+.mrow { display: grid; gap: 4px; padding: 6px 10px; font-size: 13.5px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.nudge { display: flex; gap: 4px; }
+@media (max-width: 800px) {
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: 100%; }
+  .main { padding: 20px 14px 70px; overflow: visible; }
+}
+
+/* belongs in components/shared (kept here so the look stays identical) */
+.err-t { color: var(--danger); margin: 8px 0; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px; background: var(--raise); border: 1px solid var(--line); font-size: 12px; }
+/* belongs in pages/setup (kept here so the look stays identical) */
+.setup-card { width: min(560px, 96vw); background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 28px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.msec { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); padding: 0 4px; }
+/* belongs in player/frame (kept here so the look stays identical) */
+.mrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; font-size: 14px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.nudge { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+/* belongs in player/audio-menu (kept here so the look stays identical) */
+.eq { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 4px 6px 10px; }
+/* belongs in player/audio-menu (kept here so the look stays identical) */
+.loudnote { color: rgba(255,255,255,.75); }
+/* belongs in player/frame (kept here so the look stays identical) */
+.audio-only { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; color: rgba(255,255,255,.8); text-align: center; z-index: 1; pointer-events: none; padding: 20px; }
+/* opening files, updates */
+.dropzone { position: fixed; inset: 0; z-index: 200; display: grid; place-content: center; justify-items: center; gap: 8px; background: rgba(8,10,14,.82); border: 3px dashed var(--lamp); color: var(--text); text-align: center; pointer-events: none; }
+.dropzone span { color: var(--mute); }
+.shell { grid-template-columns: 76px 1fr; }
+.main { padding: 16px 22px 60px; }
+.nav-badge { position: absolute; top: 4px; right: 10px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--lamp); color: #111; font: 700 10px/16px var(--sans); text-align: center; font-style: normal; padding: 0 4px; }
+.main { padding: 22px 32px 70px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+/* hero */
+.home { display: grid; gap: 26px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+/* dialogs and drawers: soft glass */
+.scrim { backdrop-filter: blur(6px); background: rgba(5,5,8,.55); }
+@media (max-width: 760px) {
+  .shell { grid-template-columns: 62px 1fr; }
+  .main { padding: 16px 14px 60px; }
+}
+
+/* compact mode */
+html[data-compact="1"] .main { padding: 12px 16px 50px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.nudge { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.shell.tn { display: flex; flex-direction: column; grid-template-columns: none; height: 100%; }
+.topnav { flex: none; display: flex; align-items: center; gap: 22px; height: 60px; padding: 0 24px; background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); position: relative; z-index: 20; }
+.tn-brand { display: flex; align-items: center; gap: 9px; font: 800 17px/1 var(--sans); letter-spacing: -.02em; cursor: pointer; flex: none; }
+.tn-tabs { display: flex; align-items: stretch; gap: 2px; height: 100%; }
+.tn-tab { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--mute); font: 600 13.5px/1 var(--sans); transition: color .15s; }
+.tn-tab:hover { color: var(--text); }
+.tn-tab.on { color: var(--text); }
+.tn-tab.on::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--lamp); box-shadow: 0 0 10px var(--lamp); }
+.tn-tab.on svg { color: var(--lamp); }
+.tn-search:hover { border-color: color-mix(in srgb, var(--lamp) 50%, var(--line)); color: var(--text); }
+.tn-search span { flex: 1; }
+.tn-search kbd, .tn-menu kbd { font: 600 10.5px var(--sans); padding: 2px 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--mute); background: var(--panel); margin-left: auto; }
+.tn-right { display: flex; align-items: center; gap: 4px; flex: none; }
+.tn-ic:hover, .tn-ic.on { background: var(--raise); color: var(--text); }
+.tn-ic .nav-badge { top: 1px; right: 0; }
+.tn-more { position: relative; }
+.shell.tn .main { flex: 1; min-height: 0; overflow: auto; padding: 26px 40px 80px; }
+html.pop .topnav { display: none !important; }
+@media (max-width: 900px) {
+  .tn-tab { padding: 0 12px; }
+}
+
+@media (max-width: 640px) {
+  .topnav { padding: 0 10px; gap: 8px; }
+  .tn-brand span:last-child { display: none; }
+  .shell.tn .main { padding: 16px 14px 60px; }
+}
+
+/* belongs in components/shared (kept here so the look stays identical) */
+.home {
+  display: grid;
+  gap: 28px;
+  padding-bottom: 24px;
+}
+/* belongs in components/shared (kept here so the look stays identical) */
+.scrim {
+  backdrop-filter: blur(10px);
+  background: rgba(5,5,8,.6);
+}
+/* belongs in components/shared (kept here so the look stays identical) */
+.set-accent {
+  height: 1.5px;
+  flex: none;
+  background: linear-gradient(90deg, var(--lamp) 0%, #60a5fa 40%, transparent 85%);
+}
+/* belongs in components/shared (kept here so the look stays identical) */
+.home {
+  display: grid;
+  gap: 22px;
+  padding-bottom: 28px;
+}

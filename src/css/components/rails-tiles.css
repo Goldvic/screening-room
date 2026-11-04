@@ -1,0 +1,84 @@
+/* Styles for components/rails-tiles */
+
+.badge-s { position: absolute; top: 7px; left: 7px; z-index: 2; font: 600 10px var(--sans); text-transform: uppercase; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; background: rgba(0,0,0,.65); color: #5eead4; }
+.tilecard .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+.rail-wrap { position: relative; }
+.rail-arrow { position: absolute; top: calc(50% - 30px); z-index: 4; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); backdrop-filter: blur(8px); border: 1px solid var(--line); color: var(--text); opacity: 0; transition: opacity .15s; }
+.rail-arrow.l { left: -12px; }
+.rail-arrow.r { right: -12px; transform: scaleX(-1); }
+.rail-wrap:hover .rail-arrow { opacity: 1; }
+.rail-arrow:hover { background: var(--lamp); color: #111; }
+@media (hover: none) {
+  .rail-arrow { display: none; }
+}
+
+.rail-hint {
+  font: 500 12px var(--sans);
+  color: var(--mute);
+}
+.rail-wrap { position: relative; }
+.rail-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-60%);
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(16,16,22,.85);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity .15s, background .15s, transform .15s;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.rail-wrap:hover .rail-arrow { opacity: 1; }
+.rail-arrow:hover {
+  background: rgba(30,30,40,.95);
+  transform: translateY(-60%) scale(1.05);
+}
+.rail-arrow.l { left: 4px; }
+.rail-arrow.r { right: 4px; }
+.rail-arrow.r svg { transform: scaleX(-1); }
+.badge-s {
+  position: absolute;
+  top: 8px; left: 8px;
+  z-index: 2;
+  font: 600 10px var(--sans);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(6px);
+  color: #5eead4;
+}
+.tilecard .prog {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: rgba(0,0,0,.35);
+}
+.tilecard .prog b {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+}
+@media (max-width: 640px) {
+  .rail-arrow { display: none; }
+}
+
+.rail-hint {
+  font: 500 12.5px var(--sans);
+  color: var(--mute);
+}
+.rail-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(16,18,26,.9);
+}

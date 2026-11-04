@@ -1,0 +1,22 @@
+/* Styles for components/stars-tags */
+
+/* stars and tags */
+.stars { display: inline-flex; gap: 2px; }
+.tagbox { display: grid; gap: 6px; }
+.taglist { display: flex; flex-wrap: wrap; gap: 5px; }
+.stars button:hover { transform: scale(1.1); }
+.tagbox .tag {
+  border-radius: 99px;
+  padding: 4px 10px;
+  font: 500 12px var(--sans);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.06);
+  color: var(--text);
+}
+.tagbox .tag.ghost {
+  background: transparent;
+  color: var(--mute);
+}
+.tagbox .tag:hover {
+  background: rgba(255,255,255,.1);
+}

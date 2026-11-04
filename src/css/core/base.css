@@ -1,0 +1,28 @@
+/* Base: resets and element defaults. Nothing here is specific to a page. */
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+select { background: var(--raise); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--text); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0; font-size: 13px; }
+dt { color: var(--mute); }
+dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation-duration: .01ms !important; }
+}
+
+input:not([type=range]):not([type=checkbox]):not([type=file]), textarea {
+  background: var(--raise); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: var(--text); min-width: 0;
+}
+textarea { width: 100%; resize: vertical; font: 13px/1.4 ui-monospace, Consolas, monospace; }
+body { font: 13.5px/1.45 var(--sans); }
+select { border-radius: 8px; padding: 6px 9px; }
+code { background: var(--raise); padding: 2px 6px; border-radius: 6px; font-size: 12px; user-select: all; }
+kbd { font: 600 11px var(--sans); padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,.1); border: 1px solid var(--line); color: inherit; white-space: nowrap; }
+html[data-compact="1"] body { font-size: 12.5px; }

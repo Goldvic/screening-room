@@ -1,0 +1,6 @@
+/* Styles for overlays/command-palette */
+
+.scrim.top { align-items: flex-start; padding-top: 12vh; }
+.palette { width: min(620px, 94vw); border-radius: 16px; background: rgba(22,22,29,.96); border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); overflow: hidden; animation: slidein .14s ease-out; }
+.pal-list { max-height: 50vh; overflow: auto; padding: 6px; display: grid; gap: 1px; }
+.pal-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

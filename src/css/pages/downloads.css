@@ -1,0 +1,641 @@
+/* Styles for pages/downloads */
+
+.btn.wide { width: 100%; margin-top: auto; }
+@media (max-width: 800px) {
+  .btn.wide { margin-top: 0; }
+}
+
+.bar > i.enc { background: #7aa7ff; }
+.small.trunc, .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-list { max-height: 300px; overflow: auto; border-top: 1px solid var(--line); }
+.plist { display: grid; gap: 4px; margin: 6px 0; }
+.plist .opt { border: 1px solid var(--line); background: var(--raise); }
+.plist .opt.on { border-color: var(--lamp); }
+.plist .opt small { color: var(--mute); display: block; font-size: 12.5px; }
+.plist .est { display: inline-flex; align-items: center; gap: 8px; color: var(--mute); font-size: 13px; white-space: nowrap; }
+.chk { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+.chk input { margin-top: 4px; accent-color: var(--lamp); }
+.chk span { display: grid; }
+/* belongs in player/audio-menu (kept here so the look stays identical) */
+.eq input { writing-mode: vertical-lr; direction: rtl; width: 22px; height: 110px; accent-color: var(--lamp); }
+@media (max-width: 720px) {
+  /* belongs in player/audio-menu (kept here so the look stays identical) */
+  .eq input { height: 80px; }
+}
+
+.btn.wide { justify-content: flex-start; }
+/* belongs in settings/auto-save-rules (kept here so the look stays identical) */
+.sched-row span { display: grid; min-width: 0; }
+/* belongs in overlays/details-sheet (kept here so the look stays identical) */
+.cand span { display: grid; min-width: 0; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.chips span, .chips button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--raise); color: var(--mute); font-size: 12.5px; }
+/* belongs in overlays/command-palette (kept here so the look stays identical) */
+.palette input { width: 100%; padding: 16px 18px; font-size: 15px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; outline: none; color: var(--text); }
+/* belongs in overlays/command-palette (kept here so the look stays identical) */
+.pal-list button { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 9px; text-align: left; color: var(--text); }
+/* belongs in components/shared (kept here so the look stays identical) */
+.sheet-grid span { color: var(--mute); font-size: 12.5px; }
+.sumline { margin: 10px 2px 2px; font-size: 13.5px; }
+.sumline b { font-size: 15px; }
+/* belongs in components/stars-tags (kept here so the look stays identical) */
+.stars button { font-size: 22px; line-height: 1; color: var(--line); padding: 2px; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.season-tabs button { padding: 6px 14px; border-radius: 999px; background: var(--raise); color: var(--mute); font-weight: 500; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.topnav .netmini small { font-size: 11px; }
+/* belongs in shell/topnav (kept here so the look stays identical) */
+.tn-menu button { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font: 500 13.5px var(--sans); color: var(--text); text-align: left; }
+@media (max-width: 1100px) {
+  /* belongs in components/shared (kept here so the look stays identical) */
+  .topnav .netmini small, .tn-search kbd { display: none; }
+}
+
+@media (max-width: 900px) {
+  /* belongs in components/shared (kept here so the look stays identical) */
+  .tn-search span, .tn-search kbd, .topnav .netmini { display: none; }
+  /* belongs in shell/topnav (kept here so the look stays identical) */
+  .tn-tab span { display: none; }
+}
+
+/* belongs in components/shared (kept here so the look stays identical) */
+.dp-chips button, .dp-seg button { padding: 6px 11px; border-radius: 999px; background: var(--raise); border: 1px solid transparent; font: 600 12px var(--sans); color: var(--mute); }
+/* belongs in overlays/data-panel (kept here so the look stays identical) */
+.dp-seg button { border-radius: 9px; background: transparent; padding: 8px 0; text-align: center; }
+/* belongs in overlays/data-panel (kept here so the look stays identical) */
+.dp-foot button { display: flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--raise); font: 600 12px var(--sans); }
+@media (max-width: 900px) {
+  /* belongs in shell/net-meter (kept here so the look stays identical) */
+  .topnav .netmini { display: flex; }
+  /* belongs in components/shared (kept here so the look stays identical) */
+  .topnav .netmini span, .topnav .netmini small { display: none; }
+}
+
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--text); font-size: 13.5px; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-menu button, .lib-menu a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font: 500 13.5px var(--sans); color: var(--text); text-align: left; text-decoration: none; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.sd-n b { color: var(--lamp); font-size: 15px; }
+/* belongs in overlays/details-sheet (kept here so the look stays identical) */
+.dt-chips span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; background: color-mix(in srgb, var(--text) 9%, transparent); color: var(--mute); font: 600 12px var(--sans); }
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu-tabs button {
+  flex: 0 0 auto !important;
+  position: relative;
+  padding: 6px 12px !important;
+  border-radius: 99px !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  color: rgba(255,255,255,.42) !important;
+  font: 500 12px/1 var(--sans) !important;
+  background: transparent !important;
+  text-align: center;
+  letter-spacing: -.01em;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu .opt small {
+  color: rgba(255,255,255,.36);
+  display: block;
+  font-size: 11.5px;
+  margin-top: 1px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+@media (min-width: 900px) {
+  /* belongs in player/menu (kept here so the look stays identical) */
+  .menu-tabs button { padding: 7px 14px !important; font-size: 12.5px !important; }
+}
+
+@media (max-width: 760px) {
+  /* belongs in player/menu (kept here so the look stays identical) */
+  .menu-tabs button { padding: 6px 10px !important; font-size: 11.5px !important; }
+}
+
+/* belongs in shell/download-tray (kept here so the look stays identical) */
+.dl-top b {
+  font: 650 14px var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--lamp);
+}
+.budget .bar > i.enc { background: #f0a090; }
+/* belongs in settings/auto-save-rules (kept here so the look stays identical) */
+.sched-row b { display: block; font: 550 13px var(--sans); }
+/* Storage dialog uses de-settings chrome already */
+.dialog.de-settings .st-list {
+  max-height: 40vh;
+  overflow: auto;
+  margin: 0 -4px;
+}
+/* belongs in pages/setup (kept here so the look stays identical) */
+.sfield input,
+.sfield select,
+.sfield textarea {
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(0,0,0,.25);
+  color: var(--text);
+  padding: 9px 11px;
+  font: 500 13.5px var(--sans);
+  transition: border-color .15s, box-shadow .15s;
+}
+/* belongs in pages/setup (kept here so the look stays identical) */
+.sfield textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+/* belongs in player/cast (kept here so the look stays identical) */
+.castbox-h b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 14px var(--sans);
+}
+/* belongs in components/stars-tags (kept here so the look stays identical) */
+.stars button {
+  background: none;
+  border: 0;
+  color: rgba(255,255,255,.25);
+  font-size: 18px;
+  padding: 0 2px;
+  transition: color .12s, transform .12s;
+}
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-sort-menu button,
+.lib-bar.c3 .lib-menu button,
+.lib-bar.c3 .lib-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 500 13px var(--sans);
+  text-align: left;
+  text-decoration: none;
+}
+/* belongs in pages/home (kept here so the look stays identical) */
+.mag-prog b {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+  border-radius: 99px;
+}
+/* belongs in pages/home (kept here so the look stays identical) */
+.mag-side-bar b {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+  border-radius: 99px;
+}
+/* belongs in pages/home (kept here so the look stays identical) */
+.stat-pill b {
+  font-weight: 600;
+}
+/* belongs in overlays/data-panel (kept here so the look stays identical) */
+.dp-pick button {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.28);
+  color: var(--text);
+  font: 600 13px var(--sans);
+  padding: 11px 8px;
+  border-radius: 11px;
+  cursor: pointer;
+  text-align: center;
+}
+/* belongs in overlays/data-panel (kept here so the look stays identical) */
+.dp-sec > b {
+  font: 700 17px/1.2 var(--sans);
+  letter-spacing: -.02em;
+}
+/* belongs in overlays/data-panel (kept here so the look stays identical) */
+.dp-usage-list span { color: var(--mute); }
+/* belongs in overlays/data-panel (kept here so the look stays identical) */
+.dp-usage-list b { font-weight: 600; }
+/* belongs in pages/insights (kept here so the look stays identical) */
+.ins-hero-main b {
+  font: 800 clamp(28px, 4vw, 36px)/1.1 var(--sans);
+  letter-spacing: -.03em;
+}
+/* belongs in pages/insights (kept here so the look stays identical) */
+.ins-hero-main > span {
+  font-size: 13px;
+}
+/* belongs in pages/insights (kept here so the look stays identical) */
+.ins-bar-track b {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lamp), #2dd4bf);
+}
+/* belongs in pages/insights (kept here so the look stays identical) */
+.ins-goal-meta b {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+/* belongs in pages/insights (kept here so the look stays identical) */
+.ins-metric b {
+  font: 700 22px/1.15 var(--sans);
+  letter-spacing: -.02em;
+}
+/* belongs in pages/insights (kept here so the look stays identical) */
+.ins-metric span {
+  font-size: 13px;
+}
+/* belongs in overlays/add-to-collection (kept here so the look stays identical) */
+.atc-item-text b {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* belongs in overlays/add-to-collection (kept here so the look stays identical) */
+.atc-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--raise, rgba(255,255,255,.04));
+  color: var(--text);
+  font: 500 13.5px var(--sans);
+}
+/* ── Downloads bottom dock ──────────────────────────────────────────── */
+.dl-dock-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: transparent;
+  pointer-events: auto;
+}
+.dl-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(50vh, 420px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(28,32,42,.98), rgba(14,16,22,.99));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow:
+    0 24px 80px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  overflow: hidden;
+  z-index: 81;
+  animation: dl-dock-in .28s cubic-bezier(.22,.8,.22,1);
+}
+@keyframes dl-dock-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.dl-dock-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+  min-width: 0;
+}
+.dl-dock-title {
+  font: 700 13.5px var(--sans);
+  flex: none;
+}
+.dl-dock-rate {
+  font: 600 13px var(--sans);
+  color: var(--lamp);
+  flex: none;
+  min-width: 64px;
+}
+.dl-dock-meta {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--mute);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-dock-acts {
+  display: flex;
+  gap: 5px;
+  flex: none;
+}
+.dl-dock-acts button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mute);
+  font: 500 12px var(--sans);
+  padding: 5px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.dl-dock-acts button:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.04);
+}
+.dl-dock-x {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--mute);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.dl-dock-x:hover {
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
+.dl-dock-extra {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.dl-dock-sched-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.dl-dock-budget {
+  font-size: 12px;
+  color: var(--mute);
+}
+.dl-dock-budget .dl-dock-bar {
+  margin-top: 6px;
+}
+.dl-dock-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  padding: 4px 0;
+}
+.dl-dock-empty {
+  margin: 16px 18px;
+  color: var(--mute);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.dl-dock-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.dl-dock-row:last-child {
+  border-bottom: none;
+}
+.dl-dock-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dl-dock-main strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-dock-main span {
+  font-size: 12px;
+}
+.dl-dock-bar {
+  display: block;
+  height: 3px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.1);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.dl-dock-bar b {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+  border-radius: 99px;
+}
+.dl-dock-bar b.enc {
+  background: #60a5fa;
+}
+.dl-dock-act {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.dl-dock-act .btn {
+  padding: 7px 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
+}
+@media (max-width: 640px) {
+  .dl-dock {
+      width: calc(100vw - 16px);
+      bottom: 12px;
+      max-height: 55vh;
+    }
+  .dl-dock-acts {
+      display: none;
+    }
+}
+
+/* ── Storage dialog ─────────────────────────────────────────────────── */
+.dialog.st-dialog {
+  width: min(520px, 94vw) !important;
+  max-height: min(88vh, 680px) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(28,28,36,.98), rgba(14,14,18,.99));
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 28px 64px rgba(0,0,0,.55);
+}
+.st-err {
+  margin: 0 18px 8px;
+  color: #f87171;
+  font-size: 13px;
+}
+.st-msg {
+  margin: 0 18px 8px;
+  color: #86efac;
+  font-size: 13px;
+}
+.st-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+.st-usage {
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.st-usage-nums {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.st-usage-nums b {
+  font: 700 16px/1.2 var(--sans);
+  letter-spacing: -.02em;
+}
+.st-usage-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.st-usage-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lamp), #2dd4bf);
+}
+.st-path {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.st-path-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--mute);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-path-acts {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.st-path-acts button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: 500 12px var(--sans);
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.st-path-acts button:hover {
+  background: rgba(255,255,255,.05);
+}
+.st-section {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.st-section-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.st-section-h span {
+  font-size: 12.5px;
+  color: var(--mute);
+}
+.st-dialog .st-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow: auto;
+  margin: 0 -4px;
+}
+.st-dialog .st-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px;
+  border-radius: 10px;
+}
+.st-dialog .st-row:hover {
+  background: rgba(255,255,255,.04);
+}
+.st-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.st-row-main strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-row-main span {
+  font-size: 12px;
+  color: var(--mute);
+}
+.st-watched-btn {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mute);
+  font: 500 12.5px var(--sans);
+  padding: 9px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.st-watched-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.04);
+}
+.st-cache-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--mute);
+  line-height: 1.4;
+}
+.st-cache .btn {
+  width: 100%;
+  justify-content: center;
+}
+/* download list: clear success / failure marks */
+.dl-st { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; }
+.dl-st.ok { background: rgba(63,214,160,.16); color: #3fd6a0; }
+.dl-st.bad { background: rgba(255,106,106,.16); color: #ff6a6a; }
+.dl-sec { padding: 10px 16px 4px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+.dl-sec.bad { color: #ff6a6a; }
+.dl-dock-row.error { background: rgba(255,106,106,.05); }

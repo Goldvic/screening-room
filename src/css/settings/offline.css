@@ -1,0 +1,27 @@
+/* Styles for settings/offline */
+
+/* ── Offline & downloads panel ─────────────────────────────────────── */
+.off-panel { display: flex; flex-direction: column; gap: 16px; padding-bottom: 8px; }
+.off-block { background: rgba(255,255,255,.025); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; }
+.off-block-h { margin-bottom: 14px; }
+.off-block-h h4 { margin: 0 0 2px; font: 650 12px/1.2 var(--sans); letter-spacing: .05em; text-transform: uppercase; color: var(--mute); }
+.off-block-h p { margin: 0; line-height: 1.4; word-break: break-all; }
+.off-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.off-toggles { display: flex; flex-direction: column; gap: 2px; }
+.off-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.off-toggle-row:last-child { border-bottom: none; padding-bottom: 2px; }
+.off-toggle-row b { display: block; font-size: 13.5px; font-weight: 600; }
+.off-toggle-row small { display: block; font-size: 12px; margin-top: 2px; line-height: 1.35; }
+.off-field { display: flex; flex-direction: column; gap: 10px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+.off-field:last-child { border-bottom: none; }
+.off-field-label b { display: block; font-size: 13.5px; font-weight: 600; }
+.off-field-label small { display: block; font-size: 12px; margin-top: 2px; color: var(--mute); }
+.off-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.off-chip { padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: rgba(0,0,0,.25); color: var(--text); font: 500 12.5px var(--sans); cursor: pointer; transition: .12s; }
+.off-chip:hover { border-color: rgba(255,255,255,.18); }
+.off-chip.on { border-color: color-mix(in srgb, var(--lamp) 55%, var(--line)); background: color-mix(in srgb, var(--lamp) 14%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--lamp) 28%, transparent); font-weight: 600; color: var(--lamp); }
+.off-seg { display: flex; padding: 3px; gap: 2px; background: rgba(0,0,0,.35); border-radius: 9px; border: 1px solid var(--line); }
+.off-seg button { border: none; background: transparent; color: var(--mute); font: 500 12.5px var(--sans); padding: 6px 12px; border-radius: 7px; cursor: pointer; transition: .15s; flex: 1; text-align: center; }
+.off-seg button.on { background: var(--lamp); color: #111; font-weight: 600; }
+.off-time-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 2px 12px; }
+.off-time-row input[type="time"], .off-time-row input[type="number"] { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--text); font: 500 13px var(--sans); }

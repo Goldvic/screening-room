@@ -1,0 +1,71 @@
+/* Styles for player/seek-bar */
+
+.hud.bottom { bottom: 0; padding: 40px 18px 14px; background: linear-gradient(to top, rgba(0,0,0,.85), transparent); }
+.seek { position: relative; height: 22px; cursor: pointer; touch-action: none; }
+.seek i { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 3px; transition: height .12s, top .12s; }
+.seek:hover i { top: 8px; height: 6px; }
+.seek .track { right: 0; background: rgba(255,255,255,.22); }
+.seek .buffered { background: rgba(255,255,255,.36); }
+.seek .played { background: var(--lamp); }
+.seek .knob { width: 14px; height: 14px; top: 4px; margin-left: -7px; border-radius: 50%; background: var(--lamp); transform: scale(0); transition: transform .12s; }
+.seek:hover .knob { transform: scale(1); top: 4px; height: 14px; }
+/* seek-bar preview + auto-quality offer */
+.peek { position: absolute; bottom: 28px; transform: translateX(-50%); display: grid; justify-items: center; gap: 4px; pointer-events: none; }
+.peek-img { display: block; border-radius: 8px; border: 2px solid rgba(255,255,255,.85); box-shadow: 0 6px 22px rgba(0,0,0,.6); background-color: #000; background-repeat: no-repeat; }
+.peek span { background: rgba(0,0,0,.85); padding: 1px 8px; border-radius: 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+/* belongs in player/top-bar (kept here so the look stays identical) */
+.suggest span { flex: 1 1 260px; font-size: 14px; }
+/* belongs in components/shared (kept here so the look stays identical) */
+.bar > i { display: block; height: 100%; background: var(--lamp); border-radius: 2px; transition: width .4s; }
+.chap { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,.65); z-index: 2; pointer-events: none; }
+.abmark { position: absolute; top: -2px; bottom: -2px; background: color-mix(in srgb, var(--lamp) 55%, transparent); border-left: 2px solid var(--lamp); z-index: 2; pointer-events: none; border-radius: 2px; }
+/* belongs in player/top-bar (kept here so the look stays identical) */
+.ttl span { font-size: 12px; white-space: normal; }
+.seek .cached { background: #2dd4bf; opacity: .85; }
+.seek .buffered { background: rgba(255,255,255,.42); }
+.seek:hover .cached, .seek:hover .buffered { top: 8px; height: 6px; }
+.hud.bottom { padding: 60px 22px 16px; }
+.seek { height: 26px; }
+.seek i { top: 11px; }
+.seek:hover i { top: 10px; height: 6px; }
+.seek:hover .cached, .seek:hover .buffered { top: 10px; }
+.seek .played { background: var(--lamp); }
+.theatre .hud.bottom {
+  background: linear-gradient(0deg, rgba(0,0,0,.82) 0%, rgba(0,0,0,.4) 55%, transparent 100%);
+}
+.hud.bottom { padding: 80px 20px 18px; gap: 6px; }
+/* progress strip */
+.seek {
+  height: 28px; margin: 0 2px 2px;
+  cursor: pointer;
+}
+.seek .track {
+  top: 12px; height: 4px; border-radius: 99px;
+  background: rgba(255,255,255,.18);
+}
+.seek .buffered { top: 12px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.32); }
+.seek .cached { top: 12px; height: 4px; border-radius: 99px; background: #2dd4bf; opacity: .7; }
+.seek .played {
+  top: 12px; height: 4px; border-radius: 99px;
+  background: var(--lamp);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--lamp) 50%, transparent);
+}
+.seek .knob {
+  top: 7px; width: 14px; height: 14px; margin-left: -7px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 6px rgba(0,0,0,.45);
+  opacity: 0; transition: opacity .15s, transform .15s;
+}
+.seek:hover .knob, .seek:active .knob { opacity: 1; transform: scale(1.1); }
+.seek:hover .track, .seek:hover .buffered, .seek:hover .cached, .seek:hover .played {
+  top: 11px; height: 6px;
+}
+.seek:hover .knob { top: 6px; }
+.seek .chap {
+  top: 11px; width: 2px; height: 6px;
+  background: rgba(255,255,255,.55); border-radius: 1px;
+}
+.seek .abmark {
+  top: 11px; height: 6px; border-radius: 2px;
+  background: color-mix(in srgb, var(--lamp) 45%, transparent);
+}

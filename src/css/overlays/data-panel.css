@@ -1,0 +1,239 @@
+/* Styles for overlays/data-panel */
+
+.dp-line { fill: none; stroke: var(--lamp); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.dp-fill { fill: color-mix(in srgb, var(--lamp) 16%, transparent); }
+.dp-h strong { font-size: 13.5px; }
+.dp-h .small { text-align: right; }
+.dp-bar { height: 8px; border-radius: 99px; background: var(--raise); overflow: hidden; }
+.dp-bar i { display: block; height: 100%; border-radius: 99px; background: var(--lamp); transition: width .4s; }
+.dp-bar.warn i { background: var(--danger); }
+.dp-seg button.on { background: var(--lamp); color: #111; }
+.dp-foot button:hover { background: color-mix(in srgb, var(--lamp) 16%, var(--raise)); color: var(--lamp); }
+.dp-foot button:last-child { margin-left: auto; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--mute); }
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-status.ok i { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-status.bad i { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+/* belongs in components/shared (kept here so the look stays identical) */
+.lib-bar .seg button { width: 34px; padding: 0; display: grid; place-items: center; border-radius: 7px; background: transparent; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-menu button:hover, .lib-menu a:hover { background: var(--raise); }
+/* belongs in pages/library (kept here so the look stays identical) */
+.tile-open strong { font: 600 14px/1.3 var(--sans); min-width: 0; padding-right: 20px; }
+/* belongs in overlays/details-sheet (kept here so the look stays identical) */
+.dt-skel i { height: 12px; border-radius: 6px; background: linear-gradient(100deg, var(--raise) 30%, var(--panel) 50%, var(--raise) 70%); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
+/* belongs in player/next-card (kept here so the look stays identical) */
+.nextcard strong { font-weight: 650; line-height: 1.3; }
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu-h strong {
+  font: 650 15.5px/1.2 var(--sans) !important;
+  letter-spacing: -.02em;
+  color: rgba(255,255,255,.95);
+}
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu-tabs button:hover {
+  color: rgba(255,255,255,.85) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  background: rgba(255,255,255,.04) !important;
+}
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu-tabs button.on {
+  color: #121218 !important;
+  background: #e8e8ed !important;
+  border-color: #e8e8ed !important;
+  font-weight: 600 !important;
+}
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu .seg-m button {
+  flex: 1;
+  padding: 8px 4px;
+  background: transparent;
+  color: rgba(255,255,255,.42);
+  font: 500 11.5px/1 var(--sans);
+  border: 0;
+  transition: background .15s ease, color .15s ease;
+}
+/* belongs in player/menu (kept here so the look stays identical) */
+.menu .nudge button {
+  padding: 6px 11px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.06);
+  font-size: 12px;
+  color: rgba(255,255,255,.7);
+  border: 1px solid rgba(255,255,255,.04);
+  transition: background .15s ease, color .15s ease;
+}
+@media (min-width: 900px) {
+  /* belongs in player/menu (kept here so the look stays identical) */
+  .menu-h strong { font-size: 16px !important; }
+}
+
+/* belongs in components/shared (kept here so the look stays identical) */
+.budget .bar > i {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+  border-radius: 99px;
+}
+/* belongs in overlays/tour (kept here so the look stays identical) */
+.tour-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  transition: background .15s, transform .15s;
+}
+/* belongs in overlays/tour (kept here so the look stays identical) */
+.tour-dots i.on {
+  background: var(--lamp);
+  transform: scale(1.2);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--lamp) 40%, transparent);
+}
+/* belongs in components/stars-tags (kept here so the look stays identical) */
+.stars button.on { color: #f2b84b; }
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-sort-menu button:hover,
+.lib-bar.c3 .lib-menu button:hover,
+.lib-bar.c3 .lib-menu a:hover {
+  background: rgba(255,255,255,.06);
+}
+/* belongs in pages/library (kept here so the look stays identical) */
+.lib-sort-menu button.on {
+  background: color-mix(in srgb, var(--lamp) 14%, transparent);
+}
+/* belongs in pages/home (kept here so the look stays identical) */
+button.stat-pill:hover {
+  background: rgba(255,255,255,.06);
+}
+/* ── Data panel: Budget First (laptop) ──────────────────────────────── */
+.dpanel.dp-budget-first {
+  width: 400px;
+  max-width: calc(100vw - 24px);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.dp-budget-first .dp-accent {
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--lamp), #60a5fa 45%, transparent);
+}
+.dp-budget-first .dp-hero {
+  padding: 20px 20px 18px;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, color-mix(in srgb, var(--lamp) 14%, transparent), transparent 65%);
+  border-bottom: 1px solid var(--line);
+}
+.dp-budget-first .dp-hero h2 {
+  font: 700 26px/1.15 var(--sans);
+  letter-spacing: -.03em;
+  margin: 0 0 4px;
+}
+.dp-hero-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--mute);
+}
+.dp-budget-first .dp-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.1);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.dp-budget-first .dp-bar i {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+  border-radius: 99px;
+}
+.dp-budget-first .dp-bar.warn i {
+  background: #f97316;
+}
+.dp-pick button span {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: .65;
+  margin-top: 3px;
+  min-height: 1.1em;
+}
+.dp-pick button:hover {
+  border-color: rgba(255,255,255,.16);
+}
+.dp-pick button.on {
+  background: var(--lamp);
+  color: #111;
+  border-color: var(--lamp);
+}
+.dp-pick button.on span {
+  opacity: .75;
+  color: #111;
+}
+.dp-sec + .dp-sec {
+  border-left: 1px solid var(--line);
+}
+.dp-sec-sub {
+  font-size: 12.5px;
+  color: var(--mute);
+  margin-top: 2px;
+}
+.dp-usage-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.dp-budget-first .dp-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.dp-budget-first .dp-h strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.dp-budget-first .dp-seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.dp-budget-first .dp-seg button {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.2);
+  color: var(--mute);
+  font: 500 12.5px var(--sans);
+  padding: 9px 4px;
+  border-radius: 9px;
+}
+.dp-budget-first .dp-seg button.on {
+  background: var(--lamp);
+  color: #111;
+  border-color: var(--lamp);
+  font-weight: 600;
+}
+.dp-budget-first .dp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--mute);
+  margin-top: 2px;
+}
+.dp-budget-first .dp-foot {
+  padding: 12px 16px 14px;
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.dp-budget-first .dp-foot button {
+  flex: 1;
+  justify-content: center;
+}
+.dp-budget-first .dp-foot button:last-child {
+  margin-left: 0;
+}

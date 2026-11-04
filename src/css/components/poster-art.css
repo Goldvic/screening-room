@@ -1,0 +1,3 @@
+/* Styles for components/poster-art */
+
+.frame img.poster-img, .shot img.poster-img { z-index: 1; }
