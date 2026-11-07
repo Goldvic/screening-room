@@ -383,21 +383,35 @@ export function RemoteBlock() {
     setBusy(false);
   };
   if (!r) return null;
+  const copyLink = (u: string) => { navigator.clipboard?.writeText(u).catch(() => {}); };
   return (
-    <div className="keybox">
-      <span className="inline"><button className="btn" disabled={busy} onClick={() => cfg({ on: !r.running })}>{r.running ? 'Turn off' : 'Turn on'}</button>
-        {r.running && <button className="btn ghost" disabled={busy} onClick={() => cfg({ newPin: true })}>New PIN</button>}</span>
-      {r.error && <span className="kstat bad">✕ {r.error}</span>}
+    <div className="set-box">
+      <div className="set-btns">
+        <button className="btn" disabled={busy} onClick={() => cfg({ on: !r.running })}>{r.running ? 'Turn off' : 'Turn on'}</button>
+        {r.running && <button className="btn ghost" disabled={busy} onClick={() => cfg({ newPin: true })}>New PIN</button>}
+        {r.running && <button className="btn ghost" disabled={busy} onClick={allow}>Allow in Windows Firewall</button>}
+      </div>
+      {r.error && <div className="kstat bad set-msg">✕ {r.error}</div>}
+      {fw && <div className="kstat idle set-msg">{fw}</div>}
       {r.running && (
         <>
-          <span className="kstat ok">✓ On. On your phone, connected to the same Wi-Fi as this laptop, open:</span>
-          {r.urls.map((u, i) => <code key={u}>{u}/?pin={r.pin}{i === 0 && r.urls.length > 1 ? '   (try this first)' : ''}</code>)}
-          {!r.urls.length && <span className="kstat bad">✕ No Wi-Fi or network address was found. Connect this laptop to your home network.</span>}
-          <span className="muted small">PIN: <code>{r.pin}</code>. The link already includes it. Type it exactly, starting with http:// (not https://).</span>
-          <span className="inline"><button className="btn ghost" disabled={busy} onClick={allow}>Allow in Windows Firewall</button></span>
-          {fw && <span className="kstat idle">{fw}</span>}
-          <span className="muted small">If the page does not open: press the firewall button once (this is the usual cause). Also check that the phone is on the same Wi-Fi, not mobile data, a guest network or a VPN, and that this laptop's network is set to Private in Windows.</span>
-          <span className="muted small">Anyone on your network who knows the PIN can control playback and watch the current video. It is not encrypted, so use it only on a network you trust.</span>
+          <div className="kstat ok set-msg">✓ On. On your phone, on the same Wi-Fi as this laptop, open:</div>
+          <div className="set-links">
+            {r.urls.map((u, i) => {
+              const link = `${u}/?pin=${r.pin}`;
+              return (
+                <div key={u} className="set-link">
+                  <code>{link}</code>
+                  {i === 0 && r.urls.length > 1 && <span className="set-tag">try this first</span>}
+                  <button className="btn ghost sm" onClick={() => copyLink(link)}>Copy</button>
+                </div>
+              );
+            })}
+          </div>
+          {!r.urls.length && <div className="kstat bad set-msg">✕ No Wi-Fi or network address was found. Connect this laptop to your home network.</div>}
+          <p className="set-note">PIN: <code>{r.pin}</code>. The link already includes it. Type it exactly, starting with http:// (not https://).</p>
+          <p className="set-note">If the page does not open, press Allow in Windows Firewall once (this is the usual cause). Also check that the phone is on the same Wi-Fi, not mobile data, a guest network or a VPN, and that this laptop's network is set to Private in Windows.</p>
+          <p className="set-note">Anyone on your network who knows the PIN can control playback and watch the current video. It is not encrypted, so use it only on a network you trust.</p>
         </>
       )}
     </div>

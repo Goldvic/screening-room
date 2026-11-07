@@ -23,6 +23,13 @@
 .set-msg { align-self: flex-start; }
 .set-note { margin: 0; color: var(--mute); font-size: var(--fs-sm); line-height: 1.45; }
 
+.set-links { display: flex; flex-direction: column; gap: var(--sp-2); }
+.set-link { display: flex; align-items: center; gap: var(--sp-2); padding: 8px 10px 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--wash-2); }
+.set-link code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 600 var(--fs-sm) ui-monospace, Consolas, monospace; color: var(--text); }
+.set-tag { flex: none; padding: 2px 8px; border-radius: var(--r-pill); background: var(--lamp-soft); color: var(--lamp); font: 600 var(--fs-xs) var(--sans); }
+.set-link .btn { flex: none; }
+.set-note code { padding: 1px 6px; border-radius: var(--r-xs); background: var(--wash-2); color: var(--text); }
+
 @media (max-width: 520px) {
   .set-add { flex-direction: column; }
   .set-btns .btn { flex: 1 1 100%; }

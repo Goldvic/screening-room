@@ -416,7 +416,13 @@ export default function Player(p: Props) {
     const pick = emb.find((t) => !/forced/i.test(t.label)) ?? emb[0];
     if (pick) { lastSub.current = 'e:' + pick.i; setSub('e:' + pick.i); return; }
     const ex = (info.external ?? []).find((t) => m(t.lang));
-    if (ex) { lastSub.current = 'x:' + ex.name; setSub('x:' + ex.name); }
+    if (ex) { lastSub.current = 'x:' + ex.name; setSub('x:' + ex.name); return; }
+    // Nothing is tagged with the chosen language. Many files leave the language blank, so use an untagged track rather than showing nothing.
+    const blank = (t: string) => !t || /^(und|unk|zxx|mis)$/i.test(t.trim());
+    const un = (info.subs ?? []).filter((t) => blank(t.lang) && !/forced|sign|song/i.test(t.label));
+    if (un[0]) { lastSub.current = 'e:' + un[0].i; setSub('e:' + un[0].i); return; }
+    const unx = (info.external ?? []).find((t) => blank(t.lang));
+    if (unx) { lastSub.current = 'x:' + unx.name; setSub('x:' + unx.name); }
   }, [info]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pollAi = useCallback(async () => {
