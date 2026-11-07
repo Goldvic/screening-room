@@ -4,7 +4,7 @@ import { CSSProperties, ReactNode, useCallback, useContext, useEffect, useRef, u
 import { AudioRig, EQ_FLAT, EQ_LABELS, EQ_PRESETS, isNeutral } from './audio';
 import {
   APP_NAME, ASPECTS, Bookmark, Caps, Cue, Fx, Icon, Info, LANGS, PrefsCtx, Prog, QUALITIES, SAVER, SPEEDS, SettingsCtx,
-  api, bridge, bytes, clock, join, mbps, parseCues, parseTitle, qs, rate, useNet,
+  api, bridge, bytes, clock, cantPlayCodec, join, mbps, parseCues, parseTitle, qs, rate, useNet,
 } from './lib';
 
 type MenuId = 'quality' | 'speed' | 'aspect' | 'subs' | 'audio' | 'sound' | 'picture' | 'chapters' | 'more';
@@ -202,7 +202,7 @@ export default function Player(p: Props) {
   const show = ui || !!menu || !playing || scrub !== null;
   const chapters = info.chapters ?? [];
   const bookmarks: Bookmark[] = prefs.bookmarks?.[p.pkey] ?? [];
-  const title = parseTitle(p.name);
+  const title = parseTitle(p.name, p.dir);
 
   const flash = (m: string) => { setToast(m); clearTimeout(tt.current); tt.current = window.setTimeout(() => setToast(''), 2600); };
   const wake = useCallback(() => {
@@ -223,6 +223,20 @@ export default function Player(p: Props) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { api<Info>('info', { root: p.root, path }).then(setInfo).catch(() => {}); }, [path, p.root]);
+
+  // Original needs a codec this app can decode. If it cannot (HEVC is the usual one), do not sit on a spinner forever.
+  useEffect(() => {
+    if (q !== 'orig' || !cantPlayCodec(info.codec)) return;
+    if (!p.offline) { flash(`This app cannot play ${info.codec?.toUpperCase()} directly. Switched to Auto (converted on the server).`); reload({ q: 'auto' }, false); }
+    else setFailed(true);
+  }, [info.codec, q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Original that never starts (nothing playing 15 s after opening) gets the error screen with its fix-it buttons.
+  useEffect(() => {
+    if (q !== 'orig' || failed) return;
+    const t = window.setTimeout(() => { if (!everPlayed.current) setFailed(true); }, 15000);
+    return () => clearTimeout(t);
+  }, [q, failed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // position, buffer and play state (4x per second), plus the A-B loop
   useEffect(() => {

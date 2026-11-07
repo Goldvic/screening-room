@@ -410,11 +410,25 @@ export function parseTitle(name: string, folder = ''): { title: string; year: nu
   return { title: t || name.replace(/\.[^.]+$/, ''), year, season, episode };
 }
 
+// "S01E02.mkv" in "Dexter - Original Sin/Season 01" -> "Dexter - Original Sin · S01E02"
+export function fullTitle(name: string, dir = ''): string {
+  const t = parseTitle(name, dir);
+  const ep = t.season && t.episode ? `S${String(t.season).padStart(2, '0')}E${String(t.episode).padStart(2, '0')}` : '';
+  return ep ? `${t.title} · ${ep}` : t.title || name.replace(/\.[^.]+$/, '');
+}
+
 // ---------- can this laptop play a codec? (decides which compressed downloads are offered) ----------
 export function canDecode(codec: 'h264' | 'hevc' | 'av1'): boolean {
   const v = document.createElement('video');
   const t = { h264: 'video/mp4; codecs="avc1.640028"', hevc: 'video/mp4; codecs="hvc1.1.6.L93.B0"', av1: 'video/mp4; codecs="av01.0.05M.08"' }[codec];
   return v.canPlayType(t) !== '';
+}
+/** True when this app cannot decode the video codec reported by ffprobe (e.g. HEVC on most Windows setups). */
+export function cantPlayCodec(codec?: string): boolean {
+  const c = (codec ?? '').toLowerCase();
+  if (c === 'hevc' || c === 'h265') return !canDecode('hevc');
+  if (c === 'av1') return !canDecode('av1');
+  return false;
 }
 /** Move all saved videos to another folder or drive. Resolves with an error message, or null when finished. */
 export async function moveDownloads(to: string, onProgress: (text: string) => void): Promise<string | null> {

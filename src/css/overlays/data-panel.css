@@ -254,3 +254,17 @@
 .dp-foot button:last-child {
   margin-left: 0;
 }
+
+/* The panel lives inside the sidebar (overflow hidden), so pin it to the window beside the sidebar. */
+.dpanel.dp-budget-first {
+  position: fixed;
+  left: calc(var(--sidebar-w-expanded, 240px) + 12px);
+  bottom: 12px;
+  z-index: 60;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  white-space: normal;
+}
+@media (max-width: 699px) {
+  .dpanel.dp-budget-first { left: 12px; bottom: 76px; max-height: calc(100vh - 100px); }
+}

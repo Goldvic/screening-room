@@ -231,12 +231,19 @@
 
 /* Network meter specific overrides in sidebar */
 .sidebar:not(:hover) .netmini { 
+  flex-direction: column; 
   justify-content: center; 
+  gap: 3px; 
   padding: 8px 0; 
 }
-.sidebar:not(:hover) .netmini-speed, 
 .sidebar:not(:hover) .netmini-today { 
   display: none; 
+}
+.sidebar:not(:hover) .netmini-speed { 
+  display: block; 
+  font-size: 10px; 
+  line-height: 1.1; 
+  text-align: center; 
 }
 .sidebar:hover .netmini { 
   justify-content: flex-start; 

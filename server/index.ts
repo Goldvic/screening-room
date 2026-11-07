@@ -1418,9 +1418,9 @@ export async function start(opts: StartOpts = {}) {
     }
     const ip = lanIps()[0];
     if (!ip) throw new HttpError(500, 'This laptop is not on a Wi-Fi or network, so a phone cannot reach it');
-    const name = String(b.title ?? 'video').replace(/\.[^.]+$/, '').replace(/[^\w\- ]/g, '_').slice(0, 60) || 'video';
-    const ext = /\.(mkv|webm|mov)$/i.exec(String(b.title ?? ''))?.[0] ?? '.mp4';
-    res.json({ url: `http://${ip}:${remote.port}/c/${remote.addCast(b.stream)}/${encodeURIComponent(name)}${ext}` });
+    // The link opens a player page (not the raw file, which phones just offer to download). Second stream = H.264 copy as a fallback.
+    const conv = /([?&])q=orig/.test(b.stream) ? b.stream.replace(/([?&])q=orig/, '$1q=720') : null;
+    res.json({ url: `http://${ip}:${remote.port}/c/${remote.addCastPage(b.stream, conv, String(b.title ?? 'Video').replace(/\.[^.]+$/, '').slice(0, 80))}/watch` });
   }));
   app.post('/api/cast/control', h(async (req, res) => { await castControl(String(req.body?.action), Number(req.body?.value)); res.json({ ok: true }); }));
   app.get('/api/cast/status', (_req, res) => res.json({ status: castStatus() }));

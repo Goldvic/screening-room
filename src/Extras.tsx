@@ -412,19 +412,24 @@ export function ProfilesBlock() {
   if (!p) return null;
   const sw = async (id: string) => { await post('profiles/switch', { id }); location.reload(); };
   return (
-    <div className="keybox">
-      {p.list.map((x) => (
-        <span key={x.id} className="inline spread">
-          <span><b>{x.name}</b>{x.id === p.active ? <span className="kstat ok"> ✓ in use</span> : null}</span>
-          <span className="inline">
-            {x.id !== p.active && <button className="btn ghost sm" onClick={() => sw(x.id)}>Switch</button>}
-            {x.id !== p.active && x.id !== 'default' && <button className="btn ghost sm danger" onClick={async () => { await api('profiles', { id: x.id }, 'DELETE'); load(); }}>Delete</button>}
-          </span>
-        </span>
-      ))}
-      <span className="inline"><input value={name} placeholder="New profile name" onChange={(e) => setName(e.target.value)} />
-        <button className="btn" disabled={!name.trim()} onClick={async () => { await post('profiles', { name }); setName(''); load(); }}>Add</button></span>
-      <span className="muted small">Each profile keeps its own watch progress, favourites, playlists and collections. Servers and downloads are shared.</span>
+    <div className="set-box">
+      <div className="set-rows">
+        {p.list.map((x) => (
+          <div key={x.id} className="set-row">
+            <div className="set-row-name"><b>{x.name}</b>{x.id === p.active ? <span className="kstat ok">✓ in use</span> : null}</div>
+            <div className="set-row-act">
+              {x.id !== p.active && <button className="btn ghost sm" onClick={() => sw(x.id)}>Switch</button>}
+              {x.id !== p.active && x.id !== 'default' && <button className="btn ghost sm danger" onClick={async () => { await api('profiles', { id: x.id }, 'DELETE'); load(); }}>Delete</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="set-add">
+        <input value={name} placeholder="New profile name" onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) { post('profiles', { name }).then(() => { setName(''); load(); }); } }} />
+        <button className="btn" disabled={!name.trim()} onClick={async () => { await post('profiles', { name }); setName(''); load(); }}>Add profile</button>
+      </div>
+      <p className="set-note">Each profile keeps its own watch progress, favourites, playlists and collections. Servers and downloads are shared.</p>
     </div>
   );
 }
@@ -443,11 +448,13 @@ export function BackupBlock({ clientSettings, restoreClient }: { clientSettings:
     catch (e: any) { setMsg(e.message || 'That file could not be read.'); }
   };
   return (
-    <div className="keybox">
-      <span className="inline"><button className="btn" onClick={exp}>Save a backup</button>
-        <label className="btn ghost filebtn">Restore from file<input type="file" accept="application/json,.json" hidden onChange={(e) => imp(e.target.files?.[0])} /></label></span>
-      {msg && <span className="kstat idle">{msg}</span>}
-      <span className="muted small">Includes watch progress, favourites, playlists, collections, ratings, tags and your settings. API keys and server passwords are left out on purpose.</span>
+    <div className="set-box">
+      <div className="set-btns">
+        <button className="btn" onClick={exp}>Save a backup</button>
+        <label className="btn ghost filebtn">Restore from file<input type="file" accept="application/json,.json" hidden onChange={(e) => imp(e.target.files?.[0])} /></label>
+      </div>
+      {msg && <div className="kstat idle set-msg">{msg}</div>}
+      <p className="set-note">Includes watch progress, favourites, playlists, collections, ratings, tags and your settings. API keys and server passwords are left out on purpose.</p>
     </div>
   );
 }

@@ -1,3 +1,29 @@
-/* Styles for settings/backup */
+/* Styles for settings/backup and the Profiles card (shared "set-" helpers) */
 
-.filebtn { cursor: pointer; display: inline-flex; align-items: center; }
+.filebtn { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+
+.set-box { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.set-rows { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: 10px 14px; background: var(--wash-1); }
+.set-row + .set-row { border-top: 1px solid var(--line); }
+.set-row-name { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font: 600 var(--fs-md) var(--sans); color: var(--text); }
+.set-row-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-row-act { display: flex; gap: var(--sp-2); flex: none; }
+
+.set-add { display: flex; gap: var(--sp-2); align-items: stretch; }
+.set-add input {
+  flex: 1; min-width: 0; padding: 10px 12px;
+  border-radius: var(--r-sm); border: 1px solid var(--line);
+  background: var(--wash-2); color: var(--text); font: 500 var(--fs-sm) var(--sans);
+}
+.set-add input:focus { outline: none; border-color: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-soft); }
+.set-add .btn { flex: none; white-space: nowrap; }
+
+.set-btns { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.set-msg { align-self: flex-start; }
+.set-note { margin: 0; color: var(--mute); font-size: var(--fs-sm); line-height: 1.45; }
+
+@media (max-width: 520px) {
+  .set-add { flex-direction: column; }
+  .set-btns .btn { flex: 1 1 100%; }
+}

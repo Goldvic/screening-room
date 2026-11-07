@@ -43,13 +43,48 @@ const WATCH = `<!doctype html><meta name="viewport" content="width=device-width,
 <video id="v" controls autoplay playsinline style="width:100vw;height:100vh;background:#000"></video>
 <script>const pin=new URLSearchParams(location.search).get('pin')||localStorage.pin||'';document.getElementById('v').src='/stream?pin='+encodeURIComponent(pin);</script></body>`;
 
+/** Page a phone opens from the cast link: plays the video in the browser instead of offering a download. */
+const castPage = (title: string, orig: string, conv: string | null) => {
+  const j = (x: unknown) => JSON.stringify(x).replace(/</g, '\\u003c');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title.replace(/[<>&"]/g, '')}</title></head>
+<body style="margin:0;background:#000;color:#fff;font:15px system-ui,sans-serif">
+<video id="v" controls autoplay playsinline style="width:100vw;height:100vh;background:#000"></video>
+<div id="m" style="position:fixed;left:0;right:0;bottom:70px;text-align:center;padding:0 16px"></div>
+<script>
+const O=${j(orig)},C=${j(conv)};
+const t=parseInt((location.hash.match(/t=(\\d+)/)||[])[1],10)||0;
+const v=document.getElementById('v'),m=document.getElementById('m');
+let mode='orig',started=false;
+const say=s=>{m.textContent=s;};
+function conv(){
+  if(mode==='conv'||!C){say('This phone cannot play this video.');return;}
+  mode='conv';say('Switching to a version your phone can play (it starts in a few seconds)...');
+  const pos=Math.floor(v.currentTime||t);
+  v.src=C+(C.includes('?')?'&':'?')+'t='+pos;v.play().catch(()=>{});
+}
+v.addEventListener('playing',()=>{started=true;say('');});
+v.addEventListener('loadedmetadata',()=>{if(mode==='orig'&&t){try{v.currentTime=t;}catch(e){}}});
+v.addEventListener('error',conv);
+setTimeout(()=>{if(!started&&mode==='orig')conv();},10000);
+v.src=O;
+</script></body></html>`;
+};
+
 /** A small page on your home network so a phone or TV browser can control playback, or watch the current video. */
 export class Remote {
   state: RemoteState | null = null;
   cmds: RemoteCmd[] = [];
   private casts = new Map<string, string>();
   /** A link a TV can open to fetch one video. The long random part is the only key, so it works without a PIN. */
-  addCast(stream: string): string { const t = crypto.randomBytes(16).toString('hex'); this.casts.set(t, stream); if (this.casts.size > 20) this.casts.delete(this.casts.keys().next().value!); return t; }
+  addCast(stream: string): string { const t = crypto.randomBytes(16).toString('hex'); this.casts.set(t, stream); if (this.casts.size > 60) this.casts.delete(this.casts.keys().next().value!); return t; }
+  private pages = new Map<string, { title: string; orig: string; conv: string | null }>();
+  /** A link a phone can open: a small player page that tries the original file, then a converted copy. */
+  addCastPage(stream: string, convStream: string | null, title: string): string {
+    const t = crypto.randomBytes(16).toString('hex');
+    this.pages.set(t, { title, orig: `/c/${this.addCast(stream)}/video`, conv: convStream ? `/c/${this.addCast(convStream)}/video` : null });
+    if (this.pages.size > 10) this.pages.delete(this.pages.keys().next().value!);
+    return t;
+  }
   private proxy(req: http.IncomingMessage, res: http.ServerResponse, stream: string) {
     const headers: Record<string, string> = {};
     if (req.headers.range) headers.range = String(req.headers.range);
@@ -104,7 +139,11 @@ export class Remote {
 
   private handle(req: http.IncomingMessage, res: http.ServerResponse) {
     const url = new URL(req.url ?? '/', 'http://x');
-    if (url.pathname.startsWith('/c/')) { const s = this.casts.get(url.pathname.split('/')[2] ?? ''); if (s) { this.proxy(req, res, s); return; } res.writeHead(404).end('Expired'); return; }
+    if (url.pathname.startsWith('/c/')) {
+      const pg = this.pages.get(url.pathname.split('/')[2] ?? '');
+      if (pg) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(castPage(pg.title, pg.orig, pg.conv)); return; }
+      const s = this.casts.get(url.pathname.split('/')[2] ?? ''); if (s) { this.proxy(req, res, s); return; } res.writeHead(404).end('Expired'); return;
+    }
     if (url.pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(PAGE); return; }
     if (!this.authed(req, url, res)) return;
     if (url.pathname === '/state') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(this.state && Date.now() - this.state.at < 6000 ? this.state : null)); return; }

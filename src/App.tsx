@@ -16,7 +16,7 @@ import { DataPanel, NetMini } from './components/DataPanel';
 import { Tray, DL } from './components/Tray';
 import {
   ACCENTS, APP_NAME, Caps, SavedList, dayKey, DEFAULTS, Entry, Icon, OFFLINE_ID, OPENED_ID, Prefs, PrefsCtx, Prog, Root, SAVER, SettingsCtx, VIDEO, VIDEO_EXTS,
-  api, bridge, bytes, clock, hue, join, loadSettings, mbps, parseTitle, pct, post, qs, rate, turboDownload, turboOk, useNet, useUpdates, Settings,
+  api, bridge, bytes, cantPlayCodec, clock, hue, join, loadSettings, mbps, parseTitle, pct, post, qs, rate, turboDownload, turboOk, useNet, useUpdates, Settings,
 } from './lib';
 
 type RootsRes = { host: string; mode: string; error: string; hasServer: boolean; roots: Root[] };
@@ -257,7 +257,7 @@ function Shell() {
   const remove = async (names: string[], r: number, d: string) => {
     for (const n of names) await api('item', { root: r, path: join(d, n) }, 'DELETE');
     flash('Deleted');
-    await Promise.all([loadRoots(), loadProg()]);
+    await Promise.all([load(), loadRoots(), loadProg()]);
   };
   const confirmDelete = (names: string[], what: string) => {
     const isOffline = names.length && typeof what === 'string' && /laptop/i.test(what);
@@ -289,6 +289,26 @@ function Shell() {
     if (view !== 'home' || panel) return;
     api<{ items: SavedFile[] }>('storage').then((d) => setSavedFiles([...d.items].sort((a, b) => b.mtime - a.mtime))).catch(() => {});
   }, [view, panel, play]);
+  // Pick up files added or removed outside the app (downloads finishing, the server, Explorer) without pressing F5.
+  useEffect(() => {
+    if (root === null) return;
+    const tick = async () => {
+      if (document.hidden || play) return;
+      try {
+        const next = await api<Entry[]>('list', { root, path: dir });
+        setItems((cur) => (JSON.stringify(cur) === JSON.stringify(next) ? cur : next));
+      } catch { /* keep what is shown */ }
+      if (view === 'home' && !panel) {
+        api<{ items: SavedFile[] }>('storage').then((d) => {
+          const n = [...d.items].sort((a, b) => b.mtime - a.mtime);
+          setSavedFiles((cur) => (JSON.stringify(cur) === JSON.stringify(n) ? cur : n));
+        }).catch(() => {});
+      }
+    };
+    const t = setInterval(tick, 6000);
+    window.addEventListener('focus', tick);
+    return () => { clearInterval(t); window.removeEventListener('focus', tick); };
+  }, [root, dir, play, view, panel]);
   useEffect(() => {
     const nav = navigator as any;
     if (!nav.getBattery) return;
@@ -371,7 +391,11 @@ function Shell() {
     if (rt && !rt.offline && !keepList) {
       try {
         const j = await api<{ state: string; dest?: string }>('saved', { root: r, path: join(d, name) });
-        if (j.state === 'done' && j.dest) { flash('Playing the saved copy from this laptop'); playOffline(j.dest); return; }
+        if (j.state === 'done' && j.dest) {
+          // A saved copy in a codec this app cannot decode (HEVC) would never play: stream from the server instead.
+          const inf = await api<{ codec?: string }>('info', { root: OFFLINE_ID, path: j.dest }).catch(() => null);
+          if (!inf || !cantPlayCodec(inf.codec)) { flash('Playing the saved copy from this laptop'); playOffline(j.dest); return; }
+        }
       } catch { /* server unreachable: fall through */ }
     }
     beginPlay(name, r, d);
@@ -417,7 +441,7 @@ function Shell() {
       .filter(([, p]) => !p.watched && p.pos > 30 && p.dur > 0 && p.pos / p.dur < 0.9)
       .sort((a, b) => b[1].updated - a[1].updated)
       .map(([k, p]) => cardOf(k, p)).filter((x): x is Card => !!x)
-      .filter((x) => { const n = x.name.toLowerCase(); if (seenNames.has(n)) return false; seenNames.add(n); return true; })
+      .filter((x) => { const pt = parseTitle(x.name, x.dir); const n = (pt.season ? `${pt.title}|${pt.season}|${pt.episode}` : x.name).toLowerCase(); if (seenNames.has(n)) return false; seenNames.add(n); return true; })
       .slice(0, 10);
   }, [prog, roots]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -555,7 +579,8 @@ function Shell() {
           const t = hero ? parseTitle(hero.name, hero.dir) : first ? parseTitle(first.name) : null;
           const recent = [...items].sort((a, b) => b.mtime - a.mtime).slice(0, 14);
           const cardArt = (x: { rid: number; dir: string; name: string }) => <Art root={x.rid} path={join(x.dir, x.name)} v={0} name={x.name} />;
-          const sides = resumable.filter((x) => !hero || x.k !== hero.k).slice(0, 4);
+          const sides0 = resumable.filter((x) => !hero || x.k !== hero.k).slice(0, 4);
+          const sides = sides0.length % 2 ? sides0.slice(0, -1) : sides0; // 2 or 4 squares, never a lopsided 3
           const onTop = new Set([hero?.k, ...sides.map((x) => x.k)]);
           const moreResumable = resumable.filter((x) => !onTop.has(x.k));
           const goal = prefs.goal ?? 30;
@@ -574,25 +599,25 @@ function Shell() {
           const rowsJsx: Record<string, React.ReactNode> = {
             continue: moreResumable.length > 0 ? (
               <Rail key="continue" title="Continue watching">
-                {moreResumable.map((x) => <Tile key={x.k} name={x.name} sub={x.p ? `${clock(x.p.pos)} of ${clock(x.p.dur)}` : ''} progress={progPct(x.p)} art={cardArt(x)} onClick={() => startPlay(x.name, x.rid, x.dir)} />)}
+                {moreResumable.map((x) => <Tile key={x.k} name={x.name} dir={x.dir} sub={x.p ? `${clock(x.p.pos)} of ${clock(x.p.dur)}` : ''} progress={progPct(x.p)} art={cardArt(x)} onClick={() => startPlay(x.name, x.rid, x.dir)} />)}
               </Rail>
             ) : null,
             because: because ? (
               <Rail key="because" title={`Because you watched ${because.title}`} hint="Next in the same folder">
-                {because.items.map((e) => <Tile key={e.name} name={e.name} sub={bytes(e.size)} art={<Art root={because.root} path={join(because.dir, e.name)} v={e.mtime} name={e.name} />} onClick={() => startPlay(e.name, because.root, because.dir)} />)}
+                {because.items.map((e) => <Tile key={e.name} name={e.name} dir={because.dir} sub={bytes(e.size)} art={<Art root={because.root} path={join(because.dir, e.name)} v={e.mtime} name={e.name} />} onClick={() => startPlay(e.name, because.root, because.dir)} />)}
               </Rail>
             ) : null,
             saved: savedFiles.length > 0 ? (
               <Rail key="saved" title="Saved on this laptop" hint="Plays with no internet">
                 {savedFiles.slice(0, 16).map((f) => (
-                  <Tile key={f.rel} name={f.name} sub={savedSub(f)} badge="Offline" progress={progPct(prog[`Offline:${f.rel}`])}
+                  <Tile key={f.rel} name={f.name} dir={f.rel.split('/').slice(0, -1).join('/')} sub={savedSub(f)} badge="Offline" progress={progPct(prog[`Offline:${f.rel}`])}
                     art={<Art root={OFFLINE_ID} path={f.rel} v={f.mtime} name={f.name} />} onClick={() => playOffline(f.rel)} />
                 ))}
               </Rail>
             ) : null,
             favorites: favCards.length > 0 ? (
               <Rail key="favorites" title="Favorites">
-                {favCards.map((x) => <Tile key={x.k} name={x.name} progress={progPct(x.p)} art={cardArt(x)} onClick={() => startPlay(x.name, x.rid, x.dir)} />)}
+                {favCards.map((x) => <Tile key={x.k} name={x.name} dir={x.dir} progress={progPct(x.p)} art={cardArt(x)} onClick={() => startPlay(x.name, x.rid, x.dir)} />)}
               </Rail>
             ) : null,
             collections: cols.filter((c) => c.items.length).slice(0, 3).map((c) => (
@@ -607,7 +632,7 @@ function Shell() {
               <Rail key="recent" title="Recently added" hint={cur?.name}>
                 {recent.map((it) => it.dir
                   ? <Tile key={it.name} name={it.name} sub="Folder" art={<span className="art"><span className="ph"><Icon n="folder" s={30} /></span></span>} onClick={() => { setView('library'); setDir(it.name); }} />
-                  : <Tile key={it.name} name={it.name} sub={bytes(it.size)} badge={isNew(it) ? 'New' : undefined} art={<Art root={rid} path={join(dir, it.name)} v={it.mtime} name={it.name} />} onClick={() => startPlay(it.name)} />)}
+                  : <Tile key={it.name} name={it.name} dir={dir} sub={bytes(it.size)} badge={isNew(it) ? 'New' : undefined} art={<Art root={rid} path={join(dir, it.name)} v={it.mtime} name={it.name} />} onClick={() => startPlay(it.name)} />)}
               </Rail>
             ) : null,
           };
@@ -877,7 +902,7 @@ function Shell() {
       {panel === 'settings' && <SettingsDialog mode={net.mode} prog={prog} onClose={() => setPanel(null)} onStorage={() => setPanel('storage')} onServers={() => setPanel('servers')} onTidy={() => setPanel('tidy')} onSaved={loadSrv} />}
       {panel === 'servers' && <Setup firstRun={false} onClose={() => setPanel(null)} onChanged={serversChanged} onOffline={() => setPanel(null)} />}
       {panel === 'downloads' && <DownloadsPanel onClose={() => setPanel(null)} onPlay={playOffline} onStorage={() => setPanel('storage')} />}
-      {panel === 'storage' && <StoragePanel onClose={() => setPanel(null)} onPlay={playOffline} onChanged={() => { loadRoots(); loadProg(); }} />}
+      {panel === 'storage' && <StoragePanel onClose={() => setPanel(null)} onPlay={playOffline} onChanged={() => { load(); loadRoots(); loadProg(); }} />}
       {target && (
         <DownloadDialog {...target} caps={caps} onClose={() => setTarget(null)}
           onScheduled={(t) => { setTarget(null); flash(t); setPanel('downloads'); }}

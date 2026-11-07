@@ -1,5 +1,5 @@
 import { CSSProperties, useRef } from 'react';
-import { Icon, Prog, SavedList, bytes, clock, hue, pct } from './lib';
+import { Icon, Prog, SavedList, bytes, clock, fullTitle, hue, pct } from './lib';
 import './css/pages/home.css';
 
 export type HomeCard = { k: string; rid: number; dir: string; name: string; p?: Prog; offlineRel?: string };
@@ -29,14 +29,14 @@ export function Rail({ title, hint, children }: { title: string; hint?: string; 
   );
 }
 
-export function Tile({ name, sub, progress, onClick, art, badge }: {
-  name: string; sub?: string; progress?: number; onClick: () => void; art: React.ReactNode; badge?: string;
+export function Tile({ name, dir, sub, progress, onClick, art, badge }: {
+  name: string; dir?: string; sub?: string; progress?: number; onClick: () => void; art: React.ReactNode; badge?: string;
 }) {
   return (
     <button className="tilecard" style={{ '--h': hue(name) } as CSSProperties} onClick={onClick}>
       <span className="tilecard-art">{art}{badge && <span className="tile-badge">{badge}</span>}<span className="tile-go"><Icon n="play" s={18} /></span>
         {progress ? <i className="tile-prog"><b style={{ width: `${progress}%` }} /></i> : null}</span>
-      <span className="tilecard-t" title={name}>{name.replace(/\.[^.]+$/, '')}</span>
+      <span className="tilecard-t" title={name}>{dir !== undefined ? fullTitle(name, dir) : name.replace(/\.[^.]+$/, '')}</span>
       {sub && <span className="tilecard-sub">{sub}</span>}
     </button>
   );
