@@ -19,6 +19,7 @@ if (process.platform === 'win32') app.setAppUserModelId('com.cinema.desktop');
 
 let rendererReady = false, pendingOpen = null;
 let hadWindow = false;
+const recorder = require('./recorder/recorder.cjs');
 let win = null, tray = null, server = null, origin = '', port = 0, quitting = false, blocker = -1, miniFrom = null;
 const token = crypto.randomBytes(24).toString('hex');
 
@@ -131,6 +132,7 @@ const rulesOn = async () => {
   try { const j = await (await fetch(`http://127.0.0.1:${port}/api/dl/rules?tk=${token}`)).json(); return (j.items || []).some((x) => x.on); } catch { return false; }
 };
 const hasWork = async () => {
+  if (recorder.isBusy() || recorder.isStandby()) return true; // a recording is running, or the recorder is set to stay ready
   try {
     const j = await (await fetch(`http://127.0.0.1:${port}/api/dl?tk=${token}`)).json();
     if ((j.active ?? 0) + (j.waiting ?? 0) > 0) return true;
@@ -205,7 +207,7 @@ function trackDownloads() {
       }
       const rules = await rulesOn();
       const hidden = hadWindow && (!win || win.isDestroyed() || (!win.isVisible() && !win.isMinimized()));
-      if (hidden && !busy && !sched.length && !rules && !quitting) { quitting = true; app.quit(); }
+      if (hidden && !busy && !sched.length && !rules && !quitting && !recorder.isBusy() && !recorder.isStandby()) { quitting = true; app.quit(); }
       try {
         fetch(`http://127.0.0.1:${port}/api/power?tk=${token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ battery: powerMonitor.isOnBatteryPower(), metered: meteredNow }) })
           .then((r) => r.json()).then((j) => { if (j.wantMetered && Date.now() - lastMeteredCheck > 60000) checkMetered(); if (!j.wantMetered) meteredNow = false; }).catch(() => {});
@@ -247,7 +249,7 @@ function createWindow() {
       win.hide();
       // Free the window's memory; only the small background part keeps running, and it quits by itself when the work is done.
       setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible() && !quitting) win.destroy(); }, 1500);
-      tray?.displayBalloon?.({ title: 'Cinema', content: 'Cinema keeps running only to finish your downloads, then closes by itself.' });
+      tray?.displayBalloon?.({ title: 'Cinema', content: recorder.isBusy() ? 'Your recording keeps going. Stop it from the recorder bar or with Ctrl+Alt+R.' : recorder.isStandby() ? 'Cinema Recorder stays ready. Press Ctrl+Alt+R to record.' : 'Cinema keeps running only to finish your downloads, then closes by itself.' });
     } else { quitting = true; app.quit(); }
   });
 }
@@ -258,6 +260,8 @@ function createTray() {
     tray.setToolTip('Cinema');
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: 'Open Cinema', click: () => showWin() },
+      { label: 'Screen recorder\tCtrl+Alt+R', click: () => recorder.openStudio() },
+      { label: 'Stop recording', click: () => recorder.stop() },
       { label: 'Check for updates', click: () => { showWin(); checkUpdates(); } },
       { type: 'separator' },
       { label: 'Quit', click: () => { quitting = true; app.quit(); } },
@@ -268,7 +272,7 @@ function createTray() {
 
 function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'Cinema', submenu: [{ role: 'reload' }, { role: 'togglefullscreen' }, { type: 'separator' }, { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => { quitting = true; app.quit(); } }] },
+    { label: 'Cinema', submenu: [{ label: 'Screen recorder…', click: () => recorder.openStudio() }, { type: 'separator' }, { role: 'reload' }, { role: 'togglefullscreen' }, { type: 'separator' }, { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => { quitting = true; app.quit(); } }] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'togglefullscreen' }] },
     { label: 'View', submenu: [
@@ -299,6 +303,12 @@ ipcMain.handle('select-folder', async () => {
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
   return r.canceled ? null : r.filePaths[0];
 });
+// ---- screen recorder (the window itself lives in ./recorder) ----
+ipcMain.handle('rec-open', () => recorder.openStudio());
+ipcMain.handle('rec-start', (_e, o) => recorder.startCinema(o && typeof o === 'object' ? { quality: ['720', '1080', '2160'].includes(String(o.quality)) ? String(o.quality) : undefined, sys: o.sys !== false, countdown: Number.isFinite(o.countdown) ? Math.max(0, Math.min(10, o.countdown)) : 0 } : {}));
+ipcMain.handle('rec-stop', () => recorder.stop());
+ipcMain.handle('rec-pause', () => recorder.pause());
+ipcMain.handle('rec-state', () => recorder.state());
 ipcMain.handle('power-save', (_e, on) => {
   if (on && blocker < 0) blocker = powerSaveBlocker.start('prevent-display-sleep');
   else if (!on && blocker >= 0) { powerSaveBlocker.stop(blocker); blocker = -1; }
@@ -474,7 +484,7 @@ app.on('second-instance', (_e, argv, cwd) => {
   deliver(fileFromArgv(argv, cwd));
 });
 app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch { /* ignore */ } });
-app.on('before-quit', () => { quitting = true; saveBounds(); try { server?.close(); } catch { /* ignore */ } });
+app.on('before-quit', () => { quitting = true; recorder.destroy(); saveBounds(); try { server?.close(); } catch { /* ignore */ } });
 app.on('window-all-closed', () => { if (quitting) app.quit(); });
 
 app.whenReady().then(async () => {
@@ -502,6 +512,16 @@ app.whenReady().then(async () => {
   buildMenu();
   initUpdater();
   registerMediaKeys();
+  recorder.init({
+    getMain: () => (win && !win.isDestroyed() ? win : null),
+    icon: ICON,
+    onState: (s) => {
+      try { if (win && !win.isDestroyed()) win.webContents.send('rec-state', s); } catch { /* window closing */ }
+      const mm = Math.floor((s.ms || 0) / 60000), ss = String(Math.floor((s.ms || 0) / 1000) % 60).padStart(2, '0');
+      tray?.setToolTip?.(s.state === 'recording' || s.state === 'paused' ? `Cinema · ${s.state === 'paused' ? 'recording paused' : 'recording'} ${mm}:${ss}` : 'Cinema');
+    },
+    onStandby: () => {},
+  });
   if (hiddenStart) {
     // Started with Windows: stay in the tray only when there is something to do (a scheduled download or an auto-save rule).
     createTray(); trackDownloads();

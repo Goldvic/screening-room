@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src data: blob:; media-src blob:">
+<title>Cinema Recorder</title>
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+
+<!-- ============ Full studio ============ -->
+<main class="studio" id="studio">
+  <header class="bar">
+    <div class="brand"><i class="dot"></i><b>Cinema Recorder</b></div>
+    <div class="keys"><kbd id="hkOpen">Ctrl+Alt+R</kbd><span>start / stop</span></div>
+    <button class="x" id="min" title="Minimize" aria-label="Minimize">&minus;</button>
+    <button class="x" id="close" title="Close" aria-label="Close">&times;</button>
+  </header>
+
+  <div class="scroll">
+    <section>
+      <h3>What to record</h3>
+      <div class="tabs" id="modes" role="tablist">
+        <button data-m="cinema" class="on">Cinema app</button>
+        <button data-m="screen">Screen</button>
+        <button data-m="window">Window</button>
+        <button data-m="region">Area</button>
+      </div>
+
+      <div class="pane" id="pane-cinema">
+        <div class="hero">
+          <div class="hero-mock" id="mock"><i></i></div>
+          <div>
+            <b>The whole Cinema window</b>
+            <p>Records exactly what Cinema shows, at its current size. Make the window small or tall and the recording follows it, no black screen around it.</p>
+            <span class="pill" id="cinemaSize">Cinema is closed</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-screen" hidden><div class="grid" id="screens"></div></div>
+      <div class="pane" id="pane-window" hidden><div class="grid" id="windows"></div></div>
+
+      <div class="pane" id="pane-region" hidden>
+        <div class="row"><span>On which screen</span><div class="seg" id="regScreens"></div></div>
+        <div class="row"><span>Shape</span>
+          <div class="seg" id="aspects">
+            <button data-a="free" class="on">Free</button><button data-a="16:9">16:9</button><button data-a="9:16">9:16</button><button data-a="1:1">1:1</button><button data-a="4:3">4:3</button><button data-a="21:9">21:9</button>
+          </div>
+        </div>
+        <button class="pick" id="pickRegion"><span id="regionLabel">Select an area on the screen</span></button>
+      </div>
+      <button class="refresh" id="refresh" hidden>Refresh list</button>
+    </section>
+
+    <section>
+      <h3>Quality</h3>
+      <div class="seg big" id="quality">
+        <button data-q="720"><b>720p</b><small>HD</small></button>
+        <button data-q="1080" class="on"><b>1080p</b><small>Full HD</small></button>
+        <button data-q="2160"><b>4K</b><small>Ultra HD</small></button>
+      </div>
+      <div class="row"><span>Frame rate</span>
+        <div class="seg" id="fps"><button data-f="30" class="on">30 fps</button><button data-f="60">60 fps</button></div>
+      </div>
+      <p class="note" id="summary"></p>
+    </section>
+
+    <section>
+      <h3>Sound and extras</h3>
+      <label class="sw"><span><b>Computer sound</b><small>Everything you hear from this laptop</small></span><input type="checkbox" id="sys"><i></i></label>
+      <label class="sw"><span><b>Microphone</b><small>Add your voice</small></span><input type="checkbox" id="mic"><i></i></label>
+      <div class="row" id="micRow" hidden><span>Microphone</span><select id="micSel"></select></div>
+      <label class="sw"><span><b>Show mouse pointer</b><small>Draw the cursor in the video</small></span><input type="checkbox" id="cursor"><i></i></label>
+      <div class="row"><span>Countdown</span>
+        <div class="seg" id="countdown"><button data-c="0">None</button><button data-c="3" class="on">3 s</button><button data-c="5">5 s</button></div>
+      </div>
+    </section>
+
+    <section>
+      <h3>Save to</h3>
+      <div class="path"><span id="dir"></span><button id="chdir">Change</button><button id="openDir">Open</button></div>
+      <label class="sw"><span><b>Keep the recorder ready</b><small>Stays in the tray so the shortcut works even when Cinema is closed</small></span><input type="checkbox" id="standby"><i></i></label>
+    </section>
+
+    <section id="last" hidden>
+      <h3>Last recording</h3>
+      <div class="path"><span id="lastName"></span><button id="lastOpen">Play</button><button id="lastShow">Show</button></div>
+    </section>
+  </div>
+
+  <footer>
+    <button class="rec" id="start"><i></i><span id="startLabel">Start recording</span></button>
+  </footer>
+  <div class="busy" id="busy" hidden><div class="ring"></div><b id="busyText">Saving your recording…</b><div class="meter"><i id="busyBar"></i></div></div>
+</main>
+
+<!-- ============ Small bar while recording ============ -->
+<div class="pillbar" id="pill" hidden>
+  <div class="count" id="count" hidden></div>
+  <div class="live" id="live"><i class="rdot"></i><b id="clock">00:00</b><small id="tag">1080p</small></div>
+  <button class="pb" id="pause" title="Pause (Ctrl+Alt+P)" aria-label="Pause"></button>
+  <button class="pb stop" id="stop" title="Stop (Ctrl+Alt+R)" aria-label="Stop"><i></i></button>
+</div>
+
+<script src="studio.js"></script>
+</body>
+</html>

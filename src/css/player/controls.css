@@ -11,8 +11,7 @@
 .ctl-zone.tools { grid-column: 3; grid-row: 1; justify-self: end; gap: 0; padding: 3px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--on-media) 8%, transparent); border: 1px solid var(--on-media-line); backdrop-filter: blur(10px); }
 .ctl-zone.tools .cbtn { width: 38px; height: 38px; border-radius: 50%; }
 
-/* Transport: skip back, PLAY, skip forward, next. Play is the one bold element. */
-.ctl-zone.transport .cbtn:nth-child(2) { order: -1; }
+/* Transport: shuffle, previous, back 10, PLAY, forward 10, next, repeat. Play is the one bold element. */
 .theatre .cbtn.big { width: 58px; height: 58px; border-radius: 50%; background: var(--on-media); color: var(--media-bg); box-shadow: 0 6px 24px var(--shade-3); transition: transform var(--t-fast), box-shadow var(--t-fast); }
 .theatre .cbtn.big:hover { background: var(--on-media); transform: scale(1.07); box-shadow: 0 8px 30px var(--shade-4), 0 0 0 4px var(--lamp-soft); }
 .theatre .cbtn.big:active { transform: scale(.96); }
@@ -38,11 +37,32 @@
 .time { font: 600 var(--fs-md)/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--on-media); white-space: nowrap; }
 .time i { opacity: .4; margin: 0 5px; font-style: normal; }
 
-@media (max-width: 800px) {
-  .ctl { grid-template-columns: auto 1fr auto; gap: var(--sp-2); }
-  .ctl-zone.status { gap: var(--sp-2); }
-  .volpct { display: none; }
-  .vol .slider { display: none; }
-  .ctl-zone.tools .cbtn { width: 34px; height: 34px; }
-  .theatre .cbtn.big { width: 52px; height: 52px; }
+/* The controls adapt to the size of the player window itself (not the screen), so a small or narrow Cinema window stays tidy.
+   Wide: one row (time + volume | transport | tools). Medium: transport on top, time and tools below. Narrow: three tidy rows. */
+@container theatre (max-width: 900px) {
+  .ctl { grid-template-columns: 1fr auto; row-gap: var(--sp-3); column-gap: var(--sp-3); }
+  .ctl-zone.transport { grid-column: 1 / -1; grid-row: 1; justify-self: center; }
+  .ctl-zone.status { grid-column: 1; grid-row: 2; }
+  .ctl-zone.tools { grid-column: 2; grid-row: 2; }
+  .volpct, .vol .slider { display: none; }
 }
+@container theatre (max-width: 520px) {
+  .ctl { grid-template-columns: 1fr; }
+  .ctl-zone.transport { grid-column: 1; gap: var(--sp-1); }
+  .ctl-zone.status { grid-column: 1; grid-row: 2; justify-self: stretch; justify-content: space-between; flex-direction: row-reverse; }
+  .ctl-zone.tools { grid-column: 1; grid-row: 3; justify-self: center; max-width: 100%; }
+  .theatre .ctl-zone.transport .cbtn:not(.big) { width: 40px; height: 40px; }
+  .theatre .cbtn.big { width: 52px; height: 52px; }
+  .ctl-zone.tools .cbtn { width: 36px; height: 36px; }
+  .hud.bottom { padding-left: 14px; padding-right: 14px; }
+}
+@container theatre (max-width: 340px) {
+  .ctl-zone.transport .opt-y { display: none; }
+  .ctl-zone.tools .cbtn { width: 32px; height: 32px; }
+}
+.theatre.mini .ctl-zone.transport .opt-x { display: none; }
+
+/* Repeat badge: 1 for "repeat this video", an infinity sign for "repeat all" */
+.cbtn.rep { position: relative; }
+.rep1 { position: absolute; right: 7px; top: 6px; min-width: 13px; height: 13px; padding: 0 3px; border-radius: 99px; background: var(--lamp); color: var(--media-bg); font: 800 9px/13px var(--sans); text-align: center; }
+.rep1.all { font-size: 10px; right: 5px; }

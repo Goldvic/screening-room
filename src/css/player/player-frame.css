@@ -7,6 +7,7 @@
   z-index: 100; /* higher than the sidebar and navbar */
   color: var(--on-media); 
   user-select: none; 
+  container: theatre / inline-size; /* lets the controls react to the player's own width */
 }
 
 .theatre:not(.ui) { cursor: none; }

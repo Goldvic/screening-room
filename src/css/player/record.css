@@ -1,0 +1,18 @@
+/* Record button, the REC chip in the top bar, and the Record panel */
+
+.recdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ff4d5e; box-shadow: 0 0 10px #ff4d5e; animation: rec-blink 1.2s ease-in-out infinite; flex: none; vertical-align: middle; }
+.recdot.paused { animation: none; background: var(--on-media-mute); box-shadow: none; }
+.recdot.idle { animation: none; box-shadow: none; }
+@keyframes rec-blink { 50% { opacity: .3; } }
+
+.cbtn.recbtn { color: var(--on-media); }
+.cbtn.recbtn.lit { color: #ff4d5e; animation: rec-blink 1.6s ease-in-out infinite; }
+.chip.recchip { border-color: #ff4d5e; background: color-mix(in srgb, #ff4d5e 22%, transparent); cursor: pointer; }
+.chip.recchip b { color: var(--on-media); }
+.chip.recchip:hover { background: color-mix(in srgb, #ff4d5e 38%, transparent); }
+
+.opt.recstart { border: 1px solid color-mix(in srgb, #ff4d5e 55%, transparent); background: color-mix(in srgb, #ff4d5e 12%, transparent); margin-bottom: var(--sp-2); }
+.opt.recstart:hover, .opt.recstart.on { background: color-mix(in srgb, #ff4d5e 24%, transparent); }
+.opt.recstart b { display: inline-flex; align-items: center; gap: 8px; }
+
+@media (prefers-reduced-motion: reduce) { .recdot, .cbtn.recbtn.lit { animation: none; } }

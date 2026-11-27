@@ -32,6 +32,13 @@ contextBridge.exposeInMainWorld('cinema', {
   trailerBounds: (rect) => ipcRenderer.invoke('trailer-bounds', rect),
   trailerHide: () => ipcRenderer.invoke('trailer-hide'),
   onTrailerClosed: (cb) => { const f = () => cb(); ipcRenderer.on('trailer-closed', f); return () => ipcRenderer.removeListener('trailer-closed', f); },
+  // screen recorder
+  recOpen: () => ipcRenderer.invoke('rec-open'),
+  recStart: (o) => ipcRenderer.invoke('rec-start', o || {}),
+  recStop: () => ipcRenderer.invoke('rec-stop'),
+  recPause: () => ipcRenderer.invoke('rec-pause'),
+  recState: () => ipcRenderer.invoke('rec-state'),
+  onRecState: (cb) => { const f = (_e, s) => cb(s); ipcRenderer.on('rec-state', f); return () => ipcRenderer.removeListener('rec-state', f); },
   // zoom controls
   zoomIn: () => ipcRenderer.send('zoom-in'),
   zoomOut: () => ipcRenderer.send('zoom-out'),

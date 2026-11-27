@@ -53,3 +53,12 @@
 /* Keyboard shortcuts sheet */
 .sheet { position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--shade-3); backdrop-filter: blur(8px); color: var(--on-media); }
 .sheet-box { width: min(720px, 94%); max-height: 88%; overflow: auto; padding: 18px 22px; border-radius: var(--r-xl); background: var(--glass); border: 1px solid var(--line); }
+/* Small player window: the title gets the whole width, the chips drop to their own line and lose their long text */
+@container theatre (max-width: 640px) {
+  .hud.top { flex-wrap: wrap; padding: 14px 14px 64px; gap: var(--sp-2); }
+  .hud.top .cbtn.back { width: 40px; height: 40px; }
+  .hud.top .ttl { flex: 1 1 calc(100% - 56px); }
+  .ttl strong.full { font-size: var(--fs-lg); }
+  .chip { padding: 5px 10px; }
+  .chip span { display: none; }
+}

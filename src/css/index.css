@@ -39,6 +39,7 @@
 @import './player/audio-menu.css';
 @import './player/next-card.css';
 @import './player/cast.css';
+@import './player/record.css';
 
 /* ---------- 6. Settings ---------- */
 @import './settings/settings-frame.css';

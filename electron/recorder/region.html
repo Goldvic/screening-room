@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Select area</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; font: 13px 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; color: #fff; user-select: none; cursor: crosshair; }
+  #dim { position: fixed; inset: 0; background: rgba(6, 6, 12, .58); }
+  #box { position: fixed; display: none; box-shadow: 0 0 0 99999px rgba(6, 6, 12, .58); outline: 2px solid #ff4d5e; cursor: move; }
+  #box::before { content: ""; position: absolute; inset: 0; background: linear-gradient(#fff3 1px, transparent 1px) 0 33.333%/100% 33.333%, linear-gradient(90deg, #fff3 1px, transparent 1px) 33.333% 0/33.333% 100%; opacity: .5; pointer-events: none; }
+  .h { position: absolute; width: 14px; height: 14px; background: #fff; border: 2px solid #ff4d5e; border-radius: 50%; }
+  .h.nw { left: -8px; top: -8px; cursor: nwse-resize; } .h.ne { right: -8px; top: -8px; cursor: nesw-resize; }
+  .h.sw { left: -8px; bottom: -8px; cursor: nesw-resize; } .h.se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+  #size { position: absolute; left: 0; top: -34px; padding: 5px 10px; border-radius: 999px; background: #ff4d5e; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #bar { position: fixed; left: 50%; top: 22px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: 999px; background: rgba(16, 16, 24, .94); border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 12px 40px rgba(0, 0, 0, .5); cursor: default; }
+  #bar span { color: rgba(255, 255, 255, .75); }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 999px; padding: 9px 18px; cursor: pointer; color: #fff; background: rgba(255, 255, 255, .12); }
+  button:hover { background: rgba(255, 255, 255, .2); }
+  button.go { background: #ff4d5e; } button.go:hover { background: #ff6574; } button:disabled { opacity: .4; pointer-events: none; }
+  kbd { padding: 1px 6px; border-radius: 5px; background: rgba(255, 255, 255, .14); font: inherit; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="dim"></div>
+<div id="box"><div id="size"></div><i class="h nw" data-h="nw"></i><i class="h ne" data-h="ne"></i><i class="h sw" data-h="sw"></i><i class="h se" data-h="se"></i></div>
+<div id="bar"><span id="hint">Drag to choose the area to record</span><button id="redo" style="display:none">Redraw</button><button id="cancel">Cancel <kbd>Esc</kbd></button><button class="go" id="ok" disabled>Use this area <kbd>Enter</kbd></button></div>
+<script>
+  const q = new URLSearchParams(location.search).get('aspect') || 'free';
+  const ratio = q === 'free' ? 0 : (() => { const [a, b] = q.split(':').map(Number); return a && b ? a / b : 0; })();
+  const box = document.getElementById('box'), size = document.getElementById('size'), ok = document.getElementById('ok'), hint = document.getElementById('hint'), redo = document.getElementById('redo');
+  const W = () => innerWidth, H = () => innerHeight;
+  let r = null, drag = null;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function paint() {
+    if (!r) { box.style.display = 'none'; ok.disabled = true; return; }
+    box.style.display = 'block';
+    Object.assign(box.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+    size.textContent = `${Math.round(r.w)} × ${Math.round(r.h)}`;
+    size.style.top = r.y < 40 ? 'auto' : '-34px'; size.style.bottom = r.y < 40 ? '-34px' : 'auto';
+    ok.disabled = r.w < 32 || r.h < 32;
+    hint.textContent = ratio ? `Locked to ${q}. Drag the corners to resize, drag inside to move` : 'Drag the corners to resize, drag inside to move';
+    redo.style.display = 'inline-block';
+  }
+  // keep the shape when a ratio is chosen: width leads, height follows
+  function shape(x0, y0, x1, y1, anchorX, anchorY) {
+    let w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
+    if (ratio) { h = w / ratio; if (h > H()) { h = H(); w = h * ratio; } }
+    const dx = x1 < x0 ? -1 : 1, dy = y1 < y0 ? -1 : 1;
+    let x = dx < 0 ? x0 - w : x0, y = dy < 0 ? y0 - h : y0;
+    x = clamp(x, 0, W() - w); y = clamp(y, 0, H() - h);
+    return { x, y, w, h };
+  }
+  addEventListener('mousedown', (e) => {
+    if (e.target.closest('#bar')) return;
+    const hd = e.target.dataset && e.target.dataset.h;
+    if (hd && r) {
+      const ox = hd.includes('w') ? r.x + r.w : r.x, oy = hd.includes('n') ? r.y + r.h : r.y; // the opposite corner stays put
+      drag = { type: 'size', ox, oy };
+    } else if (r && e.target.closest('#box')) drag = { type: 'move', dx: e.clientX - r.x, dy: e.clientY - r.y };
+    else { drag = { type: 'new', ox: e.clientX, oy: e.clientY }; r = { x: e.clientX, y: e.clientY, w: 0, h: 0 }; }
+  });
+  addEventListener('mousemove', (e) => {
+    if (!drag) return;
+    if (drag.type === 'move') { r.x = clamp(e.clientX - drag.dx, 0, W() - r.w); r.y = clamp(e.clientY - drag.dy, 0, H() - r.h); }
+    else r = shape(drag.ox, drag.oy, clamp(e.clientX, 0, W()), clamp(e.clientY, 0, H()));
+    paint();
+  });
+  addEventListener('mouseup', () => { drag = null; if (r && (r.w < 32 || r.h < 32)) { r = null; } paint(); });
+  const done = (v) => rec.regionDone(v);
+  document.getElementById('cancel').onclick = () => done(null);
+  ok.onclick = () => r && done(r);
+  redo.onclick = () => { r = null; paint(); hint.textContent = 'Drag to choose the area to record'; redo.style.display = 'none'; };
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') done(null); else if (e.key === 'Enter' && r && !ok.disabled) done(r); });
+</script>
+</body>
+</html>

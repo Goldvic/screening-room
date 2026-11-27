@@ -1,13 +1,13 @@
 import Hls from 'hls.js';
 import { CastDialog, WindowMenu } from './Extras';
-import { CSSProperties, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { CSSProperties, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AudioRig, EQ_FLAT, EQ_LABELS, EQ_PRESETS, isNeutral } from './audio';
 import {
   APP_NAME, ASPECTS, Bookmark, Caps, Cue, Fx, Icon, Info, LANGS, PrefsCtx, Prog, QUALITIES, SAVER, SPEEDS, SettingsCtx,
-  api, bridge, bytes, clock, cantPlayCodec, join, mbps, parseCues, parseTitle, qs, rate, useNet,
+  RecState, api, bridge, bytes, clock, cantPlayCodec, join, mbps, parseCues, parseTitle, qs, rate, useNet,
 } from './lib';
 
-type MenuId = 'quality' | 'speed' | 'aspect' | 'subs' | 'audio' | 'sound' | 'picture' | 'chapters' | 'more';
+type MenuId = 'quality' | 'speed' | 'aspect' | 'subs' | 'audio' | 'sound' | 'picture' | 'chapters' | 'record' | 'more';
 type Sprite = { interval: number; cols: number; rows: number; w: number; h: number; count: number; url: string };
 type Ai = { available: boolean; state: string; elapsed: number; error?: string };
 type OsHit = { id: number; name: string; lang: string; downloads: number };
@@ -21,6 +21,18 @@ type Props = {
 
 // Volume (and boost) survives from one video to the next while the app stays open.
 let sessionVol: number | undefined;
+
+// Shuffle all: every video plays once per round, and Previous walks back through what was played.
+let shuffleSig = '';
+let shuffleSeen = new Set<string>();
+let shuffleTrail: string[] = [];
+// A recording that started by itself when playback began stops by itself when playback is over.
+let autoStarted = false;
+let autoStopTimer: number | undefined;
+const stopAutoSoon = (ms: number) => {
+  clearTimeout(autoStopTimer);
+  autoStopTimer = window.setTimeout(() => { if (autoStarted) { autoStarted = false; bridge?.recStop?.(); } }, ms);
+};
 
 const Slider = ({ value, min, max, step = 1, onChange, label }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; label?: string }) => (
   <input type="range" className="slider" min={min} max={max} step={step} value={value} aria-label={label}
@@ -199,6 +211,21 @@ export default function Player(p: Props) {
   totalRef.current = total;
   const idx = p.videos.indexOf(p.name);
   const next = idx >= 0 ? p.videos[idx + 1] : undefined;
+  const rep = s.repeat ?? 'off';
+  const shuf = !!s.shuffle && p.videos.length > 1;
+  const sig = p.videos.join('\u0001');
+  if (sig !== shuffleSig) { shuffleSig = sig; shuffleSeen = new Set(); shuffleTrail = []; }
+  // what plays after this one: the next in order, or (shuffle) a random one not played yet; repeat all wraps round at the end
+  const upNext = useMemo(() => {
+    if (!shuf) return next ?? (rep === 'all' && p.videos.length > 1 ? p.videos[0] : undefined);
+    const others = p.videos.filter((n) => n !== p.name);
+    let pool = others.filter((n) => !shuffleSeen.has(n));
+    if (!pool.length && rep === 'all') pool = others;
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : undefined;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shuf, rep, p.name, sig]);
+  const canPrev = shuf ? shuffleTrail.length > 1 || idx > 0 : idx > 0 || (rep === 'all' && p.videos.length > 1);
+  const continuous = !!s.autoNext || shuf || rep === 'all';
   const show = ui || !!menu || !playing || scrub !== null;
   const chapters = info.chapters ?? [];
   const bookmarks: Bookmark[] = prefs.bookmarks?.[p.pkey] ?? [];
@@ -486,6 +513,50 @@ export default function Player(p: Props) {
     stalls.current = [...stalls.current.filter((x) => now - x < 90000), now];
     if (stalls.current.length >= 3 && !dismissed.current) setSuggest(true);
   };
+  useEffect(() => {
+    clearTimeout(autoStopTimer);
+    if (shuffleTrail[shuffleTrail.length - 1] !== p.name) shuffleTrail.push(p.name);
+    if (shuffleSeen.size >= p.videos.length) shuffleSeen.clear();
+    shuffleSeen.add(p.name);
+    return () => { if (autoStarted) stopAutoSoon(3000); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ----- screen recording (the recorder itself lives in the desktop app) -----
+  const [rec, setRec] = useState<RecState>({ state: 'idle', ms: 0 });
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (!bridge?.onRecState) return;
+    bridge.recState().then((x) => x && setRec(x)).catch(() => {});
+    return bridge.onRecState((x) => { setRec(x); if (x.state === 'idle') autoStarted = false; });
+  }, []);
+  const recOn = rec.state === 'recording' || rec.state === 'paused' || rec.state === 'countdown';
+  const toggleRecord = async () => {
+    if (!bridge?.recStart) { flash('Screen recording is in the Cinema desktop app'); return; }
+    if (recOn) { await bridge.recStop(); flash('Recording stopped. Saving…'); return; }
+    if (rec.state === 'saving') { flash('Still saving the last recording'); return; }
+    const r = await bridge.recStart({ quality: s.recQuality, sys: s.recSound, countdown: 0 });
+    if (r && !r.ok) flash(r.error || 'Could not start recording');
+    else flash(`Recording the Cinema window at ${s.recQuality === '2160' ? '4K' : s.recQuality + 'p'}`);
+  };
+
+  // ----- previous, next, repeat, shuffle -----
+  const replay = () => { seekTo(0); window.setTimeout(() => vref.current?.play().catch(() => {}), 60); };
+  const goNext = () => { if (upNext) p.onNext(upNext); else if (rep === 'all') replay(); };
+  const goPrev = () => {
+    if (pos > 5) { seekTo(0); return; }
+    if (shuf && shuffleTrail.length > 1) { shuffleTrail.pop(); const n = shuffleTrail.pop(); if (n) { p.onNext(n); return; } }
+    if (idx > 0) p.onNext(p.videos[idx - 1]);
+    else if (rep === 'all' && p.videos.length > 1) p.onNext(p.videos[p.videos.length - 1]);
+    else seekTo(0);
+  };
+  const cycleRepeat = () => {
+    const n = rep === 'off' ? 'all' : rep === 'all' ? 'one' : 'off';
+    set({ repeat: n });
+    flash(n === 'off' ? 'Repeat off' : n === 'all' ? 'Repeat all videos' : 'Repeat this video');
+  };
+  const toggleShuffle = () => { set({ shuffle: !s.shuffle }); flash(!s.shuffle ? 'Shuffle all is on' : 'Shuffle is off'); };
+
   const togglePlay = () => { const v = vref.current; if (v) (v.paused ? v.play().catch(() => {}) : v.pause()); };
   const skip = (d: number) => seekTo(offset + (vref.current?.currentTime ?? 0) + d);
   playingRef.current = playing;
@@ -633,8 +704,8 @@ export default function Player(p: Props) {
       }
       if (k === 'Escape') { if (help) setHelp(false); else if (menu) setMenu(null); else if (winOpen || castOpen) { setWinOpen(false); setCastOpen(false); } else p.onClose(); }
       else if (k === '?' || k === 'h') setHelp((x) => !x);
-      else if (k === 'PageDown' && next) { e.preventDefault(); p.onNext(next); }
-      else if (k === 'PageUp' && idx > 0) { e.preventDefault(); p.onNext(p.videos[idx - 1]); }
+      else if (k === 'PageDown' && upNext) { e.preventDefault(); goNext(); }
+      else if (k === 'PageUp' && canPrev) { e.preventDefault(); goPrev(); }
       else if (k === 'Home') { e.preventDefault(); seekTo(0); }
       else if (k === 'End' && totalRef.current) { e.preventDefault(); seekTo(Math.max(0, totalRef.current - 5)); }
       else if (e.shiftKey && k === 'ArrowRight') { e.preventDefault(); skip(5); }
@@ -653,7 +724,10 @@ export default function Player(p: Props) {
       else if (k === 'ArrowDown') { e.preventDefault(); setVol((x) => Math.max(0, +(x - 0.05).toFixed(2))); }
       else if (k === 'f') toggleFs();
       else if (k === 'm') setMuted((x) => !x);
-      else if (k === 'n' && next) p.onNext(next);
+      else if (k === 'n' && upNext) goNext();
+      else if (k === 'r') cycleRepeat();
+      else if (k === 'u' && p.videos.length > 1) toggleShuffle();
+      else if (k === 'R') toggleRecord();
       else if (k === 'c') toggleSubs();
       else if (k === 'a') cycleAspect();
       else if (k === 'i') setStats((x) => !x);
@@ -779,12 +853,19 @@ export default function Player(p: Props) {
             onPlaying={() => {
               setPlaying(true); setBuffering(false); everPlayed.current = true;
               if (!startedFired.current) { startedFired.current = true; p.onStarted?.(p.name); startCache(); }
+              if (s.autoRecord && bridge?.recStart && !autoTried.current) {
+                autoTried.current = true;
+                bridge.recState().then((st) => { if (st.state === 'idle') bridge!.recStart({ quality: s.recQuality, sys: s.recSound, countdown: 0 }).then((r) => { if (r?.ok) autoStarted = true; }); }).catch(() => {});
+              }
             }}
             onWaiting={onWaiting} onCanPlay={() => setBuffering(false)}
             onEnded={() => {
               post(true);
               if (sleep === 'end') { setSleep(null); flash('Sleep timer: stopped'); return; }
-              if (s.autoNext && next && !noNext) p.onNext(next);
+              if (rep === 'one') { replay(); return; }
+              if (upNext && !noNext && continuous) { p.onNext(upNext); return; }
+              if (rep === 'all' && !upNext) { replay(); return; }
+              if (autoStarted) stopAutoSoon(2500);
             }}
             onError={() => setFailed(true)}
           />
@@ -825,6 +906,7 @@ export default function Player(p: Props) {
               <Icon n="save" s={15} /><b>{cache.state === 'done' ? 'Saved' : cache.state === 'paused' ? 'Save paused' : cache.state === 'queued' ? 'Save queued' : `Saving ${Math.round(cache.frac * 100)}%`}</b>
             </span>
           )}
+          {recOn && <button className="chip recchip" onClick={toggleRecord} title="Stop recording (Ctrl+Alt+R)"><i className={rec.state === 'paused' ? 'recdot paused' : 'recdot'} /><b>{rec.state === 'countdown' ? 'Starting' : clock(rec.ms / 1000)}</b></button>}
           {vol > 1 && <span className="chip loud" title="Volume is boosted above 100%"><Icon n="volume" s={15} /><b>{Math.round(vol * 100)}%</b></span>}
           <button className={'chip' + (stats ? ' on' : '')} onClick={() => setStats((x) => !x)} title="Network and playback stats (I)">
             <Icon n="activity" s={15} />
@@ -882,7 +964,7 @@ export default function Player(p: Props) {
               <h3>Keyboard shortcuts</h3>
               <div className="sheet-grid">
                 {[['Space / K', 'Play or pause'], ['← → / J L', 'Back or forward 10 s'], ['Shift + ← →', '5 s'], ['Ctrl + ← →', '1 minute'], ['↑ ↓', 'Volume'], ['Ctrl + ↑ ↓', 'Volume, bigger steps'],
-                  ['0 to 9', 'Jump to 0% to 90%'], ['Home / End', 'Start or end'], ['PageUp / PageDown', 'Previous or next video'], ['N, Alt + →', 'Next video'], ['F, Enter', 'Full screen'], ['M', 'Mute'],
+                  ['0 to 9', 'Jump to 0% to 90%'], ['Home / End', 'Start or end'], ['PageUp / PageDown', 'Previous or next video'], ['N, Alt + →', 'Next video'], ['R', 'Repeat: off, all, one'], ['U', 'Shuffle all'], ['Shift + R', 'Record the screen'], ['F, Enter', 'Full screen'], ['M', 'Mute'],
                   ['C', 'Subtitles on or off'], ['A', 'Picture shape'], ['< >  [ ]', 'Speed down or up'], ['Backspace', 'Normal speed'], ['E / Shift+E', 'Next or previous frame'], ['B', 'Loop a section'],
                   ['D', 'Add a bookmark'], ['S, Ctrl + S', 'Screenshot'], ['P, Ctrl + P', 'Picture-in-picture'], ['T, Ctrl + M', 'Mini player'], ['I', 'Video info'], ['G', 'Sound panel'], ['Z / X', 'Subtitles earlier or later'], ['H or ?', 'This sheet'], ['Esc', 'Close']]
                   .map(([k, d]) => <p key={k}><kbd>{k}</kbd><span>{d}</span></p>)}
@@ -898,11 +980,11 @@ export default function Player(p: Props) {
             <button className="cbtn sm" onClick={p.onClose} aria-label="Close player"><Icon n="close" s={16} /></button>
           </div>
         )}
-        {next && s.autoNext && !noNext && !failed && total > 0 && total - pos <= 20 && total - pos > 0 && (
+        {upNext && continuous && rep !== 'one' && !noNext && !failed && total > 0 && total - pos <= 20 && total - pos > 0 && (
           <div className="nextcard" onClick={(e) => e.stopPropagation()}>
-            <small>Next episode</small>
-            <strong>{next.replace(/\.[^.]+$/, '')}</strong>
-            <span className="inline"><button className="btn" onClick={() => p.onNext(next)}><Icon n="next" s={15} /> Play now</button><button className="btn ghost" onClick={() => setNoNext(true)}>Cancel</button></span>
+            <small>{shuf ? 'Up next (shuffle)' : 'Next episode'}</small>
+            <strong>{upNext.replace(/\.[^.]+$/, '')}</strong>
+            <span className="inline"><button className="btn" onClick={() => p.onNext(upNext)}><Icon n="next" s={15} /> Play now</button><button className="btn ghost" onClick={() => setNoNext(true)}>Cancel</button></span>
           </div>
         )}
         {toast && <div className="ptoast">{toast}</div>}
@@ -911,12 +993,12 @@ export default function Player(p: Props) {
           <div className="menu sheet-up de-panel" onClick={(e) => e.stopPropagation()}>
             <div className="menu-accent" aria-hidden="true" />
             <div className="menu-h">
-              <strong>{{ quality: 'Quality and data', speed: 'Speed', aspect: 'Screen shape', subs: 'Subtitles', audio: 'Audio track', sound: 'Sound', picture: 'Picture', chapters: 'Chapters', more: 'More' }[menu]}</strong>
-              <span className="menu-sub">{{ quality: 'How this video streams', speed: 'Playback rate', aspect: 'Fit on screen', subs: 'Captions and timing', audio: 'Track and language', sound: 'Volume, EQ, boost', picture: 'Brightness and color', chapters: 'Jump to a chapter', more: 'Bookmarks, tools, sleep' }[menu]}</span>
+              <strong>{{ quality: 'Quality and data', speed: 'Speed', aspect: 'Screen shape', subs: 'Subtitles', audio: 'Audio track', sound: 'Sound', picture: 'Picture', chapters: 'Chapters', record: 'Record the screen', more: 'More' }[menu]}</strong>
+              <span className="menu-sub">{{ quality: 'How this video streams', speed: 'Playback rate', aspect: 'Fit on screen', subs: 'Captions and timing', audio: 'Track and language', sound: 'Volume, EQ, boost', picture: 'Brightness and color', chapters: 'Jump to a chapter', record: '720p, 1080p or 4K', more: 'Bookmarks, tools, sleep' }[menu]}</span>
               <button className="cbtn sm" onClick={() => setMenu(null)} aria-label="Close menu"><Icon n="close" s={16} /></button>
             </div>
             <div className="menu-tabs" role="tablist">
-              {([['quality', 'Quality'], ['speed', 'Speed'], ['subs', 'Subtitles'], ...((info.audio?.length ?? 0) > 1 ? [['audio', 'Audio']] : []), ['sound', 'Sound'], ['picture', 'Picture'], ['aspect', 'Shape'], ...(chapters.length > 1 ? [['chapters', 'Chapters']] : []), ['more', 'More']] as [MenuId, string][]).map(([id, l]) => (
+              {([['quality', 'Quality'], ['speed', 'Speed'], ['subs', 'Subtitles'], ...((info.audio?.length ?? 0) > 1 ? [['audio', 'Audio']] : []), ['sound', 'Sound'], ['picture', 'Picture'], ['aspect', 'Shape'], ...(bridge?.recStart ? [['record', 'Record']] : []), ...(chapters.length > 1 ? [['chapters', 'Chapters']] : []), ['more', 'More']] as [MenuId, string][]).map(([id, l]) => (
                 <button key={id} role="tab" aria-selected={menu === id} className={menu === id ? 'on' : ''} onClick={() => (id === 'sound' ? (menu !== 'sound' && openSound()) : setMenu(id))}>{l}</button>
               ))}
             </div>
@@ -1054,6 +1136,19 @@ export default function Player(p: Props) {
               </>
             )}
 
+            {menu === 'record' && bridge?.recStart && (
+              <>
+                <button className={recOn ? 'opt recstart on' : 'opt recstart'} onClick={toggleRecord}>
+                  <span><b><i className={recOn ? 'recdot' : 'recdot idle'} /> {recOn ? `Stop recording · ${clock(rec.ms / 1000)}` : 'Start recording the Cinema window'}</b>
+                    <small>{recOn ? 'Tap again or press Ctrl+Alt+R to stop' : 'Records the whole window at its current size. Shrink the window and the recording follows.'}</small></span>
+                </button>
+                <div className="msec">Quality</div>
+                {([['720', '720p', 'HD, small files'], ['1080', '1080p', 'Full HD'], ['2160', '4K', 'Ultra HD, large files']] as const).map(([id, l, h]) => <Opt key={id} on={s.recQuality === id} label={l} hint={h} onClick={() => set({ recQuality: id })} />)}
+                <Switch on={s.recSound} label="Record the sound" hint="Everything you hear from this laptop" onClick={() => set({ recSound: !s.recSound })} />
+                <Switch on={s.autoRecord} label="Record automatically when a video plays" hint="Starts when playback starts and stops when it is over" onClick={() => set({ autoRecord: !s.autoRecord })} />
+                <button className="opt" onClick={() => { setMenu(null); bridge?.recOpen?.(); }}><span><b><Icon n="external" s={15} /> Open the recorder…</b><small>Pick a screen, another window or any area. Shortcut: Ctrl+Alt+R</small></span></button>
+              </>
+            )}
             {menu === 'more' && (
               <>
                 <Switch on={s.autoNext} label="Play next episode automatically" onClick={() => set({ autoNext: !s.autoNext })} />
@@ -1125,10 +1220,16 @@ export default function Player(p: Props) {
           </div>
           <div className="ctl">
             <div className="ctl-zone transport">
+              {p.videos.length > 1 && <button className={shuf ? 'cbtn lit opt-x' : 'cbtn opt-x'} onClick={toggleShuffle} title={shuf ? 'Shuffle all: on (U)' : 'Shuffle all (U)'} aria-label="Shuffle all" aria-pressed={shuf}><Icon n="random" s={19} /></button>}
+              {(p.videos.length > 1 || rep !== 'off') && canPrev && <button className="cbtn opt-x" onClick={goPrev} title="Previous video (PageUp)" aria-label="Previous video"><Icon n="prev" s={20} /></button>}
+              <button className="cbtn opt-y" onClick={() => skip(-10)} title="Back 10 seconds" aria-label="Back 10 seconds"><Icon n="back10" s={20} /></button>
               <button className="cbtn big" onClick={togglePlay} title="Play / pause (Space)" aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} s={24} /></button>
-              <button className="cbtn" onClick={() => skip(-10)} title="Back 10 seconds" aria-label="Back 10 seconds"><Icon n="back10" s={20} /></button>
-              <button className="cbtn" onClick={() => skip(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds"><Icon n="fwd10" s={20} /></button>
-              {next && <button className="cbtn" onClick={() => p.onNext(next)} title="Next episode (N)" aria-label="Next episode"><Icon n="next" s={20} /></button>}
+              <button className="cbtn opt-y" onClick={() => skip(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds"><Icon n="fwd10" s={20} /></button>
+              {upNext && <button className="cbtn opt-x" onClick={goNext} title="Next video (N)" aria-label="Next video"><Icon n="next" s={20} /></button>}
+              <button className={rep !== 'off' ? 'cbtn lit rep opt-x' : 'cbtn rep opt-x'} onClick={cycleRepeat} aria-label={rep === 'off' ? 'Repeat off' : rep === 'all' ? 'Repeat all' : 'Repeat this video'}
+                title={rep === 'off' ? 'Repeat: off (R)' : rep === 'all' ? 'Repeat all videos (R)' : 'Repeat this video (R)'}>
+                <Icon n="repeat" s={19} />{rep === 'one' && <sup className="rep1">1</sup>}{rep === 'all' && <sup className="rep1 all">∞</sup>}
+              </button>
             </div>
             <div className="ctl-zone status">
               <span className="vol">
@@ -1144,6 +1245,7 @@ export default function Player(p: Props) {
               {(info.audio?.length ?? 0) > 1 && cbtn('audio', 'audio', 'Audio track')}
               <button className={castOpen ? 'cbtn on' : 'cbtn'} onClick={() => { setWinOpen(false); setMenu(null); setCastOpen((x) => !x); }} title="Cast to a TV or phone" aria-label="Cast to a TV or phone"><Icon n="cast" s={20} /></button>
               <button className={winOpen ? 'cbtn win on' : mini || pipOn ? 'cbtn win lit' : 'cbtn win'} onClick={() => { setCastOpen(false); setMenu(null); setWinOpen((x) => !x); }} title="Picture-in-picture, mini player, pop out" aria-label="Window modes"><Icon n="external" s={20} /></button>
+              {bridge?.recStart && <button className={menu === 'record' ? 'cbtn on' : recOn ? 'cbtn lit recbtn' : 'cbtn recbtn'} onClick={() => toggle('record')} title="Record the screen (Shift+R)" aria-label="Record the screen"><Icon n="rec" s={20} /></button>}
               {cbtn('quality', 'sliders', 'Settings: quality, speed, sound, picture', (ds > 0 && !p.offline) || needRig)}
               <button className="cbtn" onClick={toggleFs} title="Fullscreen (F)" aria-label="Fullscreen"><Icon n={fs ? 'exitfs' : 'full'} s={20} /></button>
             </div>

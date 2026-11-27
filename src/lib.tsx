@@ -57,8 +57,15 @@ export type Bridge = {
   zoomIn(): void;
   zoomOut(): void;
   zoomReset(): void;
+  // screen recorder
+  recOpen(): Promise<void>;
+  recStart(o?: { quality?: string; sys?: boolean; countdown?: number }): Promise<{ ok: boolean; error?: string }>;
+  recStop(): Promise<void>; recPause(): Promise<void>;
+  recState(): Promise<RecState>;
+  onRecState(cb: (s: RecState) => void): () => void;
   version: string;
 };
+export type RecState = { state: 'idle' | 'countdown' | 'recording' | 'paused' | 'saving'; ms: number };
 export const bridge: Bridge | undefined = typeof window !== 'undefined' ? (window as any).cinema : undefined;
 
 // ---------- constants ----------
@@ -130,6 +137,7 @@ export const ACCENTS: Record<string, string> = {
 // ---------- settings (saved in this browser) ----------
 export type Settings = {
   accent: string; quality: string; speed: number; aspect: string; autoNext: boolean;
+  repeat: 'off' | 'all' | 'one'; shuffle: boolean; autoRecord: boolean; recQuality: '720' | '1080' | '2160'; recSound: boolean;
   autoSub: boolean; subSmart: boolean; subLang: string; subSize: number; subColor: string; subBg: number; subOutline: boolean; subPos: number; themePreset: string; accentCustom: string; compact: boolean; pauseOnBattery: boolean;
   turbo: boolean; conns: number; view: 'grid' | 'list' | 'wall'; thumbs: boolean;
   saver: number; saverAuto: boolean;
@@ -140,6 +148,7 @@ export type Settings = {
 };
 export const DEFAULTS: Settings = {
   accent: 'Violet', quality: 'orig', speed: 1, aspect: 'fit', autoNext: true,
+  repeat: 'off', shuffle: false, autoRecord: false, recQuality: '1080', recSound: true,
   autoSub: true, subSmart: true, subLang: 'en', subSize: 28, subColor: '#ffffff', subBg: 55, subOutline: true, subPos: 6, themePreset: 'default', accentCustom: '', compact: false, pauseOnBattery: false,
   turbo: true, conns: 8, view: 'grid', thumbs: true, density: 150,
   saver: 0, saverAuto: true,
@@ -256,6 +265,7 @@ const ICONS: Record<string, string> = {
   more: 'M5 12h.01M12 12h.01M19 12h.01', heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
   server: 'M4 5h16v6H4zM4 13h16v6H4zM8 8h.01M8 16h.01', plus: 'M12 5v14M5 12h14', pause2: 'M8 5v14M16 5v14',
   rotate: 'M20 12a8 8 0 1 1-3-6.2M20 4v5h-5', repeat: 'M4 11V9a3 3 0 0 1 3-3h13M17 3l3 3-3 3M20 13v2a3 3 0 0 1-3 3H4M7 21l-3-3 3-3',
+  prev: 'M19 5l-9 7 9 7zM7 5v14', rec: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   bookmark: 'M6 4h12v17l-6-4-6 4z', random: 'M3 6h4l10 12h4M3 18h4l3-3.5M14 9.5L17 6h4M18 3l3 3-3 3M18 15l3 3-3 3',
   hdd: 'M3 14l3-8h12l3 8v5H3zM3 14h18M7 17h.01', skip: 'M5 5l9 7-9 7zM17 5v14', external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
   cloud: 'M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9.5 4.3 4.3 0 0 1 17.5 18z', save: 'M4 4h13l3 3v13H4zM8 4v5h8V4M8 20v-6h8v6', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
