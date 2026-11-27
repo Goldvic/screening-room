@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src data:">
+<title>Draw</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; font: 13px 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; color: #fff; user-select: none; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  body.on canvas { cursor: crosshair; }
+  #tb { display: none; position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); align-items: center; gap: 6px; padding: 8px 10px; border-radius: 22px; background: rgba(16, 16, 24, .95); border: 1px solid rgba(255, 255, 255, .18); box-shadow: 0 14px 44px rgba(0, 0, 0, .55); max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
+  body.on #tb { display: flex; }
+  .grp { display: flex; align-items: center; gap: 3px; padding: 0 8px; border-right: 1px solid rgba(255, 255, 255, .12); }
+  .grp:last-child { border-right: 0; }
+  button { font: inherit; color: #fff; border: 0; cursor: pointer; background: transparent; border-radius: 12px; min-width: 36px; height: 36px; display: grid; place-items: center; padding: 0 8px; font-weight: 600; }
+  button:hover { background: rgba(255, 255, 255, .12); }
+  button.on { background: #fff; color: #0b0b10; }
+  button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .sw { width: 24px; height: 24px; min-width: 24px; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .25); }
+  .sw.on { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, .35); background: inherit; }
+  input[type=color] { width: 28px; height: 28px; padding: 0; border: 2px solid rgba(255, 255, 255, .25); border-radius: 50%; background: none; cursor: pointer; }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+  input[type=range] { width: 90px; accent-color: #ff4d5e; }
+  .dot { display: inline-block; border-radius: 50%; background: #fff; }
+  .done { background: #ff4d5e; padding: 0 16px; } .done:hover { background: #ff6574; }
+  small { opacity: .7; margin-left: 4px; font-weight: 500; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="tb">
+  <div class="grp" id="tools">
+    <button data-t="pen" class="on" title="Pen (P)"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/></svg></button>
+    <button data-t="hl" title="Highlighter (H)"><svg viewBox="0 0 24 24"><path d="M9 14l6-6 3 3-6 6H9zM9 17l-3 3h4M15 8l2-2 3 3-2 2"/></svg></button>
+    <button data-t="line" title="Line (L)"><svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg></button>
+    <button data-t="arrow" title="Arrow (A)"><svg viewBox="0 0 24 24"><path d="M5 19L19 5M9 5h10v10"/></svg></button>
+    <button data-t="rect" title="Rectangle (R)"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg></button>
+    <button data-t="oval" title="Circle (O)"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg></button>
+    <button data-t="erase" title="Eraser (E)"><svg viewBox="0 0 24 24"><path d="M8 20h11M5 15l8-9 6 6-6 8H8z"/></svg></button>
+  </div>
+  <div class="grp" id="colors"></div>
+  <div class="grp"><span class="dot" id="szdot"></span><input type="range" id="size" min="2" max="28" value="5" title="Thickness"></div>
+  <div class="grp">
+    <button id="fade" title="Drawings fade away by themselves">Fade<small id="fadeL">off</small></button>
+    <button id="undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5M4 12h10a6 6 0 0 1 0 12"/></svg></button>
+    <button id="clear" title="Clear everything (C)"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>
+  </div>
+  <div class="grp"><button class="done" id="done" title="Stop drawing (Esc)">Done</button></div>
+</div>
+<script src="strokes.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const COLORS = ['#ff4d5e', '#ffd23f', '#3fd6a0', '#4da3ff', '#ffffff', '#111111', '#b36bff'];
+  const FADES = [0, 3000, 6000];
+  let strokes = [], cur = null, tool = 'pen', color = COLORS[0], size = 5, fadeIx = 0, on = false, lastSend = 0, raf = 0;
+
+  function fit() { const d = window.devicePixelRatio || 1; cv.width = Math.round(innerWidth * d); cv.height = Math.round(innerHeight * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
+  addEventListener('resize', () => { fit(); render(); }); fit();
+
+  $('colors').innerHTML = COLORS.map((c, i) => `<button class="sw${i ? '' : ' on'}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('') + '<input type="color" id="custom" value="#ff4d5e" title="Any colour">';
+  const fadeMs = () => FADES[fadeIx];
+  function render() {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    window.Strokes.paint(ctx, cur ? strokes.concat([cur]) : strokes, { mx: (x) => x, my: (y) => y, unit: 1, fadeMs: fadeMs() });
+  }
+  function loop() {
+    cancelAnimationFrame(raf);
+    const tick = () => {
+      const before = strokes.length;
+      if (fadeMs()) strokes = strokes.filter((s) => !s.t || Date.now() - s.t < fadeMs() + window.Strokes.FADE_OUT);
+      render();
+      if (strokes.length !== before) send(true);
+      if (strokes.length || cur) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }
+  function send(force) {
+    const n = performance.now();
+    if (!force && n - lastSend < 40) return;
+    lastSend = n;
+    window.rec.drawStrokes({ strokes: cur ? strokes.concat([cur]) : strokes, fadeMs: fadeMs() });
+  }
+  const setSize = () => { const d = Math.min(26, 4 + size); const e = $('szdot'); e.style.width = e.style.height = d + 'px'; e.style.background = color; };
+  setSize();
+
+  // ---- drawing ----
+  cv.addEventListener('pointerdown', (e) => {
+    if (!on || e.button !== 0) return;
+    cv.setPointerCapture(e.pointerId);
+    if (tool === 'erase') { erase(e.clientX, e.clientY); cur = { tool: 'erase' }; return; }
+    cur = { tool, color, size, pts: [[e.clientX, e.clientY]], t: 0 };
+    loop(); send(true);
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!cur) return;
+    if (cur.tool === 'erase') { erase(e.clientX, e.clientY); return; }
+    const p = cur.pts;
+    if (cur.tool === 'pen' || cur.tool === 'hl') { const l = p[p.length - 1]; if (Math.hypot(e.clientX - l[0], e.clientY - l[1]) > 1.5) p.push([e.clientX, e.clientY]); }
+    else p[1] = [e.clientX, e.clientY];
+    send(false);
+  });
+  const end = () => {
+    if (!cur) return;
+    if (cur.tool !== 'erase') { cur.t = Date.now(); strokes.push(cur); }
+    cur = null; render(); send(true); loop();
+  };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  function erase(x, y) {
+    const n = strokes.length;
+    strokes = strokes.filter((s) => !window.Strokes.hit(s, x, y, 10));
+    if (strokes.length !== n) { render(); send(true); }
+  }
+
+  // ---- toolbar ----
+  $('tools').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; pick(b.dataset.t); });
+  function pick(t) { tool = t; for (const b of $('tools').children) b.classList.toggle('on', b.dataset.t === t); }
+  $('colors').addEventListener('click', (e) => { const b = e.target.closest('.sw'); if (!b) return; setColor(b.dataset.c); });
+  $('custom').addEventListener('input', (e) => setColor(e.target.value, true));
+  function setColor(c, custom) { color = c; for (const b of $('colors').querySelectorAll('.sw')) b.classList.toggle('on', !custom && b.dataset.c === c); if (tool === 'erase') pick('pen'); setSize(); }
+  $('size').addEventListener('input', (e) => { size = +e.target.value; setSize(); });
+  $('fade').onclick = () => { fadeIx = (fadeIx + 1) % FADES.length; $('fadeL').textContent = fadeMs() ? fadeMs() / 1000 + ' s' : 'off'; $('fade').classList.toggle('on', !!fadeMs()); send(true); loop(); };
+  $('undo').onclick = () => { strokes.pop(); render(); send(true); };
+  $('clear').onclick = () => { strokes = []; cur = null; render(); send(true); };
+  $('done').onclick = () => window.rec.drawDone();
+  addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'escape') window.rec.drawDone();
+    else if (e.ctrlKey && k === 'z') { strokes.pop(); render(); send(true); }
+    else if (!e.ctrlKey && !e.altKey) { const m = { p: 'pen', h: 'hl', l: 'line', a: 'arrow', r: 'rect', o: 'oval', e: 'erase' }[k]; if (m) pick(m); else if (k === 'c') $('clear').click(); }
+  });
+
+  window.rec.onDraw((v) => { on = !!v; document.body.classList.toggle('on', on); if (on) window.focus(); });
+</script>
+</body>
+</html>

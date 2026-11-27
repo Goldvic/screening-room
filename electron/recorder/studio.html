@@ -67,10 +67,22 @@
     </section>
 
     <section>
-      <h3>Sound and extras</h3>
-      <label class="sw"><span><b>Computer sound</b><small>Everything you hear from this laptop</small></span><input type="checkbox" id="sys"><i></i></label>
-      <label class="sw"><span><b>Microphone</b><small>Add your voice</small></span><input type="checkbox" id="mic"><i></i></label>
+      <h3>Sound</h3>
+      <div class="seg big big4" id="soundMode">
+        <button data-s="sys"><b>Computer</b><small>what you hear</small></button>
+        <button data-s="mic"><b>Microphone</b><small>outside sound</small></button>
+        <button data-s="both" class="on"><b>Both</b><small>mixed</small></button>
+        <button data-s="none"><b>None</b><small>silent</small></button>
+      </div>
+      <div class="row" id="sysVolRow"><span>Computer sound level</span><span class="lvl"><input type="range" id="sysVol" min="0" max="200" step="5"><output id="sysVolO">100%</output></span></div>
       <div class="row" id="micRow" hidden><span>Microphone</span><select id="micSel"></select></div>
+      <div class="row" id="micVolRow" hidden><span>Microphone level</span><span class="lvl"><input type="range" id="micVol" min="0" max="300" step="5"><output id="micVolO">100%</output></span></div>
+      <p class="note" id="micNote" hidden>Speakers and a microphone together can record an echo. Headphones fix that.</p>
+    </section>
+
+    <section>
+      <h3>Drawing and extras</h3>
+      <label class="sw"><span><b>Drawing tools</b><small id="drawHint">Draw on the screen while recording: pen, highlighter, shapes, any colour. Ctrl+Alt+D</small></span><input type="checkbox" id="drawing"><i></i></label>
       <label class="sw"><span><b>Show mouse pointer</b><small>Draw the cursor in the video</small></span><input type="checkbox" id="cursor"><i></i></label>
       <div class="row"><span>Countdown</span>
         <div class="seg" id="countdown"><button data-c="0">None</button><button data-c="3" class="on">3 s</button><button data-c="5">5 s</button></div>
@@ -78,14 +90,32 @@
     </section>
 
     <section>
-      <h3>Save to</h3>
-      <div class="path"><span id="dir"></span><button id="chdir">Change</button><button id="openDir">Open</button></div>
+      <h3>Save as</h3>
+      <div class="seg big big5" id="format">
+        <button data-fm="mp4" class="on"><b>MP4</b><small>everywhere</small></button>
+        <button data-fm="mov"><b>MOV</b><small>Apple, editors</small></button>
+        <button data-fm="webm"><b>WebM</b><small>web, small</small></button>
+        <button data-fm="gif"><b>GIF</b><small>short clips</small></button>
+        <button data-fm="mp3"><b>MP3</b><small>sound only</small></button>
+      </div>
+      <div id="extraBox">
+        <div class="row"><span>Also save smaller copies</span></div>
+        <div class="chips" id="extras">
+          <button data-x="1080">1080p<small>laptops, TVs</small></button>
+          <button data-x="720">720p<small>tablets, chat apps</small></button>
+          <button data-x="480">480p<small>phones, small files</small></button>
+          <button data-x="360">360p<small>tiny</small></button>
+        </div>
+        <p class="note">Copies are made after you stop. The full-size recording is always saved too. Sizes bigger than your recording are skipped.</p>
+      </div>
+      <div class="path" style="margin-top:14px"><span id="dir"></span><button id="chdir">Change</button><button id="openDir">Open</button></div>
       <label class="sw"><span><b>Keep the recorder ready</b><small>Stays in the tray so the shortcut works even when Cinema is closed</small></span><input type="checkbox" id="standby"><i></i></label>
     </section>
 
     <section id="last" hidden>
       <h3>Last recording</h3>
       <div class="path"><span id="lastName"></span><button id="lastOpen">Play</button><button id="lastShow">Show</button></div>
+      <p class="note" id="lastMore" hidden></p>
     </section>
   </div>
 
@@ -99,10 +129,14 @@
 <div class="pillbar" id="pill" hidden>
   <div class="count" id="count" hidden></div>
   <div class="live" id="live"><i class="rdot"></i><b id="clock">00:00</b><small id="tag">1080p</small></div>
+  <button class="pb pen" id="draw" title="Draw on the screen (Ctrl+Alt+D)" aria-label="Draw" hidden>
+    <svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/></svg>
+  </button>
   <button class="pb" id="pause" title="Pause (Ctrl+Alt+P)" aria-label="Pause"></button>
   <button class="pb stop" id="stop" title="Stop (Ctrl+Alt+R)" aria-label="Stop"><i></i></button>
 </div>
 
+<script src="strokes.js"></script>
 <script src="studio.js"></script>
 </body>
 </html>
