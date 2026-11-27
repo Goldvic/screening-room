@@ -12,7 +12,7 @@ const HOTKEY_DRAW = 'Control+Alt+D';   // start or stop drawing on the screen
 
 let ctx = { getMain: () => null, icon: undefined, onState: () => {}, onStandby: () => {} };
 let studio = null, studioReady = null, regionWin = null, regionDone = null;
-let drawWin = null, drawOn = false;
+let drawWin = null, drawOn = false, drawDisplay = null, drawCount = 0;
 let saved = null, wasVisible = true;                                   // studio bounds before it shrinks into the small bar
 let blocker = -1;
 let out = null;                                     // the file being written { file, stream }
@@ -23,7 +23,7 @@ let pendingSource = { id: '', audio: false };
 // ---------- settings ----------
 const cfgFile = () => path.join(app.getPath('userData'), 'recorder.json');
 const defaultDir = () => path.join(app.getPath('videos'), 'Cinema', 'Recordings');
-let cfg = { quality: '1080', fps: 30, sys: true, mic: false, micId: '', sysVol: 100, micVol: 100, cursor: true, countdown: 3, dir: '', standby: false, mode: 'cinema', format: 'mp4', extras: [], drawing: true };
+let cfg = { quality: '1080', fps: 30, sys: true, mic: false, micId: '', sysVol: 100, micVol: 100, cursor: true, countdown: 3, dir: '', standby: true, mode: 'cinema', format: 'mp4', extras: [], drawing: false };
 const loadCfg = () => { try { cfg = { ...cfg, ...JSON.parse(fs.readFileSync(cfgFile(), 'utf8')) }; } catch { /* first run */ } };
 const saveCfg = () => { try { fs.writeFileSync(cfgFile(), JSON.stringify(cfg)); } catch { /* ignore */ } };
 const dirNow = () => cfg.dir || defaultDir();
@@ -167,9 +167,10 @@ function cinemaInfo() {
 // ---------- drawing on the screen ----------
 // A see-through window over the recorded screen. It is hidden from screen capture; the recorder paints the strokes into the video itself,
 // so they land in the right place and at the right size in every mode.
-function openDraw(displayId) {
-  closeDraw();
-  const d = screen.getAllDisplays().find((x) => String(x.id) === String(displayId)) || screen.getPrimaryDisplay();
+// It only exists while you are drawing (or while drawings are still visible), because a full-screen window on top of a playing video costs speed.
+function createDraw() {
+  if (drawWin && !drawWin.isDestroyed()) return;
+  const d = screen.getAllDisplays().find((x) => String(x.id) === String(drawDisplay)) || screen.getPrimaryDisplay();
   drawWin = new BrowserWindow({
     x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true,
     resizable: false, movable: false, fullscreenable: false, hasShadow: false, show: false, enableLargerThanScreen: true, backgroundColor: '#00000000', focusable: true,
@@ -179,22 +180,28 @@ function openDraw(displayId) {
   drawWin.setAlwaysOnTop(true, 'screen-saver');
   drawWin.setIgnoreMouseEvents(true, { forward: true });
   drawWin.once('ready-to-show', () => { try { drawWin.setBounds(d.bounds); drawWin.showInactive(); } catch { /* closed */ } });
-  drawWin.on('closed', () => { drawWin = null; drawOn = false; });
+  drawWin.on('closed', () => { drawWin = null; drawOn = false; drawCount = 0; send('rec:cmd', { cmd: 'draw-state', on: false }); });
   drawWin.loadFile(path.join(__dirname, 'draw.html'));
-  drawOn = false;
 }
 function closeDraw() {
-  drawOn = false;
-  try { if (drawWin && !drawWin.isDestroyed()) drawWin.destroy(); } catch { /* gone */ }
-  drawWin = null;
+  const w = drawWin;
+  drawWin = null; drawOn = false; drawCount = 0;
+  try { if (w && !w.isDestroyed()) w.destroy(); } catch { /* gone */ }
 }
 function setDrawMode(on) {
+  if (on && (!drawWin || drawWin.isDestroyed())) {
+    if (drawDisplay === null) return;
+    createDraw();
+    drawWin.webContents.once('did-finish-load', () => setDrawMode(true));
+    return;
+  }
   if (!drawWin || drawWin.isDestroyed()) return;
   drawOn = !!on;
   drawWin.setIgnoreMouseEvents(!drawOn, { forward: true });
   if (drawOn) { drawWin.show(); drawWin.focus(); }
   drawWin.webContents.send('draw:mode', drawOn);
   send('rec:cmd', { cmd: 'draw-state', on: drawOn });
+  if (!drawOn && drawCount === 0) closeDraw();   // nothing left on screen: remove the window completely
 }
 
 // ---------- region picker ----------
@@ -332,9 +339,9 @@ function wire() {
     pendingSource = { id, audio: !!o?.audio };
     return { ok: true, geom };
   });
-  h('rec:draw-init', (displayId) => { openDraw(displayId); return true; });
+  h('rec:draw-init', (displayId) => { closeDraw(); drawDisplay = displayId; return true; });
   h('rec:draw-toggle', () => { setDrawMode(!drawOn); return drawOn; });
-  h('rec:draw-close', () => { closeDraw(); return true; });
+  h('rec:draw-close', () => { closeDraw(); drawDisplay = null; return true; });
   h('rec:compact', (on) => { setCompact(!!on); return true; });
   h('rec:hide', () => { if (studio && !isBusy()) studio.hide(); });
   h('rec:minimize', () => { if (studio) studio.minimize(); });
@@ -369,7 +376,9 @@ function wire() {
   ipcMain.on('rec:state', (e, s) => { if (studio && e.sender === studio.webContents && s && typeof s.state === 'string') setState({ state: s.state, ms: Number(s.ms) || 0 }); });
   ipcMain.on('draw:strokes', (e, p) => {
     if (!drawWin || e.sender !== drawWin.webContents || !p || !Array.isArray(p.strokes) || p.strokes.length > 3000) return;
+    drawCount = p.strokes.length;
     send('rec:cmd', { cmd: 'strokes', strokes: p.strokes, fadeMs: Number(p.fadeMs) || 0 });
+    if (!drawCount && !drawOn) closeDraw();        // the last drawing faded away
   });
   ipcMain.on('draw:done', (e) => { if (drawWin && e.sender === drawWin.webContents) setDrawMode(false); });
   ipcMain.on('rec:region-done', (e, r) => {

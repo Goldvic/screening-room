@@ -11,7 +11,7 @@
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   const S = { mode: 'cinema', sourceId: '', display: null, region: null, aspect: 'free', quality: '1080', fps: 30, sys: true, mic: false, micId: '', sysVol: 100, micVol: 100,
-    cursor: true, countdown: 3, dir: '', standby: false, format: 'mp4', extras: [], drawing: true };
+    cursor: true, countdown: 3, dir: '', standby: true, format: 'mp4', extras: [], drawing: false };
   let sources = { screens: [], windows: [] };
   let cinema = { open: false, w: 0, h: 0 };
   let run = null;          // the live recording
@@ -39,11 +39,11 @@
     const mb = Math.round((MBPS[S.quality][S.fps === 60 ? 1 : 0] + 0.19) * 7.5);
     const size = ss ? outSize(ss[0], ss[1]) : null;
     const fm = { mp4: 'MP4', mov: 'MOV', webm: 'WebM', gif: 'GIF', mp3: 'MP3' }[S.format];
-    $('summary').innerHTML = (size ? `Video will be <b>${size[0]}×${size[1]}</b>` : 'Video size follows what you pick') + ` · ${S.fps} fps · about <b>${mb} MB</b> per minute · saved as ${fm}`;
+    $('summary').innerHTML = (size ? `Video will be <b>${size[0]}×${size[1]}</b>` : 'Video size follows what you pick') + ` · ${S.fps} fps · about <b>${mb} MB</b> per minute · saved as ${fm}` + (S.quality === '2160' || S.fps === 60 ? '<br><b>Heavy:</b> 4K or 60 fps needs a strong laptop. 1080p at 30 fps is the smoothest.' : '');
     $('extraBox').hidden = !['mp4', 'mov', 'webm'].includes(S.format);
     const d = modeAllowsDrawing();
     $('drawing').disabled = !d;
-    $('drawHint').textContent = d ? 'Draw on the screen while recording: pen, highlighter, shapes, any colour. Ctrl+Alt+D' : 'Not available when recording another app’s window. Use Screen or Area instead.';
+    $('drawHint').textContent = d ? 'Pen, highlighter, shapes, any colour. Ctrl+Alt+D. Uses a little more power, so it is off until you want it.' : 'Not available when recording another app’s window. Use Screen or Area instead.';
   }
 
   // ---------- configuration ----------
@@ -59,7 +59,7 @@
   async function loadCfg() {
     const c = await window.rec.cfgGet();
     Object.assign(S, { quality: String(c.quality), fps: c.fps, sys: c.sys, mic: c.mic, micId: c.micId, sysVol: c.sysVol ?? 100, micVol: c.micVol ?? 100, cursor: c.cursor, countdown: c.countdown,
-      dir: c.dir, standby: c.standby, mode: c.mode || 'cinema', format: c.format || 'mp4', extras: (c.extras || []).map(Number), drawing: c.drawing !== false });
+      dir: c.dir, standby: c.standby, mode: c.mode || 'cinema', format: c.format || 'mp4', extras: (c.extras || []).map(Number), drawing: c.drawing === true });
     $('hkOpen').textContent = c.hotkeys.open;
     $('pause').title = `Pause (${c.hotkeys.pause})`; $('stop').title = `Stop (${c.hotkeys.open})`; $('draw').title = `Draw on the screen (${c.hotkeys.draw})`;
     mark('quality', 'q', S.quality); mark('fps', 'f', S.fps); mark('countdown', 'c', S.countdown); mark('format', 'fm', S.format);
@@ -77,7 +77,11 @@
     for (const b of $('modes').children) b.classList.toggle('on', b.dataset.m === m);
     for (const k of ['cinema', 'screen', 'window', 'region']) $('pane-' + k).hidden = k !== m;
     $('refresh').hidden = m === 'cinema' || m === 'region';
-    if (m === 'cinema') { await updateCinema(); S.sourceId = cinema.id || ''; }
+    if (m === 'cinema') {
+      await updateCinema();
+      if (!cinema.open && quiet) { m = S.mode = 'screen'; for (const b of $('modes').children) b.classList.toggle('on', b.dataset.m === m); for (const k of ['cinema', 'screen', 'window', 'region']) $('pane-' + k).hidden = k !== m; $('refresh').hidden = false; await refreshSources(); }
+      else S.sourceId = cinema.id || '';
+    }
     else await refreshSources();
     if (m === 'screen' && !sources.screens.find((x) => x.id === S.sourceId)) S.sourceId = sources.screens[0]?.id || '';
     if (m === 'window' && !sources.windows.find((x) => x.id === S.sourceId)) S.sourceId = '';
@@ -220,6 +224,7 @@
       ctx.imageSmoothingQuality = 'high';
       const canDraw = wantDraw && dispId !== null && dispW > 0;
 
+      let boxKey = '';
       const draw = () => {
         const vw = video.videoWidth, vh = video.videoHeight;
         if (!vw) return;
@@ -228,16 +233,25 @@
         else if (crop) { sx = Math.min(crop.x, vw - 2); sy = Math.min(crop.y, vh - 2); sw = Math.min(crop.w, vw - sx); sh = Math.min(crop.h, vh - sy); }
         // if the window changes size while recording, the picture is re-fitted with black bars, so the video keeps one size
         const sc = Math.min(W / sw, H / sh), dw = sw * sc, dh = sh * sc, ox = (W - dw) / 2, oy = (H - dh) / 2;
-        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+        const key = `${Math.round(dw)}x${Math.round(dh)}`;
+        if (key !== boxKey) { boxKey = key; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); } // the bars only need painting when the shape changes
         ctx.drawImage(video, sx, sy, sw, sh, ox, oy, dw, dh);
         if (me.strokes.length) window.Strokes.paint(ctx, me.strokes, { mx: (x) => (x * k - sx) * sc + ox, my: (y) => (y * k - sy) * sc + oy, unit: k * sc, fadeMs: me.fadeMs });
+        me.lastDraw = performance.now();
+        if (me.vtrack && me.vtrack.requestFrame) me.vtrack.requestFrame();
       };
       draw();
-      me.timer = setInterval(draw, Math.round(1000 / S.fps));
-      if (dyn) me.rectTimer = setInterval(async () => { try { const g = await window.rec.cinemaRect(); if (g && !g.minimized && g.w > 4 && g.h > 4) me.rect = g; } catch { /* keep the last */ } }, 150);
+      // Draw when a new picture arrives instead of on a fixed timer, so a still screen costs almost nothing.
+      // A slow watchdog repeats the last picture so the video never stalls.
+      const onFrame = () => { if (run !== me || me.dead) return; draw(); me.rvfc = video.requestVideoFrameCallback(onFrame); };
+      if (video.requestVideoFrameCallback) me.rvfc = video.requestVideoFrameCallback(onFrame);
+      me.timer = setInterval(() => { if (!video.requestVideoFrameCallback || performance.now() - (me.lastDraw || 0) > 120) draw(); }, video.requestVideoFrameCallback ? 100 : Math.round(1000 / S.fps));
+      if (dyn) me.rectTimer = setInterval(async () => { try { const g = await window.rec.cinemaRect(); if (g && !g.minimized && g.w > 4 && g.h > 4) me.rect = g; } catch { /* keep the last */ } }, 250);
 
       // sound: computer sound and microphone mixed into one track, each with its own level
-      const tracks = [...canvas.captureStream(S.fps).getVideoTracks()];
+      const cstream = canvas.captureStream(0);                 // frames are handed over only when something was drawn
+      me.vtrack = cstream.getVideoTracks()[0];
+      const tracks = [me.vtrack];
       let micOk = false;
       me.ac = new AudioContext();
       const dest = me.ac.createMediaStreamDestination();
@@ -295,7 +309,7 @@
     if (run.state === 'paused') run.elapsedBase += Date.now() - run.pausedAt;
     run.durationMs = run.elapsed();
     run.state = 'stopping';
-    clearInterval(run.timer); clearInterval(run.tick); clearInterval(run.rectTimer);
+    clearInterval(run.timer); clearInterval(run.tick); clearInterval(run.rectTimer); run.dead = true;
     try { run.mr.stop(); } catch { finish(run); }
   }
 
@@ -322,7 +336,7 @@
   }
 
   function cleanup(me, keepRun) {
-    clearInterval(me.timer); clearInterval(me.tick); clearInterval(me.rectTimer);
+    clearInterval(me.timer); clearInterval(me.tick); clearInterval(me.rectTimer); me.dead = true;
     try { me.display?.getTracks().forEach((t) => t.stop()); } catch { /* gone */ }
     try { me.micStream?.getTracks().forEach((t) => t.stop()); } catch { /* gone */ }
     try { me.ac?.close(); } catch { /* gone */ }

@@ -837,7 +837,7 @@ export default function Player(p: Props) {
   const volPct = Math.round((muted ? 0 : vol) * 100);
 
   return (
-    <div className={'theatre' + (show ? ' ui' : '') + (mini ? ' mini' : '') + (p.floating ? ' float' : '') + (pipOn ? ' pipped' : '')} ref={box} style={{ '--ui': uiScale } as CSSProperties} onMouseMove={wake} onTouchStart={wake}
+    <div className={'theatre' + (show ? ' ui' : '') + (mini ? ' mini' : '') + (p.floating ? ' float' : '') + (pipOn ? ' pipped' : '') + (recOn ? ' recording' : '')} ref={box} style={{ '--ui': uiScale } as CSSProperties} onMouseMove={wake} onTouchStart={wake}
       onWheel={(e) => { if (menu) return; setMuted(false); setVol((x) => Math.min(maxVol, Math.max(0, +(x + (e.deltaY < 0 ? 0.05 : -0.05)).toFixed(2)))); }}>
       <div className="stage" ref={stage}>
         <div className="vwrap">

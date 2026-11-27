@@ -122,10 +122,11 @@
   $('fade').onclick = () => { fadeIx = (fadeIx + 1) % FADES.length; $('fadeL').textContent = fadeMs() ? fadeMs() / 1000 + ' s' : 'off'; $('fade').classList.toggle('on', !!fadeMs()); send(true); loop(); };
   $('undo').onclick = () => { strokes.pop(); render(); send(true); };
   $('clear').onclick = () => { strokes = []; cur = null; render(); send(true); };
-  $('done').onclick = () => window.rec.drawDone();
+  const finishDrawing = () => { send(true); window.rec.drawDone(); };
+  $('done').onclick = finishDrawing;
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
-    if (k === 'escape') window.rec.drawDone();
+    if (k === 'escape') finishDrawing();
     else if (e.ctrlKey && k === 'z') { strokes.pop(); render(); send(true); }
     else if (!e.ctrlKey && !e.altKey) { const m = { p: 'pen', h: 'hl', l: 'line', a: 'arrow', r: 'rect', o: 'oval', e: 'erase' }[k]; if (m) pick(m); else if (k === 'c') $('clear').click(); }
   });
