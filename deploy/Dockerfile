@@ -2,7 +2,8 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts --omit=optional
+# The build tools (rollup, esbuild) keep their machine-specific engine in optional packages, so these must NOT be skipped here.
+RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build && npm run build:server
 
