@@ -181,18 +181,34 @@ export const PrefsCtx = createContext<{ prefs: Prefs; setPref: <K extends keyof 
 // ---------- helpers ----------
 export const qs = (o: Record<string, string | number>) =>
   new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
+// When Cinema is opened from a phone or another computer, the server asks for a code. If the sign-in ran out, go back to that page.
+const needLogin = (r: Response) => { if (r.status === 401 && !bridge) location.href = `/login?next=${encodeURIComponent(location.pathname)}`; };
 export async function api<T>(p: string, o: Record<string, string | number> = {}, method = 'GET'): Promise<T> {
   const r = await fetch(`/api/${p}?${qs(o)}`, { method });
+  needLogin(r);
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j as T;
 }
 export async function post<T>(p: string, body: unknown = {}): Promise<T> {
   const r = await fetch(`/api/${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  needLogin(r);
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j as T;
 }
+
+// Who is using this screen: the owner (everything), or a guest with the watch-only code. `access` is true when the server asks for a code at all.
+export type Who = { role: 'admin' | 'viewer'; access: boolean };
+let who: Who = { role: 'admin', access: false };
+let whoLoad: Promise<Who> | null = null;
+export const loadWho = () => (whoLoad ??= fetch('/api/whoami', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : who)).then((j) => (who = { role: j.role === 'viewer' ? 'viewer' : 'admin', access: !!j.access })).catch(() => who));
+export function useWho(): Who {
+  const [w, setW] = useState<Who>(who);
+  useEffect(() => { loadWho().then(setW); }, []);
+  return w;
+}
+export const signOut = async () => { await fetch('/auth/logout', { method: 'POST' }).catch(() => {}); location.href = '/login'; };
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export const bytes = (n: number) => {
   const u = ['B', 'KB', 'MB', 'GB', 'TB'];

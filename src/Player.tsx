@@ -1,10 +1,11 @@
 import Hls from 'hls.js';
 import { CastDialog, WindowMenu } from './Extras';
+import { TvSheet } from './TvRemote';
 import { CSSProperties, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AudioRig, EQ_FLAT, EQ_LABELS, EQ_PRESETS, isNeutral } from './audio';
 import {
   APP_NAME, ASPECTS, Bookmark, Caps, Cue, Fx, Icon, Info, LANGS, PrefsCtx, Prog, QUALITIES, SAVER, SPEEDS, SettingsCtx,
-  RecState, api, bridge, bytes, clock, cantPlayCodec, join, mbps, parseCues, parseTitle, qs, rate, useNet,
+  RecState, api, bridge, bytes, clock, useWho, cantPlayCodec, join, mbps, parseCues, parseTitle, qs, rate, useNet,
 } from './lib';
 
 type MenuId = 'quality' | 'speed' | 'aspect' | 'subs' | 'audio' | 'sound' | 'picture' | 'chapters' | 'record' | 'more';
@@ -164,6 +165,7 @@ export default function Player(p: Props) {
   const nudgeSub = (d: number) => setSubDelay((x) => { const n = Math.round((x + d) * 10) / 10; flash(`Subtitles ${n > 0 ? 'later' : n < 0 ? 'earlier' : 'on time'} ${n ? `by ${Math.abs(n)} s` : ''}`); return n; });
   const [help, setHelp] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
+  const who = useWho();   // when the server asks for a code (phone, TV, internet) "cast" means Play on TV through the server
   useEffect(() => { // after a mouse click, do not leave a button focused: Space must play/pause, not press that button again
     const f = (e: MouseEvent) => { if (e.detail > 0 && (e.target as HTMLElement).closest?.('.theatre button')) setTimeout(() => (document.activeElement as HTMLElement | null)?.blur?.(), 0); };
     window.addEventListener('click', f);
@@ -542,6 +544,15 @@ export default function Player(p: Props) {
 
   // ----- previous, next, repeat, shuffle -----
   const replay = () => { seekTo(0); window.setTimeout(() => vref.current?.play().catch(() => {}), 60); };
+  // Send what is playing (and the videos after it in this folder) to the paired TV, starting at the same moment.
+  const sendToTv = async (tvSend: (c: Record<string, unknown>) => Promise<string | undefined>) => {
+    if (p.offline || p.opened) return 'This file is only on this device, so a TV cannot reach it.';
+    const pre = p.pkey.slice(0, p.pkey.length - path.length);
+    const items = p.videos.map((n) => ({ n, p: join(p.dir, n), k: pre + join(p.dir, n) }));
+    const err = await tvSend({ t: 'load', root: p.root, items, idx: Math.max(0, p.videos.indexOf(p.name)), pos, title: p.name.replace(/\.[^.]+$/, '') });
+    if (!err) { vref.current?.pause(); setCastOpen(false); flash('Playing on your TV. Control it from the bar at the bottom.'); }
+    return err;
+  };
   const goNext = () => { if (upNext) p.onNext(upNext); else if (rep === 'all') replay(); };
   const goPrev = () => {
     if (pos > 5) { seekTo(0); return; }
@@ -957,7 +968,8 @@ export default function Player(p: Props) {
           </div>
         )}
         {winOpen && <WindowMenu pipOn={pipOn} mini={mini} desktop={!!bridge} canFloat={!!p.onFloat} onPip={pip} onMini={toggleMini} onFloat={() => p.onFloat?.(true)} onPop={popout} onClose={() => setWinOpen(false)} />}
-        {castOpen && <CastDialog title={p.name} stream={`/api/stream?root=${p.root}&path=${encodeURIComponent(path)}&q=orig`} getPos={() => pos} onStart={() => vref.current?.pause()} onClose={() => setCastOpen(false)} />}
+        {castOpen && who.access && <TvSheet onClose={() => setCastOpen(false)} onSend={sendToTv} />}
+        {castOpen && !who.access && <CastDialog title={p.name} stream={`/api/stream?root=${p.root}&path=${encodeURIComponent(path)}&q=orig`} getPos={() => pos} onStart={() => vref.current?.pause()} onClose={() => setCastOpen(false)} />}
         {help && (
           <div className="sheet" onClick={() => setHelp(false)} role="dialog" aria-label="Keyboard shortcuts">
             <div className="sheet-box" onClick={(e) => e.stopPropagation()}>

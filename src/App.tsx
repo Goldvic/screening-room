@@ -1,5 +1,6 @@
 import { CSSProperties, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Player from './Player';
+import { TvDock } from './TvRemote';
 import Setup from './Setup';
 import SettingsDialog from './Settings';
 import { AddToCollection, CollectionsPage, Collection, HomeCustomize, HomeRow, RuleDialog, Tidy, Tour, ItemMeta } from './Extras';
@@ -16,7 +17,7 @@ import { DataPanel, NetMini } from './components/DataPanel';
 import { Tray, DL } from './components/Tray';
 import {
   ACCENTS, APP_NAME, Caps, SavedList, dayKey, DEFAULTS, Entry, Icon, OFFLINE_ID, OPENED_ID, Prefs, PrefsCtx, Prog, Root, SAVER, SettingsCtx, VIDEO, VIDEO_EXTS,
-  api, bridge, bytes, cantPlayCodec, clock, hue, join, loadSettings, mbps, parseTitle, pct, post, qs, rate, turboDownload, turboOk, useNet, useUpdates, Settings,
+  api, bridge, bytes, cantPlayCodec, clock, hue, join, loadSettings, mbps, parseTitle, pct, post, qs, rate, signOut, turboDownload, turboOk, useNet, useUpdates, useWho, Settings,
 } from './lib';
 
 type RootsRes = { host: string; mode: string; error: string; hasServer: boolean; roots: Root[] };
@@ -82,6 +83,8 @@ function Shell() {
   
   const [ask, setAsk] = useState<Ask | null>(null);
   const [toast, setToast] = useState('');
+  const who = useWho();
+  const guest = who.role === 'viewer';   // watching with the shared code: no settings, servers or downloads
   const [prog, setProg] = useState<Record<string, Prog>>({});
   const [panel, setPanel] = useState<null | 'settings' | 'servers' | 'downloads' | 'storage' | 'tidy'>(null);
   const [dls, setDls] = useState<DL[]>([]);
@@ -532,6 +535,8 @@ function Shell() {
               <span className="sidebar-label">Open file</span>
             </button>
           )}
+          {!guest && (
+            <>
           <button className="sidebar-link" onClick={() => setPanel('servers')} title="Servers">
             <Icon n="server" s={18} />
             <span className="sidebar-label">Servers</span>
@@ -545,8 +550,16 @@ function Shell() {
             <Icon n="sliders" s={18} />
             <span className="sidebar-label">Settings</span>
           </button>
+            </>
+          )}
+          {who.access && (
+            <button className="sidebar-link" onClick={() => { if (confirm('Sign out on this device?')) signOut(); }} title="Sign out" aria-label="Sign out">
+              <Icon n="close" s={18} />
+              <span className="sidebar-label">Sign out</span>
+            </button>
+          )}
 
-          <div className="sidebar-data">
+          {!guest && <div className="sidebar-data">
             <NetMini onClick={() => setDataOpen((x) => !x)} />
             {dataOpen && (
               <DataPanel
@@ -558,7 +571,7 @@ function Shell() {
                 onSettings={() => { setDataOpen(false); setPanel('settings'); }}
               />
             )}
-          </div>
+          </div>}
         </div>
       </aside>
 
@@ -923,6 +936,7 @@ function Shell() {
         const rows: HomeRow[] = [...cfg.filter((x) => DEF.some((d) => d[0] === x.id)).map((x) => ({ id: x.id, on: x.on, label: DEF.find((d) => d[0] === x.id)![1] })), ...DEF.filter((d) => !cfg.some((x) => x.id === d[0])).map((d) => ({ id: d[0], label: d[1], on: true }))];
         return <HomeCustomize rows={rows} onChange={(r) => setPref('homeRows', r.map((x) => ({ id: x.id, on: x.on })))} onClose={() => setCustomize(false)} />;
       })()}
+      {who.access && !isPop && <TvDock />}
       {!prefs.tourDone && view === 'home' && !isPop && <Tour onDone={() => setPref('tourDone', true)} />}
       {panel === 'tidy' && <Tidy onClose={() => setPanel(null)} onChanged={() => { refreshAll(); }} />}
       {palette && <Palette cmds={palCmds} onClose={() => setPalette(false)} />}

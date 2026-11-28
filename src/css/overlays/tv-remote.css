@@ -1,0 +1,46 @@
+/* Play on TV: the sheet, the remote, and the small bar that stays on screen while you browse. */
+
+/* ---------- the sheet (inside the player it reuses .castbox; elsewhere it floats) ---------- */
+.castbox.tvsheet.modal { position: fixed; right: auto; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 70; background: var(--panel); color: var(--text); box-shadow: 0 24px 60px var(--shade-4), inset 0 0 0 1px var(--line); }
+.tvsheet .opt.tvdev { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.tvsheet .opt.tvdev > span { flex: 1; min-width: 0; display: grid; }
+.tvsheet .opt.tvdev small { opacity: .65; font-size: var(--fs-xs); white-space: normal; }
+.tvdot { width: 9px; height: 9px; border-radius: 50%; background: #8a8ca0; flex: none; }
+.tvdot.on { background: var(--success, #3fd6a0); box-shadow: 0 0 8px var(--success, #3fd6a0); }
+.tvpair { display: grid; gap: 6px; margin: 8px 14px 4px; padding-top: 12px; border-top: 1px solid var(--on-media-line, var(--line)); }
+.tvurl { font-family: ui-monospace, Consolas, monospace; font-weight: 600; word-break: break-all; }
+.tvpair-row { display: flex; gap: 8px; }
+.tvpair-row input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--on-media-line, var(--line)); background: color-mix(in srgb, currentColor 8%, transparent); color: inherit; font: 700 20px ui-monospace, Consolas, monospace; letter-spacing: .25em; text-align: center; outline: 0; }
+.tvpair-row input:focus { border-color: var(--lamp); }
+
+/* ---------- the remote ---------- */
+.tvctl { display: grid; gap: 8px; margin: 4px 14px 8px; padding: 12px; border-radius: 16px; background: color-mix(in srgb, currentColor 7%, transparent); }
+.tvctl-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tvctl-title small { font-weight: 400; opacity: .65; }
+.tvctl input[type=range] { width: 100%; accent-color: var(--lamp); margin: 0; }
+.tvctl-time { display: flex; justify-content: space-between; font-size: var(--fs-xs); opacity: .7; font-variant-numeric: tabular-nums; }
+.tvctl-btns { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tvctl-btns button, .tvctl-vol > button:first-child { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.tvctl-btns button:hover, .tvctl-vol > button:first-child:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.tvctl-btns button.main { width: 58px; height: 58px; background: var(--lamp); color: var(--on-lamp, #fff); }
+.tvctl-vol { display: flex; align-items: center; gap: 8px; }
+.tvctl-vol input { flex: 1; }
+.tvctl-vol .stop { width: auto; height: 34px; padding: 0 16px; border-radius: 99px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; font-weight: 600; cursor: pointer; }
+
+/* ---------- the bar that stays while you browse ---------- */
+.tvdock { position: fixed; z-index: 60; right: 18px; bottom: 18px; width: min(380px, calc(100vw - 24px)); border-radius: 18px; background: var(--panel); color: var(--text); box-shadow: 0 18px 50px var(--shade-4), inset 0 0 0 1px var(--line); overflow: hidden; }
+.tvdock-top { display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 14px; cursor: pointer; }
+.tvdock-name { flex: 1; min-width: 0; display: grid; }
+.tvdock-name b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-sm); }
+.tvdock-name small { opacity: .65; font-size: var(--fs-xs); }
+.tvdock-top > button { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.tvdock-top > button:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.tvdock-bar { height: 3px; background: color-mix(in srgb, currentColor 14%, transparent); }
+.tvdock-bar i { display: block; height: 100%; background: var(--lamp); transition: width .9s linear; }
+.tvdock.big .tvctl { margin: 6px 12px 12px; }
+.tvdock .tvctl.compact { background: transparent; padding: 4px 0 0; }
+.tvdock .tvctl.compact .tvctl-title { display: none; }
+@media (max-width: 699px) {
+  .tvdock { right: 10px; left: 10px; width: auto; bottom: 76px; }
+  .castbox.tvsheet.modal { bottom: 80px; width: calc(100vw - 20px); max-height: calc(100vh - 110px); }
+}

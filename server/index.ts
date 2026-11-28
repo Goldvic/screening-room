@@ -19,6 +19,8 @@ import { Crypt, Root, Server, ServerInput, Store, plainCrypt } from './store';
 import { Downloads, DlItem, VIDEO } from './downloads';
 import { Online, cleanTitle } from './online';
 import * as local from './local';
+import { createAccess } from './access';
+import { createTv } from './tv';
 
 const env = process.env;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -703,6 +705,12 @@ export async function start(opts: StartOpts = {}) {
   // =====================================================================================
   const app = express();
   app.disable('x-powered-by');
+  // Behind a reverse proxy (Caddy, nginx, Cloudflare): trust it for the visitor's address and https.
+  if (env.TRUST_PROXY) app.set('trust proxy', /^\d+$/.test(env.TRUST_PROXY) ? Number(env.TRUST_PROXY) : env.TRUST_PROXY === 'true' ? 1 : env.TRUST_PROXY);
+  const dist = path.resolve(opts.staticDir ?? path.join(HERE, '../dist'));
+  // Phone, TV and internet access: ACCESS_PIN (watch only) and ADMIN_PASSWORD (everything). Off in the desktop app, which has its own secret.
+  const access = createAccess({ dataDir: DATA, pin: opts.token ? '' : env.ACCESS_PIN, admin: opts.token ? '' : env.ADMIN_PASSWORD, dist });
+  const tv = createTv({ dataDir: DATA, access });
 
   const safeEq = (a: string, b: string) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
   if (opts.token) {
@@ -715,13 +723,18 @@ export async function start(opts: StartOpts = {}) {
   }
   // Optional login (set APP_PASSWORD). Required if you expose this beyond localhost.
   const PASS = env.APP_PASSWORD;
-  if (PASS) {
+  if (PASS && !access.enabled) {
     app.use((req, res, next) => {
       const dec = Buffer.from((req.headers.authorization ?? '').replace(/^Basic /, ''), 'base64').toString();
       if (safeEq(dec.slice(dec.indexOf(':') + 1), PASS)) return next();
       res.set('WWW-Authenticate', 'Basic realm="Cinema"').status(401).send('Login required');
     });
   }
+  access.attach(app);          // /login, /auth/*, icons, the /tv page
+  tv.attachPublic(app);        // the TV's own routes (it proves itself with a secret, not a cookie)
+  app.use(access.gate);        // everything below needs a login when access is on; viewers only reach the watch-only routes
+  app.get('/api/whoami', (req, res) => res.set('Cache-Control', 'no-store').json(access.whoami(req)));
+  tv.attachPrivate(app);
   app.use(express.json({ limit: '2mb' }));
 
   // ---------- usage, speed test, preferences ----------
@@ -1861,7 +1874,6 @@ export async function start(opts: StartOpts = {}) {
     res.type('text/plain').send(await online.osGet(id));
   }));
 
-  const dist = path.resolve(opts.staticDir ?? path.join(HERE, '../dist'));
   if (fs.existsSync(dist)) {
     app.use(express.static(dist));
     app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
@@ -1883,7 +1895,7 @@ export async function start(opts: StartOpts = {}) {
   });
 
   const close = () => {
-    flushUsage(); store.flush(); dl.pauseAll(); dl.flush();
+    tv.close(); flushUsage(); store.flush(); dl.pauseAll(); dl.flush();
     try { fs.writeFileSync(STATE, JSON.stringify(progress)); } catch { /* ignore */ }
     clearInterval(usageTimer); clearInterval(sessTimer); clearInterval(cleanTimer);
     for (const b of backends.values()) b.close();

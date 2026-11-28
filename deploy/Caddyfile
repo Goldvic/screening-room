@@ -1,0 +1,6 @@
+{$DOMAIN} {
+	# flush_interval -1 keeps the live connection to your TV and phone open and instant
+	reverse_proxy cinema:3001 {
+		flush_interval -1
+	}
+}
